@@ -70,7 +70,7 @@ jobs:
             cd dist
             for f in *.apk; do mv "$f" "${f%.apk}-debug-signed.apk"; done
           fi
-          sha256sum dist/*.apk > dist/SHA256SUMS.txt && cat dist/SHA256SUMS.txt
+          sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
 
       - name: Upload unit test reports (on failure)
         if: failure()
