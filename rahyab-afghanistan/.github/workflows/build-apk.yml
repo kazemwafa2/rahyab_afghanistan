@@ -1,0 +1,104 @@
+name: Build APK
+
+# ساخت APK راه‌یاب افغانستان.
+#  - هر push به main و هر PR: ساخت آزمایشی (debug) و بارگذاری در Artifacts
+#  - تگ v*: ساخت نسخه و انتشار در Releases
+#  - اگر رازهای امضا (KEYSTORE_BASE64 و…) تنظیم شده باشد، نسخه release امضاشده ساخته می‌شود؛
+#    در غیر این صورت APK آزمایشی با پسوند «debug-signed» منتشر می‌شود و هرگز به‌عنوان
+#    نسخه رسمی معرفی نمی‌شود (مطابق چک‌لیست مرحله ۱۰).
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'نوع ساخت'
+        required: false
+        default: 'debug'
+        type: choice
+        options: [debug, release]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+      KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+      KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+      KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Decode signing key (if provided)
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
+            echo "TASK=assembleRelease" >> "$GITHUB_ENV"
+            echo "KIND=release" >> "$GITHUB_ENV"
+          else
+            echo "TASK=assembleDebug" >> "$GITHUB_ENV"
+            echo "KIND=debug" >> "$GITHUB_ENV"
+          fi
+
+      - name: Setup Gradle (with cache)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Build
+        run: gradle "$TASK" --stacktrace
+
+      - name: Collect APKs and checksums
+        run: |
+          mkdir -p dist
+          find app/build/outputs/apk/$KIND -name '*.apk' -exec cp {} dist/ \;
+          # نام‌گذاری شفاف: APK بدون کلید امضای معتبر هرگز رسمی شمرده نمی‌شود
+          if [ "$KIND" = "debug" ]; then
+            cd dist
+            for f in *.apk; do mv "$f" "${f%.apk}-debug-signed.apk"; done
+          fi
+          cd dist && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+      - name: Upload unit test reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-reports
+          path: app/build/reports/
+          if-no-files-found: ignore
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rahyab-apk-${{ env.KIND }}
+          path: dist/*
+
+      - name: Publish release (on tag)
+        if: startsWith(github.ref, 'refs/tags/v') && env.KIND == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+
+      - name: Publish debug-signed test release (on tag without signing key)
+        if: startsWith(github.ref, 'refs/tags/v') && env.KIND == 'debug'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          prerelease: true
+          body: |
+            ⚠️ این انتشار با کلید امضای آزمایشی (debug) ساخته شده است و «نسخه رسمی» نیست.
+            برای انتشار رسمی، رازهای KEYSTORE_BASE64 و KEYSTORE_PASSWORD و KEY_ALIAS و KEY_PASSWORD
+            را مطابق docs/SIGNING.md تنظیم کنید و دوباره تگ بزنید.

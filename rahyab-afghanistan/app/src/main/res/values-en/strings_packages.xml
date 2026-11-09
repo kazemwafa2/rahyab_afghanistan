@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Offline map package management -->
+    <string name="pkg_note">For maps, search and directions without internet, download the package for your region. Wi-Fi is recommended. After installation the app works offline.</string>
+    <string name="pkg_loading">Reading package list…</string>
+    <string name="pkg_manifest_error">Could not read the package list. Check your internet or the source address, then tap “Refresh”.</string>
+    <string name="pkg_available">Available packages:</string>
+    <string name="pkg_empty">No packages have been published yet. Tap “Refresh” later.</string>
+    <string name="pkg_installed_list">Installed packages:</string>
+    <string name="pkg_system">Bundled with the app — installed automatically (cannot be removed)</string>
+    <string name="pkg_installed_ok">Installed</string>
+    <string name="pkg_installed_meta">Installed • data version: %1$s • %2$s</string>
+    <string name="pkg_download">Download</string>
+    <string name="pkg_resume">Resume download</string>
+    <string name="pkg_stop">Stop</string>
+    <string name="pkg_stopped">Download stopped; you can resume it later.</string>
+    <string name="pkg_delete">Delete</string>
+    <string name="pkg_delete_confirm">Delete package “%1$s”? Offline map, search and directions for this region will stop working.</string>
+    <string name="pkg_downloading">Downloading: %1$s of %2$s</string>
+    <string name="pkg_verifying">Verifying file integrity…</string>
+    <string name="pkg_extracting">Installing package…</string>
+    <string name="pkg_done">Package installed successfully</string>
+    <string name="pkg_failed_generic">Download or installation failed. Please try again.</string>
+    <string name="pkg_one_at_time">Only one download can run at a time. Stop the current download first.</string>
+    <string name="err_no_space">Not enough free space on the phone. Free up space first.</string>
+    <string name="err_no_space_detail">Not enough free space to download this package (%1$s).\nFree space on phone: %2$s</string>
+    <string name="err_checksum">The downloaded file is corrupted. The download will restart; please check your connection.</string>
+    <string name="err_invalid">The downloaded package is invalid or incomplete. The previous package was kept.</string>
+    <string name="manifest_source">Package source: %1$s</string>
+    <string name="pkg_free_space">Free space on phone: %1$s</string>
+    <string name="refresh">Refresh</string>
+
+    <!-- Navigation notification -->
+    <string name="notif_channel">Navigation</string>
+    <string name="notif_channel_desc">Shows navigation status while the screen is off</string>
+    <string name="notif_nav_title">Navigation active</string>
+    <string name="notif_nav_text">Rahyab is guiding you</string>
+    <string name="notif_nav_stop">Stop</string>
+</resources>

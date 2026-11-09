@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="where_to">چېرته تلل غواړئ؟</string>
+    <string name="recents_title">وروستي ځایونه</string>
+    <string name="route_to">لار</string>
+    <string name="go_now">ځو</string>
+    <string name="preview_route">د لارې کتنه</string>
+    <string name="change_origin">د پیل ځای بدلول</string>
+    <string name="change_dest">د منزل بدلول</string>
+    <string name="via_fmt">د %1$s له لارې</string>
+    <string name="tab_car">موټر</string>
+    <string name="tab_walk">پلی</string>
+    <string name="route_settings">د نقشې او لارې تنظیمات</string>
+    <string name="north">شمال</string>
+    <string name="heading">لوری</string>
+    <string name="and_then">او وروسته</string>
+    <string name="arrival_label">رسېدل</string>
+    <string name="map_mode_title">د نقشې حالت</string>
+    <string name="map_auto">اتوماتیک</string>
+    <string name="map_day">ورځ</string>
+    <string name="map_night">شپه</string>
+    <string name="layers">طبقې</string>
+    <string name="voice_search">غږیز لټون</string>
+    <string name="voice_search_unavailable">په دې موبایل کې غږیز لټون نشته.</string>
+    <string name="set_home_hint">کور لا نه دی ثبت شوی. یو ځای ولټوئ او د «خوندي کړئ» تڼۍ سره د کور په توګه یې ثبت کړئ.</string>
+    <string name="set_work_hint">د کار ځای لا نه دی ثبت شوی. یو ځای ولټوئ او د «خوندي کړئ» تڼۍ سره د کار د ځای په توګه یې ثبت کړئ.</string>
+    <string name="steps_title">د لارې کتنه</string>
+    <string name="swap_route">د پیل او منزل ځای بدلول</string>
+    <string name="pick_origin_hint">نوی د پیل ځای ولټوئ</string>
+    <string name="pick_dest_hint">نوی منزل ولټوئ</string>
+    <string name="origin_set">د پیل ځای بدل شو</string>
+    <string name="chip_set_home">کور</string>
+    <string name="chip_set_work">د کار ځای</string>
+    <string name="route_no_names">وړاندیز شوې لار</string>
+    <string name="nav_map_note">ملي نقشه</string>
+    <string name="mode_unsupported">دا حالت لا نه دی ملاتړ شوی</string>
+    <string name="nav_origin_note">لارښوونه ستاسو له اوسني ځای دوام کوي</string>
+</resources>

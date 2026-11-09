@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="blue_primary">#1976D2</color>
+    <color name="blue_dark">#0D47A1</color>
+    <color name="amber">#FFB300</color>
+    <color name="route_purple">#7C4DFF</color>
+    <color name="ink">#1B2735</color>
+    <color name="ink_soft">#6B7788</color>
+    <color name="nav_light_blue">#7CC4FF</color>
+</resources>

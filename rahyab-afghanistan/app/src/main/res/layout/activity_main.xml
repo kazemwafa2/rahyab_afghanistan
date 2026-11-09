@@ -1,0 +1,878 @@
+<?xml version="1.0" encoding="utf-8"?>
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/root"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <org.maplibre.android.maps.MapView
+        android:id="@+id/mapView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+    <!-- حباب‌های زمان مسیرها روی نقشه (در کد ساخته می‌شوند) -->
+    <FrameLayout
+        android:id="@+id/bubbleLayer"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false" />
+
+    <!-- ================= بالا: سرصفحه مسیر / بنر ناوبری ================= -->
+    <LinearLayout
+        android:id="@+id/topBar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
+        android:layout_margin="10dp"
+        android:orientation="vertical">
+
+        <!-- سرصفحه پیش‌نمایش مسیر: مبدأ و مقصد -->
+        <LinearLayout
+            android:id="@+id/routeHeader"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_route_header"
+            android:elevation="8dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="14dp"
+            android:visibility="gone">
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/bg_dot_blue" />
+
+                    <TextView
+                        android:id="@+id/tvOrigin"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/ink"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnChangeOrigin"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="6dp"
+                        android:text="@string/change_origin"
+                        android:textColor="@color/blue_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <View
+                    android:layout_width="match_parent"
+                    android:layout_height="1dp"
+                    android:layout_marginTop="8dp"
+                    android:layout_marginBottom="8dp"
+                    android:background="#E6E9EF" />
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <View
+                        android:layout_width="14dp"
+                        android:layout_height="14dp"
+                        android:background="@drawable/bg_dot_red" />
+
+                    <TextView
+                        android:id="@+id/tvDestName"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/ink"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnChangeDest"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="6dp"
+                        android:text="@string/change_dest"
+                        android:textColor="@color/blue_primary"
+                        android:textSize="12sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/ivSwap"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:contentDescription="@string/swap_route"
+                android:padding="8dp"
+                android:src="@drawable/ic_swap"
+                app:tint="@color/ink" />
+        </LinearLayout>
+
+        <!-- بنر ناوبری مشکی با پیکان بزرگ -->
+        <LinearLayout
+            android:id="@+id/navBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_banner_black"
+            android:elevation="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:padding="16dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/ivNavArrow"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_turn_straight" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="16dp"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvNavDist"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAlignment="viewStart"
+                    android:textColor="#FFFFFF"
+                    android:textSize="28sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvNavText"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/nav_light_blue"
+                    android:textSize="22sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvNavInstr"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.8"
+                    android:textAlignment="viewStart"
+                    android:textColor="#FFFFFF"
+                    android:textSize="13sp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- «و بعد» -->
+        <LinearLayout
+            android:id="@+id/nextCard"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginEnd="6dp"
+            android:background="@drawable/bg_next_card"
+            android:elevation="10dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="6dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/ivNextArrow"
+                android:layout_width="28dp"
+                android:layout_height="28dp"
+                android:contentDescription="@null"
+                android:src="@drawable/ic_turn_straight" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="10dp"
+                android:text="@string/and_then"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+        </LinearLayout>
+
+        <!-- دکمه «تنظیمات نقشه و مسیر» (پیش‌نمایش مسیر) -->
+        <TextView
+            android:id="@+id/btnRouteSettings"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="10dp"
+            android:background="@drawable/bg_chip"
+            android:drawablePadding="8dp"
+            android:elevation="6dp"
+            android:gravity="center_vertical"
+            android:paddingStart="16dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="16dp"
+            android:paddingBottom="10dp"
+            android:text="@string/route_settings"
+            android:textColor="@color/ink"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone"
+            app:drawableEndCompat="@drawable/ic_tune"
+            app:drawableTint="@color/ink" />
+    </LinearLayout>
+
+    <!-- ================= پایین: دکمه‌های شناور + برگه‌ها + نوار ناوبری ================= -->
+    <LinearLayout
+        android:id="@+id/bottomStack"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_gravity="bottom"
+        android:orientation="vertical">
+
+        <FrameLayout
+            android:id="@+id/fabRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingStart="12dp"
+            android:paddingTop="6dp"
+            android:paddingEnd="12dp"
+            android:paddingBottom="10dp">
+
+            <!-- ستون چپ در ناوبری: قطب‌نما + سرعت‌سنج -->
+            <LinearLayout
+                android:id="@+id/leftCol"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="left|bottom"
+                android:gravity="center_horizontal"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/btnCompass"
+                    android:layout_width="54dp"
+                    android:layout_height="54dp"
+                    android:layout_marginBottom="12dp"
+                    android:background="@drawable/bg_compass"
+                    android:elevation="6dp"
+                    android:gravity="center"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+
+                <LinearLayout
+                    android:id="@+id/speedDial"
+                    android:layout_width="78dp"
+                    android:layout_height="78dp"
+                    android:background="@drawable/bg_speed_dial"
+                    android:elevation="6dp"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvSpeed"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="0"
+                        android:textColor="#FFFFFF"
+                        android:textSize="26sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvSpeedUnit"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:alpha="0.85"
+                        android:text="km/h"
+                        android:textColor="#D7E4FF"
+                        android:textSize="10sp" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <!-- ستون راست: لایه‌ها، موقعیت من، مسیریابی -->
+            <LinearLayout
+                android:id="@+id/fabColumn"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="right|bottom"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabLayers"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/layers"
+                    app:backgroundTint="#FFFFFF"
+                    app:fabSize="mini"
+                    app:srcCompat="@drawable/ic_layers"
+                    app:tint="@color/ink" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabLocation"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/my_location"
+                    app:backgroundTint="#FFFFFF"
+                    app:fabSize="normal"
+                    app:srcCompat="@drawable/ic_my_location"
+                    app:tint="@color/ink" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabRoute"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:contentDescription="@string/plan_route"
+                    app:backgroundTint="@color/blue_primary"
+                    app:fabSize="normal"
+                    app:srcCompat="@drawable/ic_route"
+                    app:tint="#FFFFFF" />
+            </LinearLayout>
+
+            <!-- منبع و انتساب (مجوز ODbL) -->
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal|bottom"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvSource"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:background="#B3FFFFFF"
+                    android:padding="3dp"
+                    android:textColor="@color/blue_dark"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
+
+                <TextView
+                    android:id="@+id/tvAttribution"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center_horizontal"
+                    android:layout_marginTop="2dp"
+                    android:background="#B3FFFFFF"
+                    android:padding="3dp"
+                    android:text="@string/attribution"
+                    android:textColor="#222222"
+                    android:textSize="9sp" />
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- نتایج جست‌وجو -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/resultsCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="6dp"
+            android:visibility="gone"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="8dp">
+
+            <ListView
+                android:id="@+id/lvResults"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:divider="#EEF0F4"
+                android:dividerHeight="1dp" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ===== برگه خانه: جست‌وجو، دسته‌ها، اخیر ===== -->
+        <LinearLayout
+            android:id="@+id/homeSheet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_sheet"
+            android:elevation="12dp"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@null"
+                android:src="@drawable/bg_handle" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_search_pill"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:paddingStart="16dp"
+                    android:paddingEnd="10dp">
+
+                    <ImageView
+                        android:layout_width="22dp"
+                        android:layout_height="22dp"
+                        android:contentDescription="@string/search_hint"
+                        android:src="@drawable/ic_search"
+                        app:tint="#5A6B85" />
+
+                    <EditText
+                        android:id="@+id/etSearch"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_marginStart="10dp"
+                        android:layout_weight="1"
+                        android:background="@null"
+                        android:hint="@string/where_to"
+                        android:imeOptions="actionSearch"
+                        android:importantForAutofill="no"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/ink"
+                        android:textColorHint="#7C879A"
+                        android:textDirection="locale"
+                        android:textSize="15sp" />
+
+                    <ImageView
+                        android:id="@+id/ivMic"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:contentDescription="@string/voice_search"
+                        android:padding="8dp"
+                        android:src="@drawable/ic_mic"
+                        app:tint="@color/blue_primary" />
+                </LinearLayout>
+
+                <ImageView
+                    android:id="@+id/btnProfile"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/settings"
+                    android:padding="11dp"
+                    android:src="@drawable/ic_person"
+                    app:tint="#7D8CA3" />
+            </LinearLayout>
+
+            <HorizontalScrollView
+                android:id="@+id/chipsScroll"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:scrollbars="none">
+
+                <LinearLayout
+                    android:id="@+id/chipsRow"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:paddingBottom="2dp" />
+            </HorizontalScrollView>
+
+            <TextView
+                android:id="@+id/tvRecentsTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/recents_title"
+                android:textAlignment="viewStart"
+                android:textColor="@color/ink"
+                android:textSize="16sp"
+                android:textStyle="bold"
+                android:visibility="gone" />
+
+            <LinearLayout
+                android:id="@+id/recentsList"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical" />
+        </LinearLayout>
+
+        <!-- ===== برگه مکان انتخاب‌شده ===== -->
+        <LinearLayout
+            android:id="@+id/panel"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_sheet"
+            android:elevation="12dp"
+            android:orientation="vertical"
+            android:paddingStart="18dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="18dp"
+            android:paddingBottom="14dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@null"
+                android:src="@drawable/bg_handle" />
+
+            <TextView
+                android:id="@+id/tvTitle"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:maxLines="2"
+                android:ellipsize="end"
+                android:textAlignment="viewStart"
+                android:textColor="@color/ink"
+                android:textSize="18sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvInfo"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:textAlignment="viewStart"
+                android:textColor="@color/ink_soft"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnRoute"
+                    android:layout_width="0dp"
+                    android:layout_height="52dp"
+                    android:layout_weight="1"
+                    android:backgroundTint="@color/blue_primary"
+                    android:text="@string/route_to"
+                    android:textSize="16sp"
+                    app:cornerRadius="26dp"
+                    app:icon="@drawable/ic_navigation"
+                    app:iconGravity="textStart"
+                    app:iconTint="#FFFFFF" />
+
+                <ImageView
+                    android:id="@+id/btnSave"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/save_place"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_bookmark"
+                    app:tint="@color/blue_primary" />
+
+                <ImageView
+                    android:id="@+id/btnShare"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/share"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_share"
+                    app:tint="@color/blue_primary" />
+
+                <ImageView
+                    android:id="@+id/btnClear"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_marginStart="10dp"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/clear"
+                    android:padding="12dp"
+                    android:src="@drawable/ic_close"
+                    app:tint="#7D8CA3" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ===== برگه پیش‌نمایش مسیر ===== -->
+        <LinearLayout
+            android:id="@+id/routeSheet"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_sheet"
+            android:elevation="12dp"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="8dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="14dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center_horizontal"
+                android:contentDescription="@null"
+                android:src="@drawable/bg_handle" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <LinearLayout
+                    android:id="@+id/tabCar"
+                    android:layout_width="0dp"
+                    android:layout_height="64dp"
+                    android:layout_marginEnd="8dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_tab_sel"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/ivTabCar"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_car"
+                        app:tint="@color/blue_primary" />
+
+                    <TextView
+                        android:id="@+id/tvTabCar"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tab_car"
+                        android:textColor="@color/blue_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tabFoot"
+                    android:layout_width="0dp"
+                    android:layout_height="64dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_tab"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/ivTabFoot"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_walk"
+                        app:tint="#6B7788" />
+
+                    <TextView
+                        android:id="@+id/tvTabFoot"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tab_walk"
+                        android:textColor="#6B7788"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvVia"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:textAlignment="viewStart"
+                android:textColor="@color/ink"
+                android:textSize="17sp"
+                android:textStyle="bold" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ImageView
+                    android:id="@+id/ivRouteMode"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:contentDescription="@null"
+                    android:src="@drawable/ic_car"
+                    app:tint="@color/ink" />
+
+                <TextView
+                    android:id="@+id/tvRouteTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:textColor="@color/ink"
+                    android:textSize="15sp" />
+
+                <View
+                    android:layout_width="1dp"
+                    android:layout_height="16dp"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:background="#D3D8E0" />
+
+                <TextView
+                    android:id="@+id/tvRouteDist"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/ink_soft"
+                    android:textSize="15sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvSafety"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/safety_notice"
+                android:textAlignment="viewStart"
+                android:textColor="@color/ink_soft"
+                android:textSize="11sp" />
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:orientation="horizontal">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnStart"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_marginEnd="10dp"
+                    android:layout_weight="1.2"
+                    android:backgroundTint="@color/blue_primary"
+                    android:text="@string/go_now"
+                    android:textSize="16sp"
+                    app:cornerRadius="27dp"
+                    app:icon="@drawable/ic_navigation"
+                    app:iconGravity="textStart"
+                    app:iconTint="#FFFFFF" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPreview"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="54dp"
+                    android:layout_weight="1"
+                    android:text="@string/preview_route"
+                    android:textColor="@color/ink"
+                    android:textSize="15sp"
+                    app:cornerRadius="27dp"
+                    app:strokeColor="#C9D3E3" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <!-- ===== نوار پایین ناوبری ===== -->
+        <LinearLayout
+            android:id="@+id/navBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_sheet"
+            android:elevation="12dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingStart="14dp"
+            android:paddingTop="12dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="12dp"
+            android:visibility="gone">
+
+            <ImageView
+                android:id="@+id/btnMute"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_icon_box"
+                android:contentDescription="@string/mute_voice"
+                android:padding="13dp"
+                android:src="@drawable/ic_voice"
+                app:tint="#4B6A93" />
+
+            <LinearLayout
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:gravity="center_horizontal"
+                android:orientation="vertical">
+
+                <TextView
+                    android:id="@+id/tvEta"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/ink"
+                    android:textSize="20sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvRemainTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="2dp"
+                    android:textColor="@color/ink_soft"
+                    android:textSize="15sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/btnStopNav"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:background="@drawable/bg_icon_box"
+                android:contentDescription="@string/stop_nav"
+                android:padding="14dp"
+                android:src="@drawable/ic_close"
+                app:tint="#D32F2F" />
+        </LinearLayout>
+
+        <com.google.android.material.bottomnavigation.BottomNavigationView
+            android:id="@+id/bottomNav"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="#FFFFFF"
+            android:elevation="14dp"
+            app:itemIconTint="@color/nav_item"
+            app:itemTextColor="@color/nav_item"
+            app:labelVisibilityMode="labeled"
+            app:menu="@menu/bottom_nav" />
+    </LinearLayout>
+</FrameLayout>

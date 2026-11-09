@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- مدیریت بسته‌های نقشه آفلاین -->
+    <string name="pkg_note">برای نقشه، جست‌وجو و مسیریابی بدون انترنت، بسته منطقه خود را دانلود کنید. دانلود با وای‌فای توصیه می‌شود. پس از نصب، برنامه بدون انترنت کار می‌کند.</string>
+    <string name="pkg_loading">در حال خواندن فهرست بسته‌ها…</string>
+    <string name="pkg_manifest_error">فهرست بسته‌ها خوانده نشد. انترنت یا نشانی منبع را بررسی کنید و دوباره «بروزرسانی» را بزنید.</string>
+    <string name="pkg_available">بسته‌های موجود:</string>
+    <string name="pkg_empty">در حال حاضر هیچ بسته‌ای منتشر نشده است. بعداً «بروزرسانی» را بزنید.</string>
+    <string name="pkg_installed_list">بسته‌های نصب‌شده:</string>
+    <string name="pkg_system">همراه برنامه — نصب خودکار (قابل حذف نیست)</string>
+    <string name="pkg_installed_ok">نصب شده</string>
+    <string name="pkg_installed_meta">نصب شده • نسخه داده: %1$s • %2$s</string>
+    <string name="pkg_download">دانلود</string>
+    <string name="pkg_resume">ادامه دانلود</string>
+    <string name="pkg_stop">توقف</string>
+    <string name="pkg_stopped">دانلود متوقف شد؛ بعداً می‌توانید ادامه دهید.</string>
+    <string name="pkg_delete">حذف</string>
+    <string name="pkg_delete_confirm">بسته «%1$s» حذف شود؟ نقشه، جست‌وجو و مسیریابی آفلاین این منطقه از کار می‌افتد.</string>
+    <string name="pkg_downloading">دانلود: %1$s از %2$s</string>
+    <string name="pkg_verifying">بررسی صحت فایل…</string>
+    <string name="pkg_extracting">نصب بسته…</string>
+    <string name="pkg_done">بسته با موفقیت نصب شد</string>
+    <string name="pkg_failed_generic">دانلود یا نصب ناموفق بود. دوباره امتحان کنید.</string>
+    <string name="pkg_one_at_time">یک دانلود در هر لحظه انجام می‌شود. ابتدا دانلود فعلی را متوقف کنید.</string>
+    <string name="err_no_space">فضای خالی گوشی کافی نیست. ابتدا فضا آزاد کنید.</string>
+    <string name="err_no_space_detail">برای دانلود این بسته (%1$s) فضای خالی کافی نیست.\nفضای خالی گوشی: %2$s</string>
+    <string name="err_checksum">فایل دانلودشده خراب است. دانلود از نو انجام می‌شود؛ اتصال خود را بررسی کنید.</string>
+    <string name="err_invalid">بسته دانلودشده معتبر نیست یا ناقص است. بسته قبلی دست‌نخورده باقی ماند.</string>
+    <string name="manifest_source">منبع بسته‌ها: %1$s</string>
+    <string name="pkg_free_space">فضای خالی گوشی: %1$s</string>
+    <string name="refresh">بروزرسانی</string>
+
+    <!-- اعلان ناوبری -->
+    <string name="notif_channel">ناوبری</string>
+    <string name="notif_channel_desc">نمایش وضعیت ناوبری هنگام خاموش بودن صفحه</string>
+    <string name="notif_nav_title">ناوبری فعال است</string>
+    <string name="notif_nav_text">راه‌یاب در حال راهنمایی شماست</string>
+    <string name="notif_nav_stop">توقف</string>
+</resources>

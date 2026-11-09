@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="where_to">کجا می‌خواهید بروید؟</string>
+    <string name="recents_title">مکان‌های اخیر</string>
+    <string name="route_to">مسیر</string>
+    <string name="go_now">برویم</string>
+    <string name="preview_route">مرور مسیر</string>
+    <string name="change_origin">تغییر مبدأ</string>
+    <string name="change_dest">تغییر مقصد</string>
+    <string name="via_fmt">از طریق %1$s</string>
+    <string name="tab_car">موتر</string>
+    <string name="tab_walk">پیاده</string>
+    <string name="route_settings">تنظیمات نقشه و مسیر</string>
+    <string name="north">شمال</string>
+    <string name="heading">جهت</string>
+    <string name="and_then">و بعد</string>
+    <string name="arrival_label">رسیدن</string>
+    <string name="map_mode_title">حالت نقشه</string>
+    <string name="map_auto">خودکار</string>
+    <string name="map_day">روز</string>
+    <string name="map_night">شب</string>
+    <string name="layers">لایه‌ها</string>
+    <string name="voice_search">جست‌وجوی صوتی</string>
+    <string name="voice_search_unavailable">جست‌وجوی صوتی روی این گوشی در دسترس نیست.</string>
+    <string name="set_home_hint">خانه هنوز ثبت نشده است. مکانی را جست‌وجو کنید و با دکمه «ذخیره» به‌عنوان خانه ثبت کنید.</string>
+    <string name="set_work_hint">محل کار هنوز ثبت نشده است. مکانی را جست‌وجو کنید و با دکمه «ذخیره» به‌عنوان محل کار ثبت کنید.</string>
+    <string name="steps_title">مرور مسیر</string>
+    <string name="swap_route">جابجایی مبدأ و مقصد</string>
+    <string name="pick_origin_hint">مبدأ تازه را جست‌وجو کنید</string>
+    <string name="pick_dest_hint">مقصد تازه را جست‌وجو کنید</string>
+    <string name="origin_set">مبدأ تغییر کرد</string>
+    <string name="chip_set_home">خانه</string>
+    <string name="chip_set_work">محل کار</string>
+    <string name="route_no_names">مسیر پیشنهادی</string>
+    <string name="nav_map_note">نقشه سراسری</string>
+    <string name="mode_unsupported">این حالت هنوز پشتیبانی نمی‌شود</string>
+    <string name="nav_origin_note">ناوبری از موقعیت فعلی شما ادامه می‌یابد</string>
+</resources>

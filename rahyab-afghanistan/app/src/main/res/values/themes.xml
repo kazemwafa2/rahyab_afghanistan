@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.Rahyab" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/blue_primary</item>
+        <item name="colorPrimaryVariant">@color/blue_dark</item>
+        <item name="colorSecondary">@color/amber</item>
+        <item name="android:windowBackground">@android:color/white</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/white</item>
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:windowLightNavigationBar">true</item>
+    </style>
+    <style name="FeatureRow">
+        <item name="android:layout_width">match_parent</item>
+        <item name="android:layout_height">wrap_content</item>
+        <item name="android:layout_marginTop">8dp</item>
+        <item name="android:drawablePadding">10dp</item>
+        <item name="android:gravity">center_vertical</item>
+        <item name="android:textAlignment">viewStart</item>
+        <item name="android:textColor">#243247</item>
+        <item name="android:textSize">14sp</item>
+        <item name="android:drawableStart">@drawable/ic_check_circle</item>
+    </style>
+</resources>

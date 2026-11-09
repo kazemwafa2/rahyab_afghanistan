@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="where_to">Where to?</string>
+    <string name="recents_title">Recent places</string>
+    <string name="route_to">Directions</string>
+    <string name="go_now">Go</string>
+    <string name="preview_route">Route preview</string>
+    <string name="change_origin">Change start</string>
+    <string name="change_dest">Change destination</string>
+    <string name="via_fmt">Via %1$s</string>
+    <string name="tab_car">Car</string>
+    <string name="tab_walk">Walk</string>
+    <string name="route_settings">Map and route settings</string>
+    <string name="north">N</string>
+    <string name="heading">Hdg</string>
+    <string name="and_then">Then</string>
+    <string name="arrival_label">Arrive</string>
+    <string name="map_mode_title">Map mode</string>
+    <string name="map_auto">Automatic</string>
+    <string name="map_day">Day</string>
+    <string name="map_night">Night</string>
+    <string name="layers">Layers</string>
+    <string name="voice_search">Voice search</string>
+    <string name="voice_search_unavailable">Voice search is not available on this phone.</string>
+    <string name="set_home_hint">Home is not set yet. Search a place and save it as Home with the Save button.</string>
+    <string name="set_work_hint">Work is not set yet. Search a place and save it as Work with the Save button.</string>
+    <string name="steps_title">Route preview</string>
+    <string name="swap_route">Swap start and destination</string>
+    <string name="pick_origin_hint">Search for the new start</string>
+    <string name="pick_dest_hint">Search for the new destination</string>
+    <string name="origin_set">Start changed</string>
+    <string name="chip_set_home">Home</string>
+    <string name="chip_set_work">Work</string>
+    <string name="route_no_names">Suggested route</string>
+    <string name="nav_map_note">Nationwide map</string>
+    <string name="mode_unsupported">This mode is not supported yet</string>
+    <string name="nav_origin_note">Navigation continues from your current location</string>
+</resources>

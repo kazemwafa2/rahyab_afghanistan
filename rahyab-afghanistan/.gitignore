@@ -1,0 +1,18 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+captures/
+*.jks
+*.keystore
+.DS_Store
+# ابزار ساخت داده
+tools/work/
+work/
+dist/
+*.pbf
+*.pmtiles
+*.rafgraph
+*.rafidx
+*.rahpkg.zip

@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- د آفلاین نقشو بنډلونه اداره کول -->
+    <string name="pkg_note">د انټرنېټ پرته نقشې، لټون او لارموندنې لپاره، خپل د سیمې بنډل ډاونلوډ کړئ. ډاونلوډ په وایفای سپارښتنه کیږي. له نصب وروسته برنامه پرته له انټرنېټ کار کوي.</string>
+    <string name="pkg_loading">د بنډلونو لیست لوستل کیږي…</string>
+    <string name="pkg_manifest_error">د بنډلونو لیست ونه لوستل شو. انټرنېټ یا د سرچینې پته وګورئ او بیا «نوي کول» فشار کړئ.</string>
+    <string name="pkg_available">موجود بنډلونه:</string>
+    <string name="pkg_empty">اوسمهال هېڅ بنډل خپور نه دی. وروسته «نوي کول» فشار کړئ.</string>
+    <string name="pkg_installed_list">نصب شوي بنډلونه:</string>
+    <string name="pkg_system">له پروګرام سره — اتوماتیک نصب (د منګول نه دی)</string>
+    <string name="pkg_installed_ok">نصب شوی</string>
+    <string name="pkg_installed_meta">نصب شوی • د ډاټا نسخه: %1$s • %2$s</string>
+    <string name="pkg_download">ډاونلوډ</string>
+    <string name="pkg_resume">ډاونلوډ دوام</string>
+    <string name="pkg_stop">دروول</string>
+    <string name="pkg_stopped">ډاونلوډ ودرول شو؛ وروسته یې دوام ورکولای شئ.</string>
+    <string name="pkg_delete">ړنګول</string>
+    <string name="pkg_delete_confirm">«%1$s» بنډل ړنګ شي؟ د دې سیمې آفلاین نقشه، لټون او لارموندنه بندېږي.</string>
+    <string name="pkg_downloading">ډاونلوډ: %1$s له %2$s</string>
+    <string name="pkg_verifying">د فایل د روغتیا کتنه…</string>
+    <string name="pkg_extracting">بنډل نصب کیږي…</string>
+    <string name="pkg_done">بنډل په بریالیتوب سره نصب شو</string>
+    <string name="pkg_failed_generic">ډاونلوډ یا نصب ناکام شو. بیا هڅه وکړئ.</string>
+    <string name="pkg_one_at_time">په یو وخت کې یو ډاونلوډ ترسره کیږي. لومړی اوسنی ډاونلوډ ودرولئ.</string>
+    <string name="err_no_space">د تلیفون خالي ځای کافي نه دی. لومړی ځای خالي کړئ.</string>
+    <string name="err_no_space_detail">د دې بنډل ډاونلوډ لپاره (%1$s) کافي خالي ځای نشته.\nد تلیفون خالي ځای: %2$s</string>
+    <string name="err_checksum">ډاونلوډ شوی فایل خراب دی. ډاونلوډ له سره کیږي؛ خپله اړیکه وګورئ.</string>
+    <string name="err_invalid">ډاونلوډ شوی بنډل معتبر نه دی یا نیمګړی دی. پخوانی بنډل پاتې شو.</string>
+    <string name="manifest_source">د بنډلونو سرچینه: %1$s</string>
+    <string name="pkg_free_space">د تلیفون خالي ځای: %1$s</string>
+    <string name="refresh">نوي کول</string>
+
+    <!-- د لارښوونې خبرتیا -->
+    <string name="notif_channel">لارښودنه</string>
+    <string name="notif_channel_desc">کله چې سکرین تړلی وي د لارښوونې حالت ښودل</string>
+    <string name="notif_nav_title">لارښودنه فعاله ده</string>
+    <string name="notif_nav_text">لارښود ستاسو لارښوونه کوي</string>
+    <string name="notif_nav_stop">دروول</string>
+</resources>

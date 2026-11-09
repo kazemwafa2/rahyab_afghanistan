@@ -1,0 +1,85 @@
+name: publish-map-data
+
+# انتشار بسته‌های آفلاین راه‌یاب در ریلیز ثابت «map-data».
+# این ورک‌فلو همه مراحل فنی را خودکار انجام می‌دهد:
+#   ۱) دانلود داده رسمی OSM افغانستان (Geofabrik)
+#   ۲) ساخت بسته پایه کشوری + ۳۴ بسته ولایتی (کاشی + گراف + اندیس)
+#   ۳) ساخت manifest.json و SHA256SUMS.txt
+#   ۴) بارگذاری همه فایل‌ها در ریلیز map-data (همان نشانی‌هایی که برنامه می‌خواند)
+#
+# استفاده: در گیت‌هاب → تب Actions → «publish-map-data» → Run workflow
+# پس از پایان، دانلودهای برنامه خودبه‌خود کار می‌کنند (نشانی در Config.kt ثابت است).
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    steps:
+      - name: checkout
+        uses: actions/checkout@v4
+
+      - name: setup JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: install Python deps
+        run: pip install osmium numpy pyshp
+
+      - name: download planetiler
+        run: |
+          mkdir -p .tools/planetiler
+          curl -L -o .tools/planetiler/planetiler.jar \
+            https://github.com/onthegomap/planetiler/releases/download/v0.8.3/planetiler.jar
+
+      - name: download Afghanistan OSM extract (Geofabrik)
+        run: |
+          mkdir -p workspace/data
+          curl -L -o workspace/data/afghanistan-latest.osm.pbf \
+            https://download.geofabrik.de/asia/afghanistan-latest.osm.pbf
+
+      - name: build base package (nationwide)
+        run: |
+          export RAHYAB_WORKSPACE=$GITHUB_WORKSPACE/workspace
+          export RAHYAB_PROJECT=$GITHUB_WORKSPACE
+          export RAHYAB_PLANETILER=$GITHUB_WORKSPACE/.tools/planetiler/planetiler.jar
+          python3 tools/build_base_package.py
+
+      - name: split all provinces + build packages
+        run: |
+          export RAHYAB_WORKSPACE=$GITHUB_WORKSPACE/workspace
+          export RAHYAB_PROJECT=$GITHUB_WORKSPACE
+          export RAHYAB_PLANETILER=$GITHUB_WORKSPACE/.tools/planetiler/planetiler.jar
+          for g in 0 1 2 3 4; do
+            python3 tools/build_all_provinces.py --shard "$g"
+          done
+
+      - name: regenerate manifest + checksums
+        run: |
+          cd workspace/dist_all
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/map-data"
+          python3 ../../tools/make_manifest.py ./*.rahpkg.zip \
+            --out manifest.json --base-url "$BASE_URL"
+          sha256sum *.rahpkg.zip manifest.json > SHA256SUMS.txt
+
+      - name: publish to release map-data
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          cd workspace/dist_all
+          gh release view map-data >/dev/null 2>&1 || \
+            gh release create map-data --title "بسته‌های آفلاین راه‌یاب" \
+              --notes "بسته پایه کشوری + ۳۴ ولایت — ساخته‌شده خودکار توسط ورک‌فلو. © OpenStreetMap contributors (ODbL)"
+          gh release upload map-data --clobber *.rahpkg.zip manifest.json SHA256SUMS.txt
