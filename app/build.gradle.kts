@@ -6,7 +6,7 @@ plugins {
 val ksFile: String? = System.getenv("KEYSTORE_FILE")
 
 // نشانی مخزن — یک بار در gradle.properties تغییر دهید (rahyabGithubUser=نام_کاربری_شما)
-val ghUser: String = (project.findProperty("rahyabGithubUser") as String? ?: "YOUR_USER")
+val ghUser: String = (project.findProperty("rahyabGithubUser") as String? ?: "kazemwafa2")
 
 android {
     namespace = "af.rahyab.app"
