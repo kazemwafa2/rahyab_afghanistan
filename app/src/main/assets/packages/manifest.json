@@ -1,0 +1,596 @@
+{
+ "schema": 1,
+ "updated": "2026-11-10T00:00:00Z",
+ "source": "bundled",
+ "packages": [
+  {
+   "id": "afghanistan",
+   "name": "افغانستان — بسته پایه کشوری",
+   "region": "همه ۳۴ ولایت",
+   "dataDate": "2025-11",
+   "builderVersion": "0.8.1",
+   "url": "asset://initial/afghanistan.rahpkg.zip",
+   "sizeBytes": 24722469,
+   "sha256": "9f2d7084e1d548a55f2ddf449974d012868dc8f03010318c25bd035139e41657",
+   "note": "این بسته همراه خود برنامه است و در صورت نیاز از همین‌جا دوباره نصب می‌شود — بدون انترنت."
+  },
+  {
+   "id": "kabul",
+   "name": "کابل",
+   "region": "ولایت کابل",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/kabul-2026-11-10.rahpkg.zip",
+   "sizeBytes": 662502,
+   "sha256": "51ffd2510ce43b7042f55cb1427a82e756d5494973ea67346e77ca126cf20ace",
+   "bounds": {
+    "west": 68.8,
+    "south": 34.15,
+    "east": 69.7,
+    "north": 35.05
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "herat",
+   "name": "هرات",
+   "region": "ولایت هرات",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/herat-2026-11-10.rahpkg.zip",
+   "sizeBytes": 516112,
+   "sha256": "ba8e6338e456f2023beef0927c9e86e1fcd609a4fec8d4be783eeac7fcd30069",
+   "bounds": {
+    "west": 60.2,
+    "south": 32.85,
+    "east": 63.4,
+    "north": 34.95
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "kandahar",
+   "name": "قندهار",
+   "region": "ولایت قندهار",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/kandahar-2026-11-10.rahpkg.zip",
+   "sizeBytes": 362282,
+   "sha256": "c3f62b3837cf1d767ccee9b6d74b98227ffeabc1efbed6708d788f43b51ac01f",
+   "bounds": {
+    "west": 64.7,
+    "south": 29.95,
+    "east": 67.0,
+    "north": 32.15
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "balkh",
+   "name": "بلخ",
+   "region": "ولایت بلخ",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/balkh-2026-11-10.rahpkg.zip",
+   "sizeBytes": 555842,
+   "sha256": "fb3ae3b422e965e69fd5b5cb1c75997b22f2af58c0d3347f08662bc1337d0be6",
+   "bounds": {
+    "west": 65.6,
+    "south": 36.25,
+    "east": 67.6,
+    "north": 37.45
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "nangarhar",
+   "name": "ننگرهار",
+   "region": "ولایت ننگرهار",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/nangarhar-2026-11-10.rahpkg.zip",
+   "sizeBytes": 662925,
+   "sha256": "74936e2722fd3fb8ebb80a7f0fd3d43c10db3c752ebe4015decb0a61405e8019",
+   "bounds": {
+    "west": 69.8,
+    "south": 33.65,
+    "east": 71.3,
+    "north": 35.05
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "ghazni",
+   "name": "غزنی",
+   "region": "ولایت غزنی",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/ghazni-2026-11-10.rahpkg.zip",
+   "sizeBytes": 603032,
+   "sha256": "90765c72b972c936d4e3f1c4aacbcaea8d5915921468382c0f363c7222083996",
+   "bounds": {
+    "west": 66.9,
+    "south": 32.25,
+    "east": 69.2,
+    "north": 34.15
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "helmand",
+   "name": "هلمند",
+   "region": "ولایت هلمند",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/helmand-2026-11-10.rahpkg.zip",
+   "sizeBytes": 486721,
+   "sha256": "bce599f3ea8544e3bb655cde970e9246618c3a4ae4a6a844ff5637231706c9fb",
+   "bounds": {
+    "west": 61.7,
+    "south": 29.35,
+    "east": 65.3,
+    "north": 32.65
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "bamyan",
+   "name": "بامیان",
+   "region": "ولایت بامیان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/bamyan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 1000164,
+   "sha256": "4074c462223b0d29dc680c810403c9377b85492446ddc7e3720ead46cf2f7a09",
+   "bounds": {
+    "west": 66.2,
+    "south": 33.25,
+    "east": 68.3,
+    "north": 35.25
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "kunduz",
+   "name": "کندوز",
+   "region": "ولایت کندوز",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/kunduz-2026-11-10.rahpkg.zip",
+   "sizeBytes": 428953,
+   "sha256": "bb96134b0ba6ae94b1903f9c5cd7339ed9295881169bf3a0b783382724c85282",
+   "bounds": {
+    "west": 68.3,
+    "south": 36.25,
+    "east": 69.3,
+    "north": 37.45
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "takhar",
+   "name": "تخار",
+   "region": "ولایت تخار",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/takhar-2026-11-10.rahpkg.zip",
+   "sizeBytes": 839760,
+   "sha256": "da4a4c684a27d92f0b40e95dbbb19157f75afc1a16a1b333a85b5298e29a7521",
+   "bounds": {
+    "west": 69.3,
+    "south": 36.15,
+    "east": 71.0,
+    "north": 37.65
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "badakhshan",
+   "name": "بدخشان",
+   "region": "ولایت بدخشان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/badakhshan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 1591569,
+   "sha256": "ae733db50db909cf487dda2480eccfc177666deadef01d10eeada22f9a4fb58c",
+   "bounds": {
+    "west": 70.25,
+    "south": 34.3,
+    "east": 75.15,
+    "north": 38.49
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "baghlan",
+   "name": "بغلان",
+   "region": "ولایت بغلان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/baghlan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 833114,
+   "sha256": "e32401c05cc260f6f3c85514448635a81e9f9acc8d93fc5f232733a77b4eb4bb",
+   "bounds": {
+    "west": 67.6,
+    "south": 35.2,
+    "east": 69.45,
+    "north": 36.7
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "parwan",
+   "name": "پروان",
+   "region": "ولایت پروان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/parwan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 476148,
+   "sha256": "89f05b41f2c9b3307960f194238dec2f8ff061a537531b27f987a3ce1fb20c0e",
+   "bounds": {
+    "west": 68.4,
+    "south": 34.75,
+    "east": 69.6,
+    "north": 35.8
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "logar",
+   "name": "لوگر",
+   "region": "ولایت لوگر",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/logar-2026-11-10.rahpkg.zip",
+   "sizeBytes": 634186,
+   "sha256": "d5ee0b75f6925ab6ea30661f2153bf4a2024f0c0bf4edb7d774011b93d8893b1",
+   "bounds": {
+    "west": 68.5,
+    "south": 33.55,
+    "east": 69.5,
+    "north": 34.65
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "maidan_wardak",
+   "name": "میدان وردک",
+   "region": "ولایت میدان وردک",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/maidan_wardak-2026-11-10.rahpkg.zip",
+   "sizeBytes": 634715,
+   "sha256": "b8109dd4805e397e2a600eb9d8e119373e95bc23c4ec1d40669d5dc328d1ce9d",
+   "bounds": {
+    "west": 67.3,
+    "south": 33.6,
+    "east": 69.0,
+    "north": 34.95
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "kapisa",
+   "name": "کاپیسا",
+   "region": "ولایت کاپیسا",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/kapisa-2026-11-10.rahpkg.zip",
+   "sizeBytes": 367533,
+   "sha256": "03b4fe30172aa0ba40492b4c278f46f399bfd7dc993ecf36d3efa010628ff615",
+   "bounds": {
+    "west": 69.2,
+    "south": 34.55,
+    "east": 70.0,
+    "north": 35.35
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "panjshir",
+   "name": "پنجشیر",
+   "region": "ولایت پنجشیر",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/panjshir-2026-11-10.rahpkg.zip",
+   "sizeBytes": 455001,
+   "sha256": "da4a39c4fe60c41b1561f6f69b0a3b71e926f107e9f242197e4bc073cd61d22a",
+   "bounds": {
+    "west": 68.9,
+    "south": 34.95,
+    "east": 69.9,
+    "north": 35.95
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "laghman",
+   "name": "لغمان",
+   "region": "ولایت لغمان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/laghman-2026-11-10.rahpkg.zip",
+   "sizeBytes": 383448,
+   "sha256": "74139fd72fd9b51da23912687df98d014a8926058660b432072a32d410cc4d29",
+   "bounds": {
+    "west": 69.9,
+    "south": 34.35,
+    "east": 70.8,
+    "north": 35.05
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "kunar",
+   "name": "کنر",
+   "region": "ولایت کنر",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/kunar-2026-11-10.rahpkg.zip",
+   "sizeBytes": 385843,
+   "sha256": "e0931bbd3e9e6b18f83e3aa9a980f51ccd92851dcb734649ff42155a70437c6a",
+   "bounds": {
+    "west": 70.4,
+    "south": 34.35,
+    "east": 71.7,
+    "north": 35.6
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "nuristan",
+   "name": "نورستان",
+   "region": "ولایت نورستان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/nuristan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 467663,
+   "sha256": "efb2fe7ea049527dc1abaea229dbe82f19a09016e80eb3385db686ffa5ddcb3a",
+   "bounds": {
+    "west": 70.2,
+    "south": 34.55,
+    "east": 71.5,
+    "north": 35.95
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "paktia",
+   "name": "پکتیا",
+   "region": "ولایت پکتیا",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/paktia-2026-11-10.rahpkg.zip",
+   "sizeBytes": 378254,
+   "sha256": "7a13797bd3537310402b1d185aea31f422b9c2a4aad4544086398625df35e87f",
+   "bounds": {
+    "west": 68.8,
+    "south": 33.25,
+    "east": 70.0,
+    "north": 34.15
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "paktika",
+   "name": "پکتیکا",
+   "region": "ولایت پکتیکا",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/paktika-2026-11-10.rahpkg.zip",
+   "sizeBytes": 394984,
+   "sha256": "035755fe64aa7b1b399f14cec1f0cd45668034fbfd41774b5b762f46a7d686be",
+   "bounds": {
+    "west": 67.7,
+    "south": 31.65,
+    "east": 69.4,
+    "north": 33.7
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "khost",
+   "name": "خوست",
+   "region": "ولایت خوست",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/khost-2026-11-10.rahpkg.zip",
+   "sizeBytes": 373963,
+   "sha256": "a2392aaf5c9362666d66cadf8b578564e6222ca1eb1e9d1f618240c9b623df95",
+   "bounds": {
+    "west": 69.4,
+    "south": 33.05,
+    "east": 70.8,
+    "north": 34.1
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "zabul",
+   "name": "زابل",
+   "region": "ولایت زابل",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/zabul-2026-11-10.rahpkg.zip",
+   "sizeBytes": 459806,
+   "sha256": "5972ff9dbcd5c387494ae328fc45d2c075d8e0772a01c7c9af2252b8490dd512",
+   "bounds": {
+    "west": 66.0,
+    "south": 30.75,
+    "east": 68.0,
+    "north": 32.55
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "urozgan",
+   "name": "ارزگان",
+   "region": "ولایت ارزگان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/urozgan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 468696,
+   "sha256": "23200cfd18212cb78df18fb20bdd498b588e6bcdb20cade825f3675af6d25e97",
+   "bounds": {
+    "west": 65.2,
+    "south": 31.45,
+    "east": 67.2,
+    "north": 33.35
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "farah",
+   "name": "فراه",
+   "region": "ولایت فراه",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/farah-2026-11-10.rahpkg.zip",
+   "sizeBytes": 354437,
+   "sha256": "8a1f9c3ff9f9eb3052bd1bd4d5e79dcb0cde4dad266247a15b8efa42ed41a8e7",
+   "bounds": {
+    "west": 60.5,
+    "south": 31.85,
+    "east": 63.3,
+    "north": 33.75
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "nimruz",
+   "name": "نیمروز",
+   "region": "ولایت نیمروز",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/nimruz-2026-11-10.rahpkg.zip",
+   "sizeBytes": 214302,
+   "sha256": "c75304b663bbc2929d300c7cf234db3759016e59b307d71ad49dfdb0795ea3d1",
+   "bounds": {
+    "west": 60.7,
+    "south": 28.95,
+    "east": 63.5,
+    "north": 31.65
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "badghis",
+   "name": "بادغیس",
+   "region": "ولایت بادغیس",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/badghis-2026-11-10.rahpkg.zip",
+   "sizeBytes": 478899,
+   "sha256": "d6dfc4792f1bc2f46f9f05a854846421397eb68a342794a23ba2b22538788b30",
+   "bounds": {
+    "west": 61.9,
+    "south": 33.85,
+    "east": 64.1,
+    "north": 35.7
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "ghor",
+   "name": "غور",
+   "region": "ولایت غور",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/ghor-2026-11-10.rahpkg.zip",
+   "sizeBytes": 526673,
+   "sha256": "d1472240f257689bc4d98530b4994fdf226e32930cb91336ab36bfc3851b8cb0",
+   "bounds": {
+    "west": 62.8,
+    "south": 32.85,
+    "east": 65.5,
+    "north": 35.05
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "faryab",
+   "name": "فاریاب",
+   "region": "ولایت فاریاب",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/faryab-2026-11-10.rahpkg.zip",
+   "sizeBytes": 350207,
+   "sha256": "5a364998b4034059b1630e82160ab73f4c94d9abf71e577b8998d81b5ff13b37",
+   "bounds": {
+    "west": 63.2,
+    "south": 35.35,
+    "east": 65.1,
+    "north": 37.25
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "jowzjan",
+   "name": "جوزجان",
+   "region": "ولایت جوزجان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/jowzjan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 293290,
+   "sha256": "f7f4a2286cc4f00d71049fe7fa570cd0d68cd7820d867d857769e1441b95e45a",
+   "bounds": {
+    "west": 65.4,
+    "south": 36.45,
+    "east": 67.1,
+    "north": 37.55
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "sar_e_pol",
+   "name": "سرپل",
+   "region": "ولایت سرپل",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/sar_e_pol-2026-11-10.rahpkg.zip",
+   "sizeBytes": 460802,
+   "sha256": "041f2380d14ffc045dfc41b11dd01ba10268950770ac3e30630a3c3c4d7724fe",
+   "bounds": {
+    "west": 65.1,
+    "south": 35.15,
+    "east": 66.7,
+    "north": 36.65
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "samangan",
+   "name": "سمنگان",
+   "region": "ولایت سمنگان",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/samangan-2026-11-10.rahpkg.zip",
+   "sizeBytes": 777198,
+   "sha256": "a2051e57a51d1f1a8598573f363077accb936842a9055ab3755a29b1000f9dae",
+   "bounds": {
+    "west": 65.9,
+    "south": 35.35,
+    "east": 67.7,
+    "north": 36.75
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  },
+  {
+   "id": "daykundi",
+   "name": "دایکندی",
+   "region": "ولایت دایکندی",
+   "dataDate": "2026-11-10",
+   "builderVersion": "1.2.0",
+   "url": "asset://packages/daykundi-2026-11-10.rahpkg.zip",
+   "sizeBytes": 794149,
+   "sha256": "e306e9ad0ef90f282208a842610e2fff46a2c10b23b148b3372a9a777324b466",
+   "bounds": {
+    "west": 65.3,
+    "south": 33.35,
+    "east": 67.1,
+    "north": 34.8
+   },
+   "note": "بسته ولایتی — نقشه، مسیریابی و جست‌وجوی همان ولایت بدون انترنت"
+  }
+ ]
+}

@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== پښتو ژباړه — v0.9.3 ===== -->
+
+    <!-- ویونکی -->
+    <string name="voice_state">د ویونکي حالت</string>
+    <string name="voice_source">غږ غوره کړئ</string>
+    <string name="voice_system_option">د تلیفون خبرو موټور (د همدې ژبې غږ نصبولو ته اړتیا لري)</string>
+    <string name="voice_volume">د غږ لوړوالی</string>
+    <string name="voice_speed">د خبرو چټکتیا</string>
+    <string name="voice_list_note">هر غږ %1$d ثبت شوي جملې لري — بشپړ آفلاین؛ د انتخاب کولو دمخه د پلې کولو تڼۍ کې یې واورئ.</string>
+    <string name="voice_female">ښځینه غږ</string>
+    <string name="voice_male">نارینه غږ</string>
+    <string name="voice_play">ازموینیز پلې کول</string>
+    <string name="voice_bluetooth">د بلوټوت له لارې غږ پلې کول</string>
+    <string name="voice_during_call">د اړیکې په مهال غږ پلې کول</string>
+    <string name="voice_system_unavailable">پدې تلیفون کې د دې ژبې غږ نصب نه دی</string>
+    <string name="voice_saved_msg">د غږ امستنې خوندي شوې</string>
+    <string name="voice_lang_note">د غږیز لارښود ژبه د پلېکاڼي (اپ) ژبې تعقیبوي (د تلیفون له ژبې خپلواکه). اوسنۍ ژبه: %1$s</string>
+    <string name="voice_group_dari">دري غږونه</string>
+    <string name="voice_group_pashto">پښتو غږونه</string>
+    <string name="voice_group_english">انګلیسي غږونه</string>
+    <string name="voice_active_tag">فعال — همدا غږ لارښوونه کوي</string>
+    <string name="voice_lang_mismatch_toast">د %1$s غږ خوندي شو — کله چې د اپ ژبه %2$s کړئ، په همدې غږ به لارښوونه وشي.</string>
+    <string name="voice_lang_dari_name">دري</string>
+    <string name="voice_lang_pashto_name">پښتو</string>
+    <string name="voice_lang_english_name">انګلیسي</string>
+
+    <!-- خبرتیاوې -->
+    <string name="alerts_title">د خبرتیاوې امستنې</string>
+    <string name="alert_bump">د چټک‌گیرو خبرتیا</string>
+    <string name="alert_accident">د پېښې (ټکر) خبرتیا</string>
+    <string name="alert_traffic">د ترافیکې ګنګلتیا خبرتیا</string>
+    <string name="alert_closed">د سړک تړل کېدو خبرتیا</string>
+    <string name="alert_hazard">د سړک خطر خبرتیا</string>
+    <string name="alert_cam">د چټکتیا کمرې خبرتیا</string>
+    <string name="alert_speed">د موټر د زیاتې چټکتیا خبرتیا</string>
+    <string name="alert_speed_limit">د خبرتیا حد: %1$d کیلومتره په ساعت کې</string>
+    <string name="alerts_note">د خبرتیاوو سرچینه یوازې د راحیاب کاروونکو تصدیق شوي راپورونه دي (وروستی ۲۴ ساعته)؛ پټ امنیتي معلومات لرونکي راپورونه هېڅکله نه ښودل کېږي.</string>
+
+    <string name="alert_bump_text">احتیاط. مخکې سړک کې چټک‌ګیر دی</string>
+    <string name="alert_accident_text">احتیاط. مخکې سړک کې پېښه راپوره شوې ده</string>
+    <string name="alert_traffic_text">مخکې سړک کې ترافیکې ګنګلتیا راپوره شوې ده</string>
+    <string name="alert_closed_text">مخکې سړک کې د سړک بنډ راپوره شوی دی</string>
+    <string name="alert_hazard_text">احتیاط. مخکې سړک کې خطر دی</string>
+    <string name="alert_cam_text">احتیاط. مخکې سړک کې د چټکتیا کمره ده</string>
+    <string name="alert_speed_text">ستاسو چټکتیا زیاته ده. مهرباني وکړئ چټکتیا کمه کړئ</string>
+
+    <!-- ازاد موټروونې -->
+    <string name="free_title">آزاده موټروونې</string>
+    <string name="free_end">پای</string>
+    <string name="free_started">د آزادې موټروونې حالت فعاله شو</string>
+    <string name="stop_nav_first">لومړی اوسنۍ لارښوونه ودروئ</string>
+    <string name="speed_unit">کیلومتره په ساعت کې</string>
+    <string name="tab_free">آزاد</string>
+</resources>

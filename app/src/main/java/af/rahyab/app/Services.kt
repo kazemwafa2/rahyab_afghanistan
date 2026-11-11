@@ -24,7 +24,8 @@ data class RouteResult(
     val points: List<Pair<Double, Double>>, val steps: List<Step>
 )
 
-enum class Profile { CAR, FOOT }
+/** وسیله نقلیه/نوع مسیر — بخش هفتم چک‌لیست */
+enum class Profile { CAR, MOTO, BIKE, FOOT }
 
 // ---------- خطاهای شبکه با پیام مشخص ----------
 sealed class ServiceException(message: String) : Exception(message)
@@ -182,11 +183,15 @@ class NominatimGeocoder(private val base: String) : GeocoderService {
     }
 }
 
-class OsrmRouting(private val carBase: String, private val footBase: String) : RoutingService {
+class OsrmRouting(private val carBase: String, private val footBase: String, private val bikeBase: String? = null) : RoutingService {
     private val cache by lazy { DiskJsonCache("route", Config.ROUTE_CACHE_TTL_MS, Config.ROUTE_CACHE_MAX) }
 
     override fun route(profile: Profile, fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): RouteResult? {
-        val base = if (profile == Profile.CAR) carBase else footBase
+        val base = when (profile) {
+            Profile.CAR, Profile.MOTO -> carBase   // موتورسکل روی سرویس عمومی مثل موتر نزدیک‌تر است
+            Profile.BIKE -> bikeBase ?: carBase
+            Profile.FOOT -> footBase
+        }
         val url = "$base${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=true"
         val key = java.util.zip.CRC32().apply { update(url.toByteArray()) }.value.toString()
         cache.get(key)?.let { json ->
@@ -252,7 +257,7 @@ class OfflineRoutingService(private val g: OfflineRouter.Graph) : RoutingService
 // ---------- دروازه انتخاب سرویس: آفلاین اول، آنلاین جایگزین ----------
 object Services {
     private val onlineGeocoder by lazy { NominatimGeocoder(Config.GEOCODER_URL) }
-    private val onlineRouting by lazy { OsrmRouting(Config.ROUTING_CAR_URL, Config.ROUTING_FOOT_URL) }
+    private val onlineRouting by lazy { OsrmRouting(Config.ROUTING_CAR_URL, Config.ROUTING_FOOT_URL, Config.ROUTING_BIKE_URL) }
 
     fun init(ctx: Context) {
         DiskJsonCache.init(ctx)

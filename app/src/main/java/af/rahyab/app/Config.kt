@@ -33,6 +33,7 @@ object Config {
     // فقط برای نمونه اولیه و آزمایش؛ محدودیت سرور عمومی FOSSGIS باید رعایت شود
     const val ROUTING_CAR_URL = "https://routing.openstreetmap.de/routed-car/route/v1/driving/"
     const val ROUTING_FOOT_URL = "https://routing.openstreetmap.de/routed-foot/route/v1/driving/"
+    const val ROUTING_BIKE_URL = "https://routing.openstreetmap.de/routed-bike/route/v1/driving/"
     const val ROUTE_CACHE_TTL_MS = 10 * 60 * 1000L
     const val ROUTE_CACHE_MAX = 40
 

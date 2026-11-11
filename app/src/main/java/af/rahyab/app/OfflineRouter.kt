@@ -147,13 +147,12 @@ object OfflineRouter {
         }
 
         /** نزدیک‌ترین گره قابل پذیرش در شعاع مجاز؛ گره باید دست‌کم یک یال قابل استفاده برای پروفایل داشته باشد */
-        fun nearest(latDeg: Double, lonDeg: Double, maxMeters: Double, car: Boolean): Int? {
+        fun nearest(latDeg: Double, lonDeg: Double, maxMeters: Double, profile: Profile): Int? {
             buildGrid()
             val latE7 = (latDeg * 1e7).toInt()
             val lonE7 = (lonDeg * 1e7).toInt()
             val baseLa = Math.floorDiv(latE7, 500_000)
             val baseLo = Math.floorDiv(lonE7, 500_000)
-            val needFlag = if (car) F_CAR else F_FOOT
             var best = -1
             var bestM = maxMeters
             var ring = 0
@@ -166,7 +165,7 @@ object OfflineRouter {
                             val d = distMeters(latDeg, lonDeg, lat[n] / 1e7, lon[n] / 1e7)
                             if (d < bestM) {
                                 var ok = false
-                                for (e in csr[n] until csr[n + 1]) if (flags[e] and needFlag != 0) { ok = true; break }
+                                for (e in csr[n] until csr[n + 1]) if (edgeUsable(flags[e], profile)) { ok = true; break }
                                 if (!ok) continue
                                 bestM = d; best = n
                             }
@@ -179,9 +178,23 @@ object OfflineRouter {
             return if (best >= 0) best else null
         }
 
-        fun edgeCostSeconds(e: Int, car: Boolean): Double =
-            if (car) lenM[e] * 3.6 / max(5, speedKmh[e])
-            else lenM[e] / 1.33 // پیاده ≈ ۴٫۸ کیلومتر در ساعت
+        /** آیا یال برای پروفایل قابل استفاده است؟ (بخش هفتم چک‌لیست) */
+        fun edgeUsable(flag: Int, profile: Profile): Boolean = when (profile) {
+            Profile.CAR, Profile.MOTO -> flag and F_CAR != 0
+            Profile.BIKE -> flag and (F_CAR or F_FOOT) != 0
+            Profile.FOOT -> flag and F_FOOT != 0
+        }
+
+        /** هزینه زمانی یال بر اساس پروفایل (ثانیه) */
+        fun edgeCostSeconds(e: Int, profile: Profile): Double = when (profile) {
+            Profile.CAR -> lenM[e] * 3.6 / max(5, speedKmh[e])
+            // موتورسکل: کمی محتاط‌تر از موتر، اما روی جاده‌های خاکی هم می‌رود
+            Profile.MOTO -> lenM[e] * 3.6 / max(15, (speedKmh[e] * 0.9).toInt())
+            // بایسکل ≈ ۱۶ کیلومتر در ساعت
+            Profile.BIKE -> lenM[e] / 4.4
+            // پیاده ≈ ۴٫۸ کیلومتر در ساعت
+            Profile.FOOT -> lenM[e] / 1.33
+        }
     }
 
     // ---------- محاسبات جغرافیایی ----------
@@ -213,18 +226,27 @@ object OfflineRouter {
         g: Graph, profile: Profile,
         fromLat: Double, fromLon: Double, toLat: Double, toLon: Double
     ): RouteResult? {
-        val car = profile == Profile.CAR
-        val snap = if (car) (if (g.nationwide) 900.0 else 350.0) else (if (g.nationwide) 400.0 else 150.0)
-        val s = g.nearest(fromLat, fromLon, snap, car)
+        val snap = snapFor(g, profile)
+        val s = g.nearest(fromLat, fromLon, snap, profile)
         if (s == null) { Log.d(TAG, "نزدیک راه مبدأ، گره‌ای یافت نشد"); return null }
-        val t = g.nearest(toLat, toLon, snap, car)
+        val t = g.nearest(toLat, toLon, snap, profile)
         if (t == null) { Log.d(TAG, "نزدیک راه مقصد، گره‌ای یافت نشد"); return null }
 
         val t0 = System.currentTimeMillis()
-        val path = astar(g, s, t, car)
+        val path = astar(g, s, t, profile)
         Log.d(TAG, "A* در ${System.currentTimeMillis() - t0}ms؛ گره‌های مسیر: ${path?.size ?: 0}")
         if (path == null || path.size < 2) return null
-        return buildResult(g, path, car)
+        return buildResult(g, path, profile)
+    }
+
+    private fun snapFor(g: Graph, profile: Profile): Double {
+        val nationwide = g.nationwide
+        return when (profile) {
+            Profile.CAR -> if (nationwide) 900.0 else 350.0
+            Profile.MOTO -> if (nationwide) 700.0 else 300.0
+            Profile.BIKE -> if (nationwide) 500.0 else 200.0
+            Profile.FOOT -> if (nationwide) 400.0 else 150.0
+        }
     }
 
     /**
@@ -239,18 +261,17 @@ object OfflineRouter {
         fromLat: Double, fromLon: Double, toLat: Double, toLon: Double,
         count: Int = 3
     ): List<RouteResult> {
-        val car = profile == Profile.CAR
-        val snap = if (car) (if (g.nationwide) 900.0 else 350.0) else (if (g.nationwide) 400.0 else 150.0)
-        val s = g.nearest(fromLat, fromLon, snap, car) ?: return emptyList()
-        val t = g.nearest(toLat, toLon, snap, car) ?: return emptyList()
+        val snap = snapFor(g, profile)
+        val s = g.nearest(fromLat, fromLon, snap, profile) ?: return emptyList()
+        val t = g.nearest(toLat, toLon, snap, profile) ?: return emptyList()
 
         val paths = ArrayList<IntArray>()   // مسیرهای گره‌ای پذیرفته‌شده
         val penalized = HashSet<Long>()     // یال‌های جریمه‌خورده
         var attempt = 0
         while (paths.size < count && attempt < 6) {
             attempt++
-            val path = if (paths.isEmpty()) astar(g, s, t, car)
-            else astarWithPenalty(g, s, t, car, penalized, paths.size * 120.0)
+            val path = if (paths.isEmpty()) astar(g, s, t, profile)
+            else astarWithPenalty(g, s, t, profile, penalized, paths.size * 120.0)
             if (path == null || path.size < 2) break
 
             // بررسی تمایز با مسیرهای موجود (نسبت یال مشترک)
@@ -273,7 +294,7 @@ object OfflineRouter {
         }
 
         val out = ArrayList<RouteResult>(paths.size)
-        for (p in paths) out.add(buildResult(g, p, car))
+        for (p in paths) out.add(buildResult(g, p, profile))
         // مرتب‌سازی بر اساس زمان (سریع‌ترین اول) — قرارداد رابط کاربری
         out.sortBy { it.durationS }
         return out
@@ -290,11 +311,11 @@ object OfflineRouter {
      * penaltySeconds به هزینه هر یال جریمه‌خورده اضافه می‌شود.
      */
     private fun astarWithPenalty(
-        g: Graph, s: Int, t: Int, car: Boolean,
+        g: Graph, s: Int, t: Int, profile: Profile,
         penalized: Set<Long>, penaltySeconds: Double
     ): IntArray? {
         val sess = Session(g.nodeCount)
-        val maxSpeedMs = if (car) 25.0 else 1.5
+        val maxSpeedMs = maxSpeedFor(profile)
         val tLat = g.nodeLat(t); val tLon = g.nodeLon(t)
         fun h(n: Int): Double = distMeters(g.nodeLat(n), g.nodeLon(n), tLat, tLon) / maxSpeedMs
 
@@ -311,13 +332,11 @@ object OfflineRouter {
             if (n == t) break
             val dn = sess.dist[n]
             for (e in g.csr[n] until g.csr[n + 1]) {
-                val f = g.flags[e]
-                if (car && f and F_CAR == 0) continue
-                if (!car && f and F_FOOT == 0) continue
+                if (!g.edgeUsable(g.flags[e], profile)) continue
                 val v = g.to[e]
                 if (sess.settled[v]) continue
                 val penalty = if (penalized.contains(edgeKey(n, v))) penaltySeconds else 0.0
-                val nd = dn + g.edgeCostSeconds(e, car) + penalty
+                val nd = dn + g.edgeCostSeconds(e, profile) + penalty
                 if (nd < sess.dist[v]) {
                     sess.dist[v] = nd
                     sess.prev[v] = n
@@ -339,9 +358,9 @@ object OfflineRouter {
         return rev.toIntArray()
     }
 
-    private fun astar(g: Graph, s: Int, t: Int, car: Boolean): IntArray? {
+    private fun astar(g: Graph, s: Int, t: Int, profile: Profile): IntArray? {
         val sess = Session(g.nodeCount)
-        val maxSpeedMs = if (car) 25.0 else 1.5 // سقف سرعت برای بخش‌پذیری تقریب H
+        val maxSpeedMs = maxSpeedFor(profile) // سقف سرعت برای بخش‌پذیری تقریب H
         val tLat = g.nodeLat(t); val tLon = g.nodeLon(t)
         fun h(n: Int): Double = distMeters(g.nodeLat(n), g.nodeLon(n), tLat, tLon) / maxSpeedMs
 
@@ -358,12 +377,10 @@ object OfflineRouter {
             if (n == t) break
             val dn = sess.dist[n]
             for (e in g.csr[n] until g.csr[n + 1]) {
-                val f = g.flags[e]
-                if (car && f and F_CAR == 0) continue
-                if (!car && f and F_FOOT == 0) continue
+                if (!g.edgeUsable(g.flags[e], profile)) continue
                 val v = g.to[e]
                 if (sess.settled[v]) continue
-                val nd = dn + g.edgeCostSeconds(e, car)
+                val nd = dn + g.edgeCostSeconds(e, profile)
                 if (nd < sess.dist[v]) {
                     sess.dist[v] = nd
                     sess.prev[v] = n
@@ -385,6 +402,14 @@ object OfflineRouter {
         return rev.toIntArray()
     }
 
+    /** سقف سرعت هر پروفایل برای بخش‌پذیری تابع H */
+    private fun maxSpeedFor(profile: Profile): Double = when (profile) {
+        Profile.CAR -> 25.0
+        Profile.MOTO -> 25.0
+        Profile.BIKE -> 5.0
+        Profile.FOOT -> 1.5
+    }
+
     /** کلید صف اولویت: بیت‌های float بدون علامت در ۳۲ بیت بالا + شماره گره */
     private fun pack(fSeconds: Double, node: Int): Long {
         val fb = java.lang.Float.floatToIntBits(fSeconds.toFloat()).toLong() and 0xFFFFFFFFL
@@ -394,7 +419,7 @@ object OfflineRouter {
     // ---------- ساخت نتیجه و مرحله‌های ناوبری ----------
     private class RE(val from: Int, val to: Int, val len: Int, val name: String, val round: Boolean)
 
-    private fun buildResult(g: Graph, path: IntArray, car: Boolean): RouteResult {
+    private fun buildResult(g: Graph, path: IntArray, profile: Profile): RouteResult {
         val pts = ArrayList<Pair<Double, Double>>(path.size)
         for (n in path) pts.add(Pair(g.nodeLon(n), g.nodeLat(n)))
 
@@ -406,15 +431,13 @@ object OfflineRouter {
             var found = -1
             for (e in g.csr[u] until g.csr[u + 1]) {
                 if (g.to[e] != v) continue
-                val f = g.flags[e]
-                if (car && f and F_CAR == 0) continue
-                if (!car && f and F_FOOT == 0) continue
+                if (!g.edgeUsable(g.flags[e], profile)) continue
                 found = e; break
             }
             if (found < 0) continue
             val len = g.lenM[found].toDouble()
             totalLen += len
-            totalTime += g.edgeCostSeconds(found, car)
+            totalTime += g.edgeCostSeconds(found, profile)
             edges.add(RE(u, v, g.lenM[found], g.edgeName(found), g.flags[found] and F_ROUNDABOUT != 0))
         }
 

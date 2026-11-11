@@ -26,10 +26,15 @@ class NavEngine(val route: RouteResult) {
         val offRouteM: Double,
         val remaining: Double,
         val stepIndex: Int,
-        val toManeuver: Double
+        val toManeuver: Double,
+        /** نقطه چسبیده‌به‌مسیر (پروژه‌شده) — تیرک جهت روی همین نقطه می‌نشیند */
+        val snapLat: Double = 0.0,
+        val snapLon: Double = 0.0,
+        /** جهت‌سنج قطعه فعلی مسیر به درجه (۰ تا ۳۶۰) */
+        val snapBearing: Double = 0.0
     )
 
-    private class Proj(val progress: Double, val dist: Double, val seg: Int)
+    private class Proj(val progress: Double, val dist: Double, val seg: Int, val t: Double)
 
     private val n = route.points.size
     private val lat = DoubleArray(n) { route.points[it].second }
@@ -60,6 +65,7 @@ class NavEngine(val route: RouteResult) {
         var best = Double.MAX_VALUE
         var bestProgress = 0.0
         var bestSeg = from
+        var bestT = 0.0
         val k = cos(Math.toRadians(pLat))
         for (i in from..to) {
             val ax = (lon[i] - pLon) * 111320.0 * k
@@ -76,14 +82,24 @@ class NavEngine(val route: RouteResult) {
             if (d < best) {
                 best = d
                 bestSeg = i
+                bestT = t
                 bestProgress = cum[i] + t * (cum[i + 1] - cum[i])
             }
         }
-        return Proj(bestProgress, best, bestSeg)
+        return Proj(bestProgress, best, bestSeg, bestT)
+    }
+
+    /** جهت‌سنج قطعه مسیر (seg) به درجه — از نقطه i به i+1 */
+    fun bearingOf(seg: Int): Double {
+        if (seg < 0 || seg >= n - 1) return 0.0
+        val dLat = Math.toRadians(lat[seg + 1] - lat[seg])
+        val dLon = Math.toRadians((lon[seg + 1] - lon[seg]) * Math.cos(Math.toRadians(lat[seg])))
+        val b = Math.toDegrees(atan2(dLon, dLat))
+        return (b + 360.0) % 360.0
     }
 
     fun update(la: Double, lo: Double): State {
-        if (n < 2) return State(0.0, 0.0, 0.0, 0, 0.0)
+        if (n < 2) return State(0.0, 0.0, 0.0, 0, 0.0, la, lo, 0.0)
         var pr = project(la, lo, max(0, lastSeg - 2), min(n - 2, lastSeg + 300))
         if (pr.dist > 50) {
             val g = project(la, lo, 0, n - 2)
@@ -95,6 +111,11 @@ class NavEngine(val route: RouteResult) {
             if (stepAt[i] > pr.progress + 5) { idx = i; break }
         }
         val toMan = if (stepAt.isEmpty()) total - pr.progress else stepAt[idx] - pr.progress
-        return State(pr.progress, pr.dist, max(0.0, total - pr.progress), idx, max(0.0, toMan))
+        // نقطه دقیق روی مسیر + جهت قطعه — تیرک باید روی مسیر بنشیند نه روی GPS خام
+        val snapLat = lat[pr.seg] + pr.t * (lat[pr.seg + 1] - lat[pr.seg])
+        val snapLon = lon[pr.seg] + pr.t * (lon[pr.seg + 1] - lon[pr.seg])
+        val bearing = bearingOf(pr.seg)
+        return State(pr.progress, pr.dist, max(0.0, total - pr.progress), idx, max(0.0, toMan),
+            snapLat, snapLon, bearing)
     }
 }

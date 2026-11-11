@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
@@ -327,6 +328,39 @@
                 android:orientation="vertical">
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabTraffic"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/traffic_item"
+                    app:backgroundTint="#FFF7E0"
+                    app:fabSize="mini"
+                    app:srcCompat="@drawable/ic_traffic"
+                    app:tint="@color/ink" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabRadio"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/radio"
+                    app:backgroundTint="#FFFFFF"
+                    app:fabSize="mini"
+                    app:srcCompat="@drawable/ic_radio"
+                    app:tint="@color/ink" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabReport"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/report_title"
+                    app:backgroundTint="#FFFFFF"
+                    app:fabSize="mini"
+                    app:srcCompat="@drawable/ic_report"
+                    app:tint="@color/ink" />
+
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/fabLayers"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
@@ -495,6 +529,30 @@
                     app:tint="#7D8CA3" />
             </LinearLayout>
 
+            <!-- کارت هوا و کیفیت هوا (بخش نهم چک‌لیست) -->
+            <LinearLayout
+                android:id="@+id/weatherCard"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:background="@drawable/bg_chip"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingStart="14dp"
+                android:paddingTop="9dp"
+                android:paddingEnd="14dp"
+                android:paddingBottom="9dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvWeather"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:textAlignment="viewStart"
+                    android:textColor="@color/ink"
+                    android:textSize="13sp" />
+            </LinearLayout>
+
             <HorizontalScrollView
                 android:id="@+id/chipsScroll"
                 android:layout_width="match_parent"
@@ -657,7 +715,7 @@
                     android:id="@+id/tabCar"
                     android:layout_width="0dp"
                     android:layout_height="64dp"
-                    android:layout_marginEnd="8dp"
+                    android:layout_marginEnd="6dp"
                     android:layout_weight="1"
                     android:background="@drawable/bg_tab_sel"
                     android:gravity="center"
@@ -677,6 +735,62 @@
                         android:layout_height="wrap_content"
                         android:text="@string/tab_car"
                         android:textColor="@color/blue_primary"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tabMoto"
+                    android:layout_width="0dp"
+                    android:layout_height="64dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_tab"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/ivTabMoto"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_moto"
+                        app:tint="#6B7788" />
+
+                    <TextView
+                        android:id="@+id/tvTabMoto"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tab_moto"
+                        android:textColor="#6B7788"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/tabBike"
+                    android:layout_width="0dp"
+                    android:layout_height="64dp"
+                    android:layout_marginEnd="6dp"
+                    android:layout_weight="1"
+                    android:background="@drawable/bg_tab"
+                    android:gravity="center"
+                    android:orientation="vertical">
+
+                    <ImageView
+                        android:id="@+id/ivTabBike"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
+                        android:contentDescription="@null"
+                        android:src="@drawable/ic_bike"
+                        app:tint="#6B7788" />
+
+                    <TextView
+                        android:id="@+id/tvTabBike"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="@string/tab_bike"
+                        android:textColor="#6B7788"
                         android:textSize="13sp"
                         android:textStyle="bold" />
                 </LinearLayout>
@@ -862,6 +976,78 @@
                 android:padding="14dp"
                 android:src="@drawable/ic_close"
                 app:tint="#D32F2F" />
+        </LinearLayout>
+
+        <!-- ===== کارت رانندگی آزاد (مثل «حالت رانندگی آزاد» نشان) ===== -->
+        <LinearLayout
+            android:id="@+id/freeCard"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="10dp"
+            android:layout_marginEnd="10dp"
+            android:layout_marginBottom="8dp"
+            android:background="@drawable/bg_sheet"
+            android:elevation="12dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:paddingStart="14dp"
+            android:paddingTop="10dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="12dp"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/tvFreeTitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/free_title"
+                android:textColor="#4B6A93"
+                android:textSize="13sp" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/tvFreeSpeed"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="0"
+                    android:textColor="@color/ink"
+                    android:textSize="44sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:text="@string/speed_unit"
+                    android:textColor="@color/ink_soft"
+                    android:textSize="14sp" />
+            </LinearLayout>
+
+            <TextView
+                android:id="@+id/tvFreeAlert"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#E0342C"
+                android:textSize="14sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                tools:visibility="visible" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnFreeEnd"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="wrap_content"
+                android:layout_height="44dp"
+                android:layout_marginTop="6dp"
+                android:text="@string/free_end"
+                android:textColor="@color/ink"
+                app:cornerRadius="22dp"
+                app:strokeColor="#C9D3E3" />
         </LinearLayout>
 
         <com.google.android.material.bottomnavigation.BottomNavigationView

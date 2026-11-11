@@ -61,6 +61,17 @@ import org.maplibre.android.style.layers.PropertyFactory.lineCap
 import org.maplibre.android.style.layers.PropertyFactory.lineColor
 import org.maplibre.android.style.layers.PropertyFactory.lineJoin
 import org.maplibre.android.style.layers.PropertyFactory.lineWidth
+import org.maplibre.android.style.layers.PropertyFactory.textAllowOverlap
+import org.maplibre.android.style.layers.PropertyFactory.textColor
+import org.maplibre.android.style.layers.PropertyFactory.textField
+import org.maplibre.android.style.layers.PropertyFactory.textFont
+import org.maplibre.android.style.layers.PropertyFactory.textHaloColor
+import org.maplibre.android.style.layers.PropertyFactory.textHaloWidth
+import org.maplibre.android.style.layers.PropertyFactory.textIgnorePlacement
+import org.maplibre.android.style.layers.PropertyFactory.textSize
+import org.maplibre.android.style.layers.PropertyFactory.visibility
+import org.maplibre.android.style.layers.SymbolLayer
+import org.maplibre.android.style.expressions.Expression
 import org.maplibre.android.style.sources.GeoJsonSource
 import org.maplibre.geojson.Feature
 import org.maplibre.geojson.FeatureCollection
@@ -152,6 +163,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var btnStart: MaterialButton
     private lateinit var btnStopNav: View
 
+    // رانندگی آزاد (مثل «حالت رانندگی آزاد» نشان)
+    private lateinit var freeCard: View
+    private lateinit var tvFreeSpeed: TextView
+    private lateinit var tvFreeAlert: TextView
+    private lateinit var btnFreeEnd: View
+
     // حالت‌های صفحه (سبک نشان/بلد): خانه → مکان → پیش‌نمایش مسیر → ناوبری
     private enum class Mode { HOME, PLACE, ROUTE, NAV }
     private var mode = Mode.HOME
@@ -161,6 +178,25 @@ class MainActivity : AppCompatActivity() {
     private var pick = Pick.NONE
     private var originPlace: Place? = null   // null = موقعیت فعلی
     private var northUp = false
+
+    // زبانه‌های موتورسکل و بایسکل (بخش هفتم چک‌لیست)
+    private lateinit var tabMoto: View
+    private lateinit var tabBike: View
+    private lateinit var ivTabMoto: ImageView
+    private lateinit var ivTabBike: ImageView
+    private lateinit var tvTabMoto: TextView
+    private lateinit var tvTabBike: TextView
+
+    // ترافیک، رادیو، گزارش حوادث، هوا
+    private lateinit var fabTraffic: View
+    private lateinit var fabRadio: View
+    private lateinit var fabReport: View
+    private lateinit var weatherCard: View
+    private lateinit var tvWeather: TextView
+    private var trafficOn = false
+    private var trafficScheduled = false
+    private var voiceDialogShown = false
+    private val refreshHandler = android.os.Handler(android.os.Looper.getMainLooper())
 
     // حباب‌های زمان مسیرها روی نقشه
     private class Bubble(val view: TextView, val anchor: LatLng)
@@ -184,6 +220,9 @@ class MainActivity : AppCompatActivity() {
     // گوش‌دهی به کنترلر ناوبری
     private val uiListener = { st: NavigationController.UiState -> onNavState(st) }
     private val fixListener = { loc: Location -> onFixDuringNav(loc) }
+    private val alertListener = { clip: String ->
+        tvFreeAlert.text = NavigationController.alertText(clip)
+    }
 
     // دسته‌بندی‌های جست‌وجوی سریع (نماد + نام + شناسه دسته در اندیس آفلاین)
     private val categories = listOf(
@@ -251,6 +290,17 @@ class MainActivity : AppCompatActivity() {
         tvRemainTime = findViewById(R.id.tvRemainTime)
         tvEta = findViewById(R.id.tvEta)
         btnMute = findViewById(R.id.btnMute)
+        tabMoto = findViewById(R.id.tabMoto)
+        tabBike = findViewById(R.id.tabBike)
+        ivTabMoto = findViewById(R.id.ivTabMoto)
+        ivTabBike = findViewById(R.id.ivTabBike)
+        tvTabMoto = findViewById(R.id.tvTabMoto)
+        tvTabBike = findViewById(R.id.tvTabBike)
+        fabTraffic = findViewById(R.id.fabTraffic)
+        fabRadio = findViewById(R.id.fabRadio)
+        fabReport = findViewById(R.id.fabReport)
+        weatherCard = findViewById(R.id.weatherCard)
+        tvWeather = findViewById(R.id.tvWeather)
         panel = findViewById(R.id.panel)
         tvTitle = findViewById(R.id.tvTitle)
         tvInfo = findViewById(R.id.tvInfo)
@@ -269,6 +319,10 @@ class MainActivity : AppCompatActivity() {
         ivRouteMode = findViewById(R.id.ivRouteMode)
         btnStart = findViewById(R.id.btnStart)
         btnStopNav = findViewById(R.id.btnStopNav)
+        freeCard = findViewById(R.id.freeCard)
+        tvFreeSpeed = findViewById(R.id.tvFreeSpeed)
+        tvFreeAlert = findViewById(R.id.tvFreeAlert)
+        btnFreeEnd = findViewById(R.id.btnFreeEnd)
 
         mapView = findViewById(R.id.mapView)
         mapView.onCreate(savedInstanceState)
@@ -278,9 +332,28 @@ class MainActivity : AppCompatActivity() {
                 .target(LatLng(Config.START_LAT, Config.START_LON))
                 .zoom(Config.START_ZOOM).build()
             m.addOnCameraMoveListener { positionBubbles() }
-            m.addOnCameraIdleListener { positionBubbles() }
+            m.addOnCameraIdleListener {
+                positionBubbles()
+                // ذخیره مرکز نقشه برای کارت هوا
+                m.cameraPosition.target?.let { t ->
+                    prefs.edit().putFloat("map_lat", t.latitude.toFloat())
+                        .putFloat("map_lon", t.longitude.toFloat()).apply()
+                }
+            }
+            // تغییر مبدأ/مقصد دستی روی نقشه — لمس طولانی = گفت‌وگوی انتخاب
+            m.addOnMapLongClickListener { pt ->
+                if (!NavigationController.navigating) onMapPointChosen(pt.latitude, pt.longitude, true)
+                true
+            }
+            m.addOnMapClickListener { pt ->
+                if (NavigationController.navigating || mode == Mode.NAV) return@addOnMapClickListener false
+                onMapPointChosen(pt.latitude, pt.longitude, false)
+                true
+            }
+            hideMapAttribution()
             loadStyle()
         }
+        mapView.post { hideMapAttribution() }
 
         buildCategoryChips()
         refreshRecents()
@@ -309,11 +382,20 @@ class MainActivity : AppCompatActivity() {
         btnCompass.setOnClickListener { northUp = !northUp; updateCompassLabel() }
         btnStart.setOnClickListener { startNav() }
         btnStopNav.setOnClickListener { confirmStopNav() }
+        btnFreeEnd.setOnClickListener { endFreeDriving() }
         btnMute.setOnClickListener { toggleVoice() }
+        tabMoto.setOnClickListener { setProfile(Profile.MOTO) }
+        tabBike.setOnClickListener { setProfile(Profile.BIKE) }
+        fabTraffic.setOnClickListener { toggleTraffic() }
+        fabTraffic.setOnLongClickListener { showTrafficSettingsDialog(); true }
+        fabRadio.setOnClickListener { startActivity(Intent(this, RadioActivity::class.java)) }
+        fabReport.setOnClickListener { showReportDialog() }
+        weatherCard.setOnClickListener { showWeatherDialog() }
 
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
                 R.id.tab_map -> { hideKeyboard(); resultsCard.visibility = View.GONE; true }
+                R.id.tab_free -> { startFreeDriving(); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
                 R.id.tab_saved -> { showPlaces(); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
                 R.id.tab_packs -> { startActivity(Intent(this, MapPackagesActivity::class.java)); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
                 R.id.tab_settings -> { showSettings(); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
@@ -333,6 +415,7 @@ class MainActivity : AppCompatActivity() {
     /** دکمه برگشت: ناوبری → تأیید توقف؛ مسیر → مکان؛ مکان → خانه؛ در غیر این صورت خروج */
     private fun onBack() {
         when {
+            NavigationController.freeMode -> endFreeDriving()
             NavigationController.navigating -> confirmStopNav()
             pick != Pick.NONE -> cancelPick()
             resultsCard.visibility == View.VISIBLE -> resultsCard.visibility = View.GONE
@@ -350,55 +433,121 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * پذیرش درخواست مسیریابی از اپلیکیشن‌های دیگر:
-     *   rahyab://navigate?origin_lat=..&origin_lon=..&destination_lat=..&destination_lon=..
-     *                       [&travel_mode=driving|walking][&name=..]
-     * اعتبارسنجی: مختصات باید در بازه معتبر جهانی باشد؛ در غیر این صورت درخواست رد می‌شود.
-     * اگر اپ فراخوان EXTRA_RETURN_RESULT=true گذاشته باشد، فاصله/زمان مسیر برگردانده می‌شود.
+     * پذیرش درخواست از برنامه‌های دیگر — بخش ششم چک‌لیست:
+     *  - rahyab://navigate?... (تاکسی و برنامه‌های همکار، مستند در docs/INTEGRATION.md)
+     *  - geo:lat,lon (استاندارد اندروید؛ از مرورگر و هر برنامه‌ای)
+     *  - لینک‌های Google Maps و OpenStreetMap (مستقیم یا کوتاه goo.gl)
+     *  - اشتراک متن از واتساپ و سایر برنامه‌ها: مختصات، لینک نقشه یا نام مکان
+     * اعتبارسنجی: مختصات باید معتبر باشد؛ درخواست نامعتبر رد می‌شود.
      */
     private fun handleDeepLink(intent: Intent?) {
-        val uri = intent?.data ?: return
-        if (uri.scheme != "rahyab" || uri.host != "navigate") return
-        fun param(k: String): String? = uri.getQueryParameter(k)?.trim()?.takeIf { it.isNotEmpty() }
-
-        fun coord(k: String): Double? = param(k)?.toDoubleOrNull()?.takeIf { it.isFinite() }
-        val dLat = coord("destination_lat") ?: return rejectDeepLink("destination_lat")
-        val dLon = coord("destination_lon") ?: return rejectDeepLink("destination_lon")
-        if (dLat !in -90.0..90.0 || dLon !in -180.0..180.0) return rejectDeepLink("bounds")
-        val oLat = coord("origin_lat")
-        val oLon = coord("origin_lon")
-        if ((oLat == null) != (oLon == null)) return rejectDeepLink("origin_pair")
-        if (oLat != null && oLon != null && (oLat !in -90.0..90.0 || oLon !in -180.0..180.0)) {
-            return rejectDeepLink("bounds")
+        if (intent == null) return
+        if (intent.action == Intent.ACTION_SEND) {
+            val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
+            handleExternalPlace(Integration.fromText(text), fromShare = true)
+            return
         }
-        val mode = param("travel_mode")
-        val profile = if (mode.equals("walking", ignoreCase = true)) Profile.FOOT else Profile.CAR
-        val name = param("name") ?: getString(R.string.deep_link_dest_default)
-        deepLinkReturn = intent.getBooleanExtra("EXTRA_RETURN_RESULT", false)
-
-        val dest = Place(name, dLat, dLon)
-        selected = dest
-        originPlace = null
-        setDestMarker(dest)
-        showPlaceSheet(dest)
-        navProfile = profile
-        styleTabs()
-        if (oLat != null && oLon != null) {
-            // مبدأ صریح از اپ فراخوان (مثلاً موقعیت راننده/مسافر)
-            requestRouteFrom(profile, oLat, oLon)
-        } else {
-            val loc = lastKnown()
-            if (loc != null) requestRouteFrom(profile, loc.latitude, loc.longitude)
-            else {
-                toast(R.string.need_location_for_route)
-                if (!hasLocationPermission()) permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+        val uri = intent.data ?: return
+        if (uri.scheme == "rahyab" && uri.host == "navigate") {
+            fun param(k: String): String? = uri.getQueryParameter(k)?.trim()?.takeIf { it.isNotEmpty() }
+            fun coord(k: String): Double? = param(k)?.toDoubleOrNull()?.takeIf { it.isFinite() }
+            val dLat = coord("destination_lat") ?: return rejectDeepLink("destination_lat")
+            val dLon = coord("destination_lon") ?: return rejectDeepLink("destination_lon")
+            if (dLat !in -90.0..90.0 || dLon !in -180.0..180.0) return rejectDeepLink("bounds")
+            val oLat = coord("origin_lat")
+            val oLon = coord("origin_lon")
+            if ((oLat == null) != (oLon == null)) return rejectDeepLink("origin_pair")
+            if (oLat != null && oLon != null && (oLat !in -90.0..90.0 || oLon !in -180.0..180.0)) {
+                return rejectDeepLink("bounds")
             }
+            val mode = param("travel_mode")
+            val profile = if (mode.equals("walking", ignoreCase = true)) Profile.FOOT else Profile.CAR
+            val name = param("name") ?: getString(R.string.deep_link_dest_default)
+            deepLinkReturn = intent.getBooleanExtra("EXTRA_RETURN_RESULT", false)
+
+            val dest = Place(name, dLat, dLon)
+            selected = dest
+            originPlace = null
+            setDestMarker(dest)
+            showPlaceSheet(dest)
+            navProfile = profile
+            styleTabs()
+            if (oLat != null && oLon != null) {
+                // مبدأ صریح از اپ فراخوان (مثلاً موقعیت راننده/مسافر)
+                requestRouteFrom(profile, oLat, oLon)
+            } else {
+                val loc = lastKnown()
+                if (loc != null) requestRouteFrom(profile, loc.latitude, loc.longitude)
+                else {
+                    toast(R.string.need_location_for_route)
+                    if (!hasLocationPermission()) permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
+                }
+            }
+            return
         }
+        // geo: و لینک‌های نقشه‌های دیگر (واتساپ، پیام‌رسان‌ها، مرورگر)
+        val p = try { Integration.fromUri(uri) } catch (e: Exception) { null } ?: return
+        if (p.needResolveUrl != null) {
+            toast(R.string.resolving_link)
+            io.execute {
+                val rp = Integration.resolveShortLink(p.needResolveUrl!!)
+                ui.post {
+                    if (rp != null) handleExternalPlace(rp, fromShare = false)
+                    else toast(R.string.deep_link_invalid)
+                }
+            }
+            return
+        }
+        handleExternalPlace(p, fromShare = false)
     }
 
     private fun rejectDeepLink(why: String) {
         android.util.Log.w("MainActivity", "درخواست Deep Link رد شد: $why")
         toast(R.string.deep_link_invalid)
+    }
+
+    /** مکان دریافتی از برنامه دیگر یا لینک: مقصد یا جست‌وجو */
+    private fun handleExternalPlace(p: Integration.Parsed, fromShare: Boolean) {
+        when {
+            p.lat != null && p.lon != null -> {
+                val name = p.name ?: getString(if (fromShare) R.string.shared_location else R.string.link_location)
+                select(Place(name, p.lat, p.lon))
+            }
+            p.searchQuery != null -> {
+                etSearch.setText(p.searchQuery)
+                doSearch()
+            }
+            else -> if (fromShare) toast(R.string.deep_link_invalid)
+        }
+    }
+
+    /**
+     * ترتیب مسیرهای جایگزین با پرهیز از راه‌های پرزحمت (تنظیم مسیریابی).
+     * مسیرهایی که به گزارش‌های «زحمت» کاربران نزدیک‌ترند به عقب می‌روند —
+     * تنها داده واقعی گزارش‌ها لحاظ می‌شود (قانون ۵).
+     */
+    private fun reorderLowTraffic(list: List<RouteResult>): List<RouteResult> {
+        if (list.size < 2) return list
+        val jams = try {
+            ReportsModule.active(this).filter { it.type == ReportsModule.TYPE_HEAVY_TRAFFIC }
+        } catch (e: Exception) { emptyList() }
+        if (jams.isEmpty()) return list
+        fun penalty(r: RouteResult): Int {
+            var p = 0
+            val pts = r.points
+            val step = if (pts.size > 120) pts.size / 100 else 1
+            var i = 0
+            while (i < pts.size) {
+                val (lo, la) = pts[i]
+                for (j in jams) {
+                    val d = haversineKm(la, lo, j.lat, j.lon)
+                    if (d < 0.7) p += 1
+                }
+                i += step
+            }
+            return p
+        }
+        return list.sortedBy { penalty(it) }
     }
 
     /** درخواست مسیر با مبدأ مشخص (برای Deep Link، ناوبری عادی و مبدأ دلخواه) */
@@ -419,7 +568,8 @@ class MainActivity : AppCompatActivity() {
                         routeSourceOffline = pair.second == Services.Source.OFFLINE
                         if (routeSourceOffline) showSource(getString(R.string.route_offline_active))
                         else showSource(getString(R.string.source_online))
-                        altRoutes = list
+                        val ordered = if (prefs.getBoolean("r_avoid_traffic", false)) reorderLowTraffic(list) else list
+                        altRoutes = ordered
                         selectedRouteIdx = 0
                         setMode(Mode.ROUTE)
                         drawAllRoutes()
@@ -639,22 +789,8 @@ class MainActivity : AppCompatActivity() {
         hideKeyboard()
         etSearch.setText("")
         when (pick) {
-            Pick.ORIGIN -> {
-                pick = Pick.NONE
-                etSearch.setHint(R.string.where_to)
-                originPlace = p
-                toast(R.string.origin_set)
-                if (selected != null) requestRoute(navProfile) else showPlaceSheet(p)
-                return
-            }
-            Pick.DEST -> {
-                pick = Pick.NONE
-                etSearch.setHint(R.string.where_to)
-                selected = p
-                store.addRecent(p)
-                setDestMarker(p)
-                refreshRecents()
-                requestRoute(navProfile)
+            Pick.ORIGIN, Pick.DEST -> {
+                assignPickedPoint(p)
                 return
             }
             Pick.NONE -> {}
@@ -667,6 +803,30 @@ class MainActivity : AppCompatActivity() {
         setDestMarker(p)
         map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.lat, p.lon), 15.0))
         showPlaceSheet(p)
+    }
+
+    /** جای‌گذاری مبدأ/مقصد انتخاب‌شده (از جست‌وجو یا نقشه) — رفع مشکل تغییر دستی */
+    private fun assignPickedPoint(p: Place) {
+        when (pick) {
+            Pick.ORIGIN -> {
+                pick = Pick.NONE
+                etSearch.setHint(R.string.where_to)
+                originPlace = p
+                toast(R.string.origin_set)
+                if (selected != null) requestRoute(navProfile) else showPlaceSheet(p)
+            }
+            Pick.DEST -> {
+                pick = Pick.NONE
+                etSearch.setHint(R.string.where_to)
+                selected = p
+                originPlace = null
+                store.addRecent(p)
+                setDestMarker(p)
+                refreshRecents()
+                requestRoute(navProfile)
+            }
+            Pick.NONE -> {}
+        }
     }
 
     /** برگه مکان انتخاب‌شده: نام، فاصله تا کاربر، دکمه مسیر */
@@ -764,16 +924,25 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun styleTabs() {
-        val car = navProfile == Profile.CAR
         val blue = Color.parseColor("#1976D2")
         val gray = Color.parseColor("#6B7788")
-        tabCar.setBackgroundResource(if (car) R.drawable.bg_tab_sel else R.drawable.bg_tab)
-        tabFoot.setBackgroundResource(if (!car) R.drawable.bg_tab_sel else R.drawable.bg_tab)
-        ImageViewCompat.setImageTintList(ivTabCar, ColorStateList.valueOf(if (car) blue else gray))
-        ImageViewCompat.setImageTintList(ivTabFoot, ColorStateList.valueOf(if (!car) blue else gray))
-        tvTabCar.setTextColor(if (car) blue else gray)
-        tvTabFoot.setTextColor(if (!car) blue else gray)
-        ivRouteMode.setImageResource(if (car) R.drawable.ic_car else R.drawable.ic_walk)
+        fun style(tab: View, iv: ImageView, tv: TextView, active: Boolean) {
+            tab.setBackgroundResource(if (active) R.drawable.bg_tab_sel else R.drawable.bg_tab)
+            ImageViewCompat.setImageTintList(iv, ColorStateList.valueOf(if (active) blue else gray))
+            tv.setTextColor(if (active) blue else gray)
+        }
+        style(tabCar, ivTabCar, tvTabCar, navProfile == Profile.CAR)
+        style(tabMoto, ivTabMoto, tvTabMoto, navProfile == Profile.MOTO)
+        style(tabBike, ivTabBike, tvTabBike, navProfile == Profile.BIKE)
+        style(tabFoot, ivTabFoot, tvTabFoot, navProfile == Profile.FOOT)
+        ivRouteMode.setImageResource(
+            when (navProfile) {
+                Profile.CAR -> R.drawable.ic_car
+                Profile.MOTO -> R.drawable.ic_moto
+                Profile.BIKE -> R.drawable.ic_bike
+                Profile.FOOT -> R.drawable.ic_walk
+            }
+        )
     }
 
     private fun setProfile(p: Profile) {
@@ -924,6 +1093,8 @@ class MainActivity : AppCompatActivity() {
         clearBubbles()
         style?.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
         style?.getSourceAs<GeoJsonSource>("route-alt-src")?.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
+        style?.getSourceAs<GeoJsonSource>("nav-arrow-src")?.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
+        style?.getSourceAs<GeoJsonSource>("origin-src")?.setGeoJson(FeatureCollection.fromFeatures(emptyList<Feature>()))
     }
 
     private fun clearAll() {
@@ -949,7 +1120,10 @@ class MainActivity : AppCompatActivity() {
     private fun setMode(m: Mode) {
         mode = m
         val nav = m == Mode.NAV
-        homeSheet.visibility = if (m == Mode.HOME) View.VISIBLE else View.GONE
+        // در رانندگی آزاد برگه خانه (جست‌وجو) پنهان می‌شود تا کارت سرعت‌سنج و دکمه «پایان»
+        // کامل روی صفحه جا شوند (اشکال نیمه‌صفحه در نسخه‌های قبل)
+        val home = m == Mode.HOME && !NavigationController.freeMode
+        homeSheet.visibility = if (home) View.VISIBLE else View.GONE
         panel.visibility = if (m == Mode.PLACE) View.VISIBLE else View.GONE
         routeSheet.visibility = if (m == Mode.ROUTE) View.VISIBLE else View.GONE
         routeHeader.visibility = if (m == Mode.ROUTE) View.VISIBLE else View.GONE
@@ -959,7 +1133,7 @@ class MainActivity : AppCompatActivity() {
         navBar.visibility = if (nav) View.VISIBLE else View.GONE
         leftCol.visibility = if (nav) View.VISIBLE else View.GONE
         fabColumn.visibility = if (nav) View.GONE else View.VISIBLE
-        fabRoute.visibility = if (m == Mode.HOME) View.VISIBLE else View.GONE
+        fabRoute.visibility = if (home) View.VISIBLE else View.GONE
         bottomNav.visibility = if (m == Mode.HOME) View.VISIBLE else View.GONE
         if (m != Mode.HOME) resultsCard.visibility = View.GONE
         if (m != Mode.ROUTE) clearBubbles()
@@ -1087,16 +1261,43 @@ class MainActivity : AppCompatActivity() {
     /** هر قرائت GPS هنگام ناوبری: دوربین دنبال می‌کند + سرعت‌سنج */
     @SuppressLint("MissingPermission")
     private fun onFixDuringNav(loc: Location) {
+        if (NavigationController.freeMode) {
+            // رانندگی آزاد: سرعت‌سنج بزرگ + دنبال‌کردن نرم موقعیت
+            if (loc.hasSpeed()) tvFreeSpeed.text = (loc.speed * 3.6).roundToInt().coerceIn(0, 240).toString()
+            map?.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder().target(LatLng(loc.latitude, loc.longitude))
+                        .zoom(16.0).tilt(0.0).build()
+                ), 800
+            )
+            return
+        }
         if (NavigationController.navigating && loc.hasSpeed()) {
             tvSpeed.text = (loc.speed * 3.6).roundToInt().coerceIn(0, 200).toString()
         }
-        val bearing = if (northUp) 0.0 else if (loc.hasBearing()) loc.bearing.toDouble() else (map?.cameraPosition?.bearing ?: 0.0)
-        map?.animateCamera(
-            CameraUpdateFactory.newCameraPosition(
-                CameraPosition.Builder().target(LatLng(loc.latitude, loc.longitude))
-                    .zoom(17.0).tilt(40.0).bearing(bearing).build()
-            ), 900
-        )
+        // تیرک جهت: روی نقطه چسبیده‌به‌مسیر می‌نشیند و به سمت قطعه مسیر می‌چرخد
+        if (NavigationController.hasSnap) {
+            try {
+                val f = Feature.fromGeometry(Point.fromLngLat(NavigationController.lastSnapLon, NavigationController.lastSnapLat))
+                f.addNumberProperty("bearing", NavigationController.lastSnapBearing)
+                style?.getSourceAs<GeoJsonSource>("nav-arrow-src")?.setGeoJson(f)
+            } catch (e: Exception) { }
+            val bearing = if (northUp) 0.0 else NavigationController.lastSnapBearing
+            map?.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder().target(LatLng(NavigationController.lastSnapLat, NavigationController.lastSnapLon))
+                        .zoom(17.5).tilt(45.0).bearing(bearing).build()
+                ), 900
+            )
+        } else {
+            val bearing = if (northUp) 0.0 else if (loc.hasBearing()) loc.bearing.toDouble() else (map?.cameraPosition?.bearing ?: 0.0)
+            map?.animateCamera(
+                CameraUpdateFactory.newCameraPosition(
+                    CameraPosition.Builder().target(LatLng(loc.latitude, loc.longitude))
+                        .zoom(17.0).tilt(40.0).bearing(bearing).build()
+                ), 900
+            )
+        }
     }
 
     // ---------- موقعیت ----------
@@ -1154,6 +1355,13 @@ class MainActivity : AppCompatActivity() {
         val items = arrayOf(
             getString(R.string.language),
             getString(R.string.night_mode),
+            getString(R.string.voice_title),
+            getString(R.string.alerts_title),
+            getString(R.string.routing_title),
+            getString(R.string.free_title),
+            getString(R.string.map_labels_title),
+            getString(R.string.traffic_item),
+            getString(R.string.check_update),
             getString(R.string.about)
         )
         AlertDialog.Builder(this)
@@ -1162,6 +1370,13 @@ class MainActivity : AppCompatActivity() {
                 when (i) {
                     0 -> showLanguageDialog()
                     1 -> showMapModeDialog()
+                    2 -> showVoiceDialog()
+                    3 -> showAlertsDialog()
+                    4 -> showRoutingDialog()
+                    5 -> startFreeDriving()
+                    6 -> showMapLabelsDialog()
+                    7 -> showTrafficSettingsDialog()
+                    8 -> checkUpdates()
                     else -> showAbout()
                 }
             }
@@ -1171,8 +1386,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun showAbout() {
         val msg = getString(R.string.version_fmt, Config.APP_VERSION) + "\n\n" +
-            getString(R.string.data_note) + "\n\n" +
-            getString(R.string.attribution_offline) + "\n\n" +
             getString(R.string.safety_notice)
         AlertDialog.Builder(this)
             .setTitle(R.string.about)
@@ -1196,7 +1409,15 @@ class MainActivity : AppCompatActivity() {
      */
     private fun loadStyle() {
         val m = map ?: return
-        val pkg = OfflineData.activeMapPackage()
+        // بسته نقشه بر اساس مکان فعلی/مرکز نقشه انتخاب می‌شود تا اگر چند ولایت
+        // نصب باشد، بسته همان ولایتِ کاربر استفاده شود؛ بیرون آن → بسته پایه
+        val loc = lastKnown()
+        val target = m.cameraPosition?.target
+        val pkg = when {
+            loc != null -> OfflineData.activeMapPackage(loc.latitude, loc.longitude)
+            target != null -> OfflineData.activeMapPackage(target.latitude, target.longitude)
+            else -> OfflineData.activeMapPackage()
+        }
         if (pkg != null) {
             val base = OfflineData.basePackage()
             val localJson = buildOfflineStyleJson(pkg, base?.takeIf { it.id != pkg.id })
@@ -1205,7 +1426,7 @@ class MainActivity : AppCompatActivity() {
                 if (styleUrl == key && style != null) return
                 styleUrl = key
                 offlineStyleActive = true
-                findViewById<TextView>(R.id.tvAttribution).text = getString(R.string.attribution_offline)
+                findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
                 locationEnabled = false
                 m.setStyle(Style.Builder().fromJson(localJson)) { s ->
                     style = s
@@ -1215,7 +1436,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
         offlineStyleActive = false
-        findViewById<TextView>(R.id.tvAttribution).text = getString(R.string.attribution)
+        findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
         val url = if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT
         if (url == styleUrl && style != null) return
         styleUrl = url
@@ -1303,6 +1524,34 @@ class MainActivity : AppCompatActivity() {
                 circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
             )
         )
+        // مبدأ مسیر — نقطه آبی از مبدأ تا مقصد روی مسیر
+        s.addSource(GeoJsonSource("origin-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
+        s.addLayer(
+            CircleLayer("origin-layer", "origin-src").withProperties(
+                circleColor(Color.parseColor("#1E88E5")), circleRadius(8f),
+                circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
+            )
+        )
+        // تیرک جهت ناوبری — همیشه دقیقاً روی مسیر می‌نشیند (نه روی GPS خام)
+        try {
+            if (s.getImage("nav-arrow-icon") == null) s.addImage("nav-arrow-icon", makeNavArrowBitmap())
+            s.addSource(GeoJsonSource("nav-arrow-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
+            s.addLayer(
+                org.maplibre.android.style.layers.SymbolLayer("nav-arrow-layer", "nav-arrow-src").withProperties(
+                    org.maplibre.android.style.layers.PropertyFactory.iconImage("nav-arrow-icon"),
+                    org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
+                    org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true),
+                    org.maplibre.android.style.layers.PropertyFactory.iconRotate(Expression.get("bearing")),
+                    org.maplibre.android.style.layers.PropertyFactory.iconRotationAlignment(
+                        org.maplibre.android.style.layers.Property.ICON_ROTATION_ALIGNMENT_VIEWPORT
+                    )
+                )
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "لایه تیرک ناوبری ساخته نشد", e)
+        }
+        addTrafficLayers(s)
+        applyAfLabels(s)
         drawnRoute?.let { r ->
             val line = LineString.fromLngLats(r.points.map { Point.fromLngLat(it.first, it.second) })
             s.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(Feature.fromGeometry(line))
@@ -1311,6 +1560,36 @@ class MainActivity : AppCompatActivity() {
             s.getSourceAs<GeoJsonSource>("dest-src")?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)))
         }
         if (hasLocationPermission()) enableLocation()
+    }
+
+    /** بیت‌مپ تیرک ناوبری (پیکان آبی بزرگ به سبک نشان) */
+    private fun makeNavArrowBitmap(): android.graphics.Bitmap {
+        val size = 44
+        val bmp = android.graphics.Bitmap.createBitmap(size, size, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        val shadow = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#44000000")
+            style = android.graphics.Paint.Style.FILL
+        }
+        val p = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#1E88E5")
+            style = android.graphics.Paint.Style.FILL
+        }
+        val white = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = size / 11f
+        }
+        val path = android.graphics.Path()
+        path.moveTo(size / 2f, 3f)
+        path.lineTo(size - 7f, size - 7f)
+        path.lineTo(size / 2f, size - 16f)
+        path.lineTo(7f, size - 7f)
+        path.close()
+        c.save(); c.translate(1.5f, 2.5f); c.drawPath(path, shadow); c.restore()
+        c.drawPath(path, p)
+        c.drawPath(path, white)
+        return bmp
     }
 
     /** ساخت بیت‌مپ پیکان جهت حرکت (بدون نیاز به فایل خارجی) */
@@ -1413,12 +1692,828 @@ class MainActivity : AppCompatActivity() {
 
     private fun toast(res: Int) = Toast.makeText(this, res, Toast.LENGTH_SHORT).show()
 
+    private fun toast(msg: String) = Toast.makeText(this, msg, Toast.LENGTH_SHORT).show()
+
+    // ---------- ترافیک زنده (بخش سوم چک‌لیست) ----------
+    private fun hideMapAttribution() {
+        // پاک‌کردن نوشته‌های منبع نقشه و لوگو از روی صفحه (درخواست کاربر؛ اطلاعات منبع فقط در مستندات می‌ماند)
+        try {
+            val mc = mapView as android.view.ViewGroup
+            for (i in 0 until mc.childCount) {
+                val ch = mc.getChildAt(i)
+                // نما‌های داخلی نقشه: اتریبیوشن و لوگو فقط ImageView هستند؛ قطب‌نما View جدا است
+                if (ch is android.widget.ImageView) ch.visibility = View.GONE
+            }
+        } catch (e: Throwable) { }
+    }
+
+    /**
+     * برچسب‌های افغانستان روی نقشه (درخواست کاربر: پاک‌کردن نام‌های بیرون افغانستان).
+     *  - لایه‌های نام مکان سبک پایه (place…) وقتی «فقط افغانستان» فعال است پنهان می‌شوند.
+     *  - به‌جای آن‌ها برچسب دری ولایات، شهرها و شهرستان‌ها از پایگاه‌داده داخلی
+     *    «af_places.geojson» نمایش داده می‌شود — همه نام‌ها افغانی و دری‌اند.
+     */
+    private fun applyAfLabels(s: Style) {
+        try {
+            val afOnly = prefs.getBoolean("labels_af_only", true)
+            for (l in s.layers) {
+                if (l.id.startsWith("place")) {
+                    l.setProperties(visibility(if (afOnly) Property.NONE else Property.VISIBLE))
+                }
+            }
+            if (s.getSource("af-places") == null) {
+                s.addSource(GeoJsonSource("af-places", "asset://places/af_places.geojson"))
+                val nameExpr = Expression.get("n")
+                val font = arrayOf("Noto Sans Regular")
+                fun size(a: Float, sa: Float, b: Float, sb: Float) = Expression.interpolate(
+                    Expression.linear(), Expression.zoom(),
+                    Expression.stop(a, Expression.literal(sa)),
+                    Expression.stop(b, Expression.literal(sb))
+                )
+                val prov = SymbolLayer("af-place-prov", "af-places").withProperties(
+                    textField(nameExpr), textFont(font),
+                    textSize(size(4.0f, 11.0f, 10.0f, 16.0f)),
+                    textColor(Color.parseColor("#3D2E6E")),
+                    textHaloColor(Color.WHITE), textHaloWidth(1.6f),
+                    textAllowOverlap(true), textIgnorePlacement(true),
+                    visibility(if (afOnly) Property.VISIBLE else Property.NONE)
+                )
+                prov.setFilter(Expression.eq(Expression.get("c"), Expression.literal("province")))
+                prov.minZoom = 4.0f
+                s.addLayer(prov)
+                val city = SymbolLayer("af-place-city", "af-places").withProperties(
+                    textField(nameExpr), textFont(font),
+                    textSize(size(6.0f, 10.5f, 12.0f, 15.0f)),
+                    textColor(Color.parseColor("#1B2735")),
+                    textHaloColor(Color.WHITE), textHaloWidth(1.4f),
+                    visibility(if (afOnly) Property.VISIBLE else Property.NONE)
+                )
+                city.setFilter(Expression.eq(Expression.get("c"), Expression.literal("city")))
+                city.minZoom = 6.0f
+                s.addLayer(city)
+                val town = SymbolLayer("af-place-town", "af-places").withProperties(
+                    textField(nameExpr), textFont(font),
+                    textSize(size(9.0f, 10.0f, 13.0f, 12.5f)),
+                    textColor(Color.parseColor("#3A4A5E")),
+                    textHaloColor(Color.WHITE), textHaloWidth(1.2f),
+                    visibility(if (afOnly) Property.VISIBLE else Property.NONE)
+                )
+                town.setFilter(Expression.any(
+                    Expression.eq(Expression.get("c"), Expression.literal("town")),
+                    Expression.eq(Expression.get("c"), Expression.literal("district"))
+                ))
+                town.minZoom = 9.0f
+                s.addLayer(town)
+            } else {
+                for (id in listOf("af-place-prov", "af-place-city", "af-place-town")) {
+                    s.getLayer(id)?.setProperties(visibility(if (afOnly) Property.VISIBLE else Property.NONE))
+                }
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "برچسب‌های افغانی اعمال نشد", e)
+        }
+    }
+
+    private fun addTrafficLayers(s: Style) {
+        try {
+            for (c in listOf("traffic-green" to "#23A455", "traffic-orange" to "#F5A623", "traffic-red" to "#E0342C")) {
+                s.addSource(GeoJsonSource(c.first + "-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
+                s.addLayer(
+                    CircleLayer(c.first, c.first + "-src").withProperties(
+                        circleColor(Color.parseColor(c.second)), circleRadius(8f),
+                        circleStrokeColor(Color.WHITE), circleStrokeWidth(2f)
+                    )
+                )
+            }
+            // کاشی جریان TomTom فقط اگر کاربر کلید API خودش را ثبت کرده باشد (اختیاری کامل)
+            val url = TrafficModule.tomtomTileUrl(this)
+            if (url != null) {
+                s.addSource(org.maplibre.android.style.sources.RasterSource("tomtom-flow-src", url, 256))
+                s.addLayer(
+                    org.maplibre.android.style.layers.RasterLayer("tomtom-flow", "tomtom-flow-src")
+                        .withProperties(org.maplibre.android.style.layers.PropertyFactory.rasterOpacity(0.8f))
+                )
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "لایه ترافیک ساخته نشد", e)
+        }
+    }
+
+    /** ترسیم نقاط ترافیک: گزارش‌های کاربران + فید جامعه — فقط رنگ واقعی، بدون داده جعلی */
+    private fun renderTraffic() {
+        val st = style ?: return
+        val pts = if (trafficOn) TrafficModule.allPoints(this) else emptyList()
+        val green = ArrayList<Feature>(); val orange = ArrayList<Feature>(); val red = ArrayList<Feature>()
+        for (p in pts) {
+            val f = Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat))
+            f.addStringProperty("title", p.title)
+            when (p.color) {
+                "#23A455" -> green.add(f)
+                "#F5A623" -> orange.add(f)
+                else -> red.add(f)
+            }
+        }
+        st.getSourceAs<GeoJsonSource>("traffic-green-src")?.setGeoJson(FeatureCollection.fromFeatures(green))
+        st.getSourceAs<GeoJsonSource>("traffic-orange-src")?.setGeoJson(FeatureCollection.fromFeatures(orange))
+        st.getSourceAs<GeoJsonSource>("traffic-red-src")?.setGeoJson(FeatureCollection.fromFeatures(red))
+        st.getLayer("tomtom-flow")?.setProperties(
+            org.maplibre.android.style.layers.PropertyFactory.rasterOpacity(if (trafficOn) 0.8f else 0f)
+        )
+    }
+
+    private fun toggleTraffic() {
+        trafficOn = !TrafficModule.isEnabled(this)
+        TrafficModule.setEnabled(this, trafficOn)
+        toast(if (trafficOn) R.string.traffic_on else R.string.traffic_off)
+        refreshTrafficData()
+    }
+
+    /** تازه‌سازی فید ترافیک؛ شکست شبکه بی‌صدا است (قانون بدون داده جعلی) */
+    private fun refreshTrafficData() {
+        if (Build.VERSION.SDK_INT >= 24) {
+            try {
+                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+                cm.registerDefaultNetworkCallback(object : android.net.ConnectivityManager.NetworkCallback() {
+                    override fun onAvailable(network: android.net.Network) {
+                        ui.post { refreshTrafficData() }
+                    }
+                })
+            } catch (e: Exception) { }
+        }
+        io.execute {
+            TrafficModule.refreshFeed(this@MainActivity)
+            ui.post { renderTraffic() }
+        }
+        scheduleTrafficRefresh()
+    }
+
+    private fun scheduleTrafficRefresh() {
+        if (trafficScheduled) return
+        trafficScheduled = true
+        refreshHandler.postDelayed({
+            trafficScheduled = false
+            if (trafficOn && !isDestroyed && !isFinishing) refreshTrafficData()
+        }, 90_000L)
+    }
+
+    /** تنظیمات پیشرفته ترافیک — فقط با لمس طولانی دکمه یا از تنظیمات؛ عادی نیازی به تنظیم ندارد */
+    private fun showTrafficSettingsDialog() {
+        val container = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(20), dp(10), dp(20), dp(10))
+        }
+        val tvStatus = TextView(this)
+        tvStatus.text = TrafficModule.statusLine(this)
+        tvStatus.textSize = 13f
+        val etKey = EditText(this)
+        etKey.hint = getString(R.string.traffic_tomtom_hint)
+        etKey.setText(TrafficModule.tomtomKey(this))
+        etKey.textSize = 13f
+        val etFeed = EditText(this)
+        etFeed.hint = getString(R.string.traffic_feed_hint)
+        etFeed.setText(TrafficModule.feedUrl(this))
+        etFeed.textSize = 13f
+        container.addView(tvStatus)
+        container.addView(etKey)
+        container.addView(etFeed)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.traffic_settings)
+            .setView(container)
+            .setPositiveButton(R.string.save_ok) { _, _ ->
+                TrafficModule.setTomtomKey(this, etKey.text.toString())
+                TrafficModule.setFeedUrl(this, etFeed.text.toString())
+                TrafficModule.lastFeedFetchReset()
+                refreshTrafficData()
+            }
+            .setNeutralButton(
+                getString(if (TrafficModule.isEnabled(this)) R.string.traffic_turn_off else R.string.traffic_turn_on)
+            ) { _, _ ->
+                TrafficModule.setEnabled(this, !TrafficModule.isEnabled(this))
+                trafficOn = TrafficModule.isEnabled(this)
+                refreshTrafficData()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ---------- هواشناسی و کیفیت هوا (بخش نهم چک‌لیست) ----------
+    private fun refreshWeatherCard() {
+        val loc = lastKnown()
+        val lat = loc?.latitude ?: prefs.getFloat("map_lat", Config.START_LAT.toFloat()).toDouble()
+        val lon = loc?.longitude ?: prefs.getFloat("map_lon", Config.START_LON.toFloat()).toDouble()
+        io.execute {
+            val d = WeatherModule.refresh(this@MainActivity, lat, lon)
+            ui.post {
+                if (d != null) {
+                    weatherCard.visibility = View.VISIBLE
+                    tvWeather.text = getString(R.string.weather_short,
+                        WeatherModule.emoji(d.code), d.tempC.roundToInt(), WeatherModule.describe(d.code, d.isDay),
+                        WeatherModule.aqiLabel(d.aqi))
+                }
+            }
+        }
+    }
+
+    private fun showWeatherDialog() {
+        val d = WeatherModule.last
+        if (d == null) { toast(R.string.weather_fetching); refreshWeatherCard(); return }
+        val sb = StringBuilder()
+        sb.append(WeatherModule.emoji(d.code) + " " + WeatherModule.describe(d.code, d.isDay) + " — " + d.tempC.roundToInt() + " درجه\n")
+        sb.append(getString(R.string.weather_feels, d.feelsC.roundToInt()) + "\n")
+        sb.append(getString(R.string.weather_humidity, d.humidity) + "\n")
+        sb.append(getString(R.string.weather_wind, d.windKmh.roundToInt()) + "\n")
+        if (d.pm25 != null) sb.append(getString(R.string.weather_pm25, d.pm25) + "\n")
+        if (d.pm10 != null) sb.append(getString(R.string.weather_pm10, d.pm10) + "\n")
+        sb.append(getString(R.string.weather_aqi, WeatherModule.aqiLabel(d.aqi)) + "\n\n")
+        for (day in d.daily) {
+            sb.append(day.dateIso + ": " + WeatherModule.emoji(day.code) + " " +
+                day.minC.roundToInt() + "° — " + day.maxC.roundToInt() + "° • " +
+                getString(R.string.weather_rain_prob, day.rainProb) + "\n")
+        }
+        sb.append("\n" + getString(R.string.weather_model_note) + "\n")
+        sb.append(getString(R.string.weather_updated, NavigationController.formatTimeOfDay(d.fetchedMs)))
+        AlertDialog.Builder(this).setTitle(R.string.weather_title).setMessage(sb.toString())
+            .setPositiveButton(R.string.close, null).show()
+    }
+
+    // ---------- رادیو (بخش دهم چک‌لیست) ----------
+    private fun showRadioDialog() {
+        toast(R.string.radio_loading)
+        io.execute {
+            val stations = RadioModule.list(this@MainActivity)
+            ui.post {
+                if (stations.isEmpty()) { toast(R.string.radio_failed); return@post }
+                val names = stations.map {
+                    (if (RadioService.isPlaying() && RadioService.nowPlaying == it.name) "▶ " else "") +
+                        it.name + " — " + it.tag
+                }.toTypedArray()
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.radio)
+                    .setItems(names) { _, i -> playStation(stations[i]) }
+                    .setPositiveButton(R.string.radio_stop) { _, _ -> RadioService.stop(this) }
+                    .setNegativeButton(R.string.close, null)
+                    .show()
+            }
+        }
+    }
+
+    private fun playStation(s: RadioModule.Station) {
+        RadioService.start(this, s.url, s.name)
+        Toast.makeText(this, getString(R.string.radio_playing_toast, s.name), Toast.LENGTH_SHORT).show()
+    }
+
+    // ---------- گزارش حوادث (بخش هشتم چک‌لیست) ----------
+    private fun showReportDialog() {
+        val target = selected
+        val loc = if (target != null) Pair(target.lat, target.lon) else mapCenter()
+        if (loc == null) { toast(R.string.need_location_for_route); return }
+        showReportTypePicker(loc.first, loc.second)
+    }
+
+    /** انتخاب نوع گزارش، سپس یادداشت */
+    private fun showReportTypePicker(lat: Double, lon: Double) {
+        val labels = arrayOf(
+            getString(R.string.report_accident), getString(R.string.report_damage),
+            getString(R.string.report_closed), getString(R.string.report_jam),
+            getString(R.string.report_hazard), getString(R.string.report_bump),
+            getString(R.string.report_cam)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(R.string.report_title)
+            .setItems(labels) { _, i ->
+                val type = when (i) {
+                    0 -> ReportsModule.TYPE_ACCIDENT
+                    1 -> ReportsModule.TYPE_ROAD_DAMAGE
+                    2 -> ReportsModule.TYPE_ROAD_CLOSED
+                    3 -> ReportsModule.TYPE_HEAVY_TRAFFIC
+                    4 -> ReportsModule.TYPE_HAZARD
+                    5 -> ReportsModule.TYPE_SPEED_BUMP
+                    else -> ReportsModule.TYPE_SPEED_CAMERA
+                }
+                showReportNoteDialog(type, lat, lon)
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    private fun mapCenter(): Pair<Double, Double>? {
+        val t = map?.cameraPosition?.target ?: return null
+        return Pair(t.latitude, t.longitude)
+    }
+
+    private fun showReportNoteDialog(type: String, lat: Double, lon: Double) {
+        val et = EditText(this)
+        et.hint = getString(R.string.report_note_hint)
+        val pad = dp(20)
+        et.setPadding(pad, pad / 2, pad, pad / 2)
+        AlertDialog.Builder(this)
+            .setTitle(R.string.report_note_title)
+            .setView(et)
+            .setPositiveButton(R.string.report_save) { _, _ ->
+                val note = et.text.toString().trim().take(300)
+                val sensitive = ReportsModule.isSensitive(note)
+                try {
+                    ReportsModule.add(this, type, note, lat, lon)
+                    ReportsModule.purgeExpired(this)
+                    toast(if (sensitive) R.string.report_saved_local else R.string.report_saved)
+                    if (!sensitive) NavigationController.voiceReportSaved()
+                    renderTraffic()
+                } catch (e: Exception) {
+                    toast(R.string.report_failed)
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ---------- راهنمای صوتی — تنظیمات کامل سخنگو (مثل «تنظیمات سخنگو» نشان) ----------
+    /**
+     * تنظیمات سخنگو به سبک برنامه نشان:
+     *  - کلید روشن/خاموش سخنگو
+     *  - فهرست صداهای ضبط‌شده داخل برنامه (امیر، دلارا، فرید، نگار، همایون) با دکمه پخش
+     *    برای شنیدن هر صدا پیش از انتخاب — کاملاً آفلاین
+     *  - گزینه موتور گفتار گوشی برای کسانی که صدای فارسی گوشی دارند
+     *  - بلندی صدا و سرعت گفتار با لغزنده؛ بلوتوث؛ پخش در جریان مکالمه
+     *  - دکمه «آزمایش صدا» و ذخیره
+     */
+    private fun showVoiceDialog() {
+        val vg = NavigationController.voiceGuide
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(12), dp(22), dp(6))
+        }
+
+        // ---------- کلید سخنگو ----------
+        val swRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+        val swOn = android.widget.Switch(this)
+        swOn.text = getString(R.string.voice_state)
+        swOn.isChecked = NavigationController.voiceEnabled
+        swRow.addView(swOn)
+        c.addView(swRow)
+
+        // ---------- زبان راهنما از زبان برنامه ----------
+        val curLang = vg?.appLang() ?: "fa"
+        val langName = getString(when (curLang) {
+            "ps" -> R.string.voice_lang_pashto_name
+            "en" -> R.string.voice_lang_english_name
+            else -> R.string.voice_lang_dari_name
+        })
+        c.addView(TextView(this).apply {
+            text = getString(R.string.voice_lang_note, langName)
+            textSize = 12f; setTextColor(0xFF2E6DB4.toInt()); setPadding(0, dp(12), 0, dp(2))
+        })
+
+        // ---------- فهرست صداها (به تفکیک زبان) ----------
+        c.addView(TextView(this).apply { text = getString(R.string.voice_source); setPadding(0, dp(8), 0, dp(4)); textSize = 14f })
+        val packs = vg?.packs() ?: emptyList()
+        val hasPack = packs.isNotEmpty()
+        if (hasPack) {
+            c.addView(TextView(this).apply {
+                text = getString(R.string.voice_list_note, vg!!.packClipCount(vg!!.packId))
+                textSize = 12f; setTextColor(0xFF555555.toInt()); setPadding(0, 0, 0, dp(6))
+            })
+        }
+        val selectedPack = arrayOf(if (hasPack) vg!!.packId else "")
+        val selectedSource = arrayOf(prefs.getString("voice_source", "pack") ?: "pack")
+        val radios = ArrayList<Pair<String, android.widget.RadioButton>>() // (packId یا "system")
+
+        fun selectWhich(which: String) {
+            selectedSource[0] = if (which == "system") "system" else "pack"
+            if (which != "system") selectedPack[0] = which
+            for ((id, rb) in radios) rb.isChecked = id == which
+        }
+
+        /** یک ردیف صدا: دکمه رادیو + نام + جنسیت/تعداد + دکمه پخش */
+        fun addPackRow(p: af.rahyab.app.VoiceGuide.PackInfo) {
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            val rb = android.widget.RadioButton(this).apply {
+                isChecked = selectedSource[0] == "pack" && selectedPack[0] == p.id
+            }
+            radios.add(p.id to rb)
+            val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+            col.addView(TextView(this).apply {
+                text = p.name + "  —  " + getString(when (p.lang) {
+                    "ps" -> R.string.voice_lang_pashto_name
+                    "en" -> R.string.voice_lang_english_name
+                    else -> R.string.voice_lang_dari_name
+                })
+                textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+            })
+            col.addView(TextView(this).apply {
+                text = getString(if (p.gender == "female") R.string.voice_female else R.string.voice_male) +
+                    " • " + getString(R.string.voice_pack_status, p.clips).substringAfter(": ").substringBefore(" —") +
+                    (if (p.id == selectedPack[0] && selectedSource[0] == "pack" && p.lang == curLang)
+                        " • " + getString(R.string.voice_active_tag) else "")
+                textSize = 11f; setTextColor(0xFF777777.toInt())
+            })
+            val play = android.widget.ImageView(this).apply {
+                setImageResource(R.drawable.ic_play)
+                setPadding(dp(10), dp(10), dp(10), dp(10))
+                background = ContextCompat.getDrawable(context, R.drawable.bg_btn_ghost)
+                contentDescription = getString(R.string.voice_play)
+            }
+            play.setOnClickListener {
+                // جمله پشتیبان به زبان همان بسته — اگر فایل صوتی پخش نشد، موتور گوشی حرف می‌زند
+                val sentence = when (p.lang) {
+                    "ps" -> "غږیز لارښود راحیاب چمتو دی."
+                    "en" -> "Rahyab voice guidance is ready."
+                    else -> "راهنمای صوتی راه‌یاب آماده است."
+                }
+                vg?.previewPack(p.id, sentence)
+                selectWhich(p.id)
+            }
+            row.addView(rb)
+            row.addView(col, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(6), 0, 0, 0) })
+            row.addView(play)
+            row.setPadding(0, dp(2), 0, dp(2))
+            c.addView(row)
+            rb.setOnClickListener { selectWhich(p.id) }
+        }
+
+        // صداهای ضبط‌شده داخل برنامه — به سه زبان گروه‌بندی شده
+        // (زبان راهنما همیشه همان زبان برنامه است؛ صدای زبان دیگر پس از تغییر زبان پخش می‌شود)
+        val groups = listOf(
+            Triple("fa", R.string.voice_group_dari, R.string.voice_lang_dari_name),
+            Triple("ps", R.string.voice_group_pashto, R.string.voice_lang_pashto_name),
+            Triple("en", R.string.voice_group_english, R.string.voice_lang_english_name)
+        )
+        for ((gl, labelRes, nameRes) in groups) {
+            val gp = packs.filter { it.lang == gl }
+            if (gp.isEmpty()) continue
+            c.addView(TextView(this).apply {
+                text = getString(labelRes) +
+                    (if (gl == curLang) "  •  " + getString(R.string.voice_active_tag) else "")
+                textSize = 13f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(if (gl == curLang) 0xFF2E6DB4.toInt() else 0xFF888888.toInt())
+                setPadding(0, dp(10), 0, dp(2))
+            })
+            for (p in gp) addPackRow(p)
+        }
+
+        // گزینه موتور گفتار گوشی
+        val rbSystem = android.widget.RadioButton(this).apply {
+            text = getString(R.string.voice_system_option)
+            isChecked = selectedSource[0] == "system"
+        }
+        radios.add("system" to rbSystem)
+        c.addView(rbSystem)
+        rbSystem.setOnClickListener { selectWhich("system") }
+        val sysOk = vg?.hasPersianVoice() == true && (vg?.packAvailable() == false || selectedSource[0] == "system")
+        if (!sysOk) {
+            c.addView(TextView(this).apply {
+                text = getString(R.string.voice_system_unavailable) + " — «" + getString(R.string.voice_test) + "» را بزنید و در صورت نیاز «" + getString(R.string.voice_install) + "» را از راهنما استفاده کنید."
+                textSize = 11f; setTextColor(0xFFB00020.toInt()); setPadding(0, 0, 0, dp(4))
+            })
+        }
+
+        // ---------- بلندی صدا ----------
+        c.addView(TextView(this).apply { text = getString(R.string.voice_volume); setPadding(0, dp(12), 0, dp(2)); textSize = 14f })
+        val sbVol = android.widget.SeekBar(this)
+        sbVol.max = 100
+        sbVol.progress = prefs.getInt("voice_vol", 85)
+        c.addView(sbVol)
+
+        // ---------- سرعت گفتار ----------
+        c.addView(TextView(this).apply { text = getString(R.string.voice_speed); setPadding(0, dp(10), 0, dp(2)); textSize = 14f })
+        val sbSpeed = android.widget.SeekBar(this)
+        sbSpeed.max = 100
+        sbSpeed.progress = prefs.getInt("voice_speed", 40)
+        c.addView(sbSpeed)
+
+        // ---------- بلوتوث ----------
+        val swBt = android.widget.Switch(this)
+        swBt.text = getString(R.string.voice_bluetooth)
+        swBt.isChecked = vg?.bluetoothAllowed ?: true
+        c.addView(swBt)
+
+        // ---------- مکالمه ----------
+        val swCall = android.widget.Switch(this)
+        swCall.text = getString(R.string.voice_during_call)
+        swCall.isChecked = vg?.speakDuringCalls ?: false
+        c.addView(swCall)
+
+        val dlg = AlertDialog.Builder(this)
+            .setTitle(R.string.voice_title)
+            .setView(android.widget.ScrollView(this).apply { addView(c) })
+            .setPositiveButton(R.string.saved_ok) { _, _ ->
+                NavigationController.voiceEnabled = swOn.isChecked
+                // ذخیره صدا برای زبان خودِ آن صدا؛ با تغییر زبان برنامه همان صدا پخش می‌شود
+                var mismatchName: String? = null
+                var mismatchLang: String? = null
+                val edit = prefs.edit()
+                if (selectedSource[0] == "system") {
+                    edit.putString("voice_source", "system")
+                } else {
+                    val p = selectedPack[0].ifEmpty { "dari" }
+                    val pLang = packs.firstOrNull { it.id == p }?.lang ?: curLang
+                    edit.putString("voice_source", "pack").putString("voice_pack_$pLang", p)
+                    if (pLang != curLang) {
+                        mismatchName = packs.firstOrNull { it.id == p }?.name ?: p
+                        mismatchLang = getString(when (pLang) {
+                            "ps" -> R.string.voice_lang_pashto_name
+                            "en" -> R.string.voice_lang_english_name
+                            else -> R.string.voice_lang_dari_name
+                        })
+                    }
+                }
+                edit.putInt("voice_vol", sbVol.progress).putInt("voice_speed", sbSpeed.progress).apply()
+                vg?.bluetoothAllowed = swBt.isChecked
+                vg?.speakDuringCalls = swCall.isChecked
+                updateMuteIcon()
+                if (mismatchName != null && mismatchLang != null) {
+                    toast(getString(R.string.voice_saved_msg) + " — " +
+                        getString(R.string.voice_lang_mismatch_toast, mismatchName, mismatchLang))
+                } else {
+                    toast(R.string.voice_saved_msg)
+                }
+            }
+            .setNeutralButton(R.string.voice_test) { _, _ ->
+                // آزمایش با انتخاب فعلی صفحه — پیش از ذخیره هم درست بشنود
+                val wasEnabled = NavigationController.voiceEnabled
+                if (!wasEnabled) NavigationController.voiceEnabled = true
+                val ok = if (selectedSource[0] == "system" || selectedPack[0].isEmpty()) {
+                    NavigationController.testVoice()
+                } else {
+                    // پیش‌نمایش مستقیم همان صدای انتخابی — مستقل از زبان فعلی برنامه.
+                    // اگر فایل صوتی بسته به هر دلیل پخش نشد، previewPack خودش جمله
+                    // پشتیبان را با موتور گوشی (به زبان همان بسته) می‌گوید.
+                    val p = selectedPack[0]
+                    val pLang = packs.firstOrNull { it.id == p }?.lang ?: curLang
+                    val sentence = when (pLang) {
+                        "ps" -> "غږیز لارښود راحیاب چمتو دی."
+                        "en" -> "Rahyab voice guidance is ready."
+                        else -> "راهنمای صوتی راه‌یاب آماده است."
+                    }
+                    vg?.previewPack(p, sentence)
+                    true
+                }
+                if (!ok) toast(R.string.voice_test_failed)
+                if (!wasEnabled) NavigationController.voiceEnabled = false
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    private fun voiceClipCount(): Int = try {
+        assets.list("voice/dari")?.count { it.endsWith(".ogg") } ?: 0
+    } catch (e: Exception) { 0 }
+
+    // ---------- تنظیمات هشدارها (مثل «تنظیمات هشدارها» نشان) ----------
+    private fun showAlertsDialog() {
+        val p = getSharedPreferences("alerts", Context.MODE_PRIVATE)
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(12), dp(22), dp(6))
+        }
+        val keys = listOf(
+            "a_bump" to R.string.alert_bump,
+            "a_accident" to R.string.alert_accident,
+            "a_traffic" to R.string.alert_traffic,
+            "a_closed" to R.string.alert_closed,
+            "a_hazard" to R.string.alert_hazard,
+            "a_cam" to R.string.alert_cam,
+            "a_speed" to R.string.alert_speed
+        )
+        val switches = HashMap<String, android.widget.Switch>()
+        for ((k, label) in keys) {
+            val sw = android.widget.Switch(this)
+            sw.text = getString(label)
+            sw.isChecked = p.getBoolean(k, true)
+            c.addView(sw)
+            switches[k] = sw
+        }
+        c.addView(TextView(this).apply {
+            text = getString(R.string.alert_speed_limit, p.getInt("a_limit", 80))
+            setPadding(0, dp(14), 0, dp(2)); textSize = 14f
+        })
+        val sbLimit = android.widget.SeekBar(this)
+        sbLimit.max = 9 // ۵۰ تا ۱۴۰ با گام ۱۰
+        sbLimit.progress = ((p.getInt("a_limit", 80) - 50) / 10).coerceIn(0, 9)
+        val tvLimit = c.getChildAt(c.childCount - 1) as TextView
+        sbLimit.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(sb: android.widget.SeekBar?, value: Int, fromUser: Boolean) {
+                tvLimit.text = getString(R.string.alert_speed_limit, 50 + value * 10)
+            }
+            override fun onStartTrackingTouch(sb: android.widget.SeekBar?) { }
+            override fun onStopTrackingTouch(sb: android.widget.SeekBar?) { }
+        })
+        c.addView(sbLimit)
+        c.addView(TextView(this).apply {
+            text = getString(R.string.alerts_note)
+            textSize = 11f; setTextColor(0xFF666666.toInt()); setPadding(0, dp(10), 0, 0)
+        })
+        AlertDialog.Builder(this)
+            .setTitle(R.string.alerts_title)
+            .setView(c)
+            .setPositiveButton(R.string.saved_ok) { _, _ ->
+                val e = p.edit()
+                for ((k, _) in keys) e.putBoolean(k, switches[k]!!.isChecked)
+                e.putInt("a_limit", 50 + sbLimit.progress * 10)
+                e.apply()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ---------- تنظیمات مسیریابی (مثل «تنظیمات طرح و مسیریابی» نشان) ----------
+    private fun showRoutingDialog() {
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(12), dp(22), dp(6))
+        }
+        val keys = listOf(
+            "r_avoid_traffic" to R.string.routing_avoid_traffic,
+            "r_avoid_unpaved" to R.string.routing_avoid_unpaved,
+            "r_avoid_toll" to R.string.routing_avoid_toll
+        )
+        val switches = HashMap<String, android.widget.Switch>()
+        for ((k, label) in keys) {
+            val sw = android.widget.Switch(this)
+            sw.text = getString(label)
+            sw.isChecked = prefs.getBoolean(k, false)
+            c.addView(sw)
+            switches[k] = sw
+        }
+        c.addView(TextView(this).apply {
+            text = getString(R.string.routing_note)
+            textSize = 11f; setTextColor(0xFF666666.toInt()); setPadding(0, dp(12), 0, 0)
+        })
+        AlertDialog.Builder(this)
+            .setTitle(R.string.routing_title)
+            .setView(c)
+            .setPositiveButton(R.string.saved_ok) { _, _ ->
+                val e = prefs.edit()
+                for ((k, _) in keys) e.putBoolean(k, switches[k]!!.isChecked)
+                e.apply()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** نام‌های روی نقشه: فقط افغانستان (پیش‌فرض) یا همه کشورها */
+    private fun showMapLabelsDialog() {
+        val items = arrayOf(getString(R.string.map_labels_af), getString(R.string.map_labels_all))
+        val cur = if (prefs.getBoolean("labels_af_only", true)) 0 else 1
+        AlertDialog.Builder(this)
+            .setTitle(R.string.map_labels_title)
+            .setSingleChoiceItems(items, cur) { d, i ->
+                prefs.edit().putBoolean("labels_af_only", i == 0).apply()
+                style?.let { applyAfLabels(it) }
+                d.dismiss()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ---------- رانندگی آزاد (مثل نشان) ----------
+    private fun startFreeDriving() {
+        if (NavigationController.navigating) { toast(R.string.stop_nav_first); return }
+        if (!hasLocationPermission()) { permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION); return }
+        if (!locationEnabled) enableLocation()
+        if (NavigationController.startFree()) {
+            freeCard.visibility = View.VISIBLE
+            tvFreeSpeed.text = "0"
+            tvFreeAlert.text = ""
+            setMode(Mode.HOME)
+        }
+    }
+
+    private fun endFreeDriving() {
+        NavigationController.stopFree()
+        freeCard.visibility = View.GONE
+        setMode(Mode.HOME) // برگه جست‌وجو دوباره نمایش داده شود
+    }
+
+    // ---------- به‌روزرسانی مستقیم (بخش دوازدهم چک‌لیست) ----------
+    private fun checkUpdates() {
+        toast(R.string.update_checking)
+        io.execute {
+            try {
+                val rel = Updater.checkLatest() ?: throw BadResponseException("no release")
+                val newer = Updater.isNewer(rel, this@MainActivity)
+                ui.post {
+                    if (!newer) toast(R.string.update_latest)
+                    else AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.update_available, rel.versionName))
+                        .setMessage(getString(R.string.update_info, rel.sizeBytes / 1048576) + "\n\n" + rel.notes.take(500))
+                        .setPositiveButton(R.string.update_download) { _, _ -> downloadUpdate(rel) }
+                        .setNegativeButton(R.string.close, null)
+                        .show()
+                }
+            } catch (e: Exception) {
+                ui.post { toast(R.string.update_unavailable) }
+            }
+        }
+    }
+
+    private fun downloadUpdate(rel: Updater.Release) {
+        val tv = TextView(this)
+        tv.setPadding(dp(24), dp(16), dp(24), dp(16))
+        val dlg = AlertDialog.Builder(this)
+            .setTitle(R.string.update_downloading)
+            .setView(tv)
+            .setNegativeButton(R.string.close, null)
+            .show()
+        Updater.download(this, rel,
+            onProgress = { p -> ui.post { tv.text = getString(R.string.update_progress, p) } },
+            onDone = { f ->
+                ui.post {
+                    dlg.dismiss()
+                    if (!Updater.canInstall(this)) {
+                        Updater.requestInstallPermission(this)
+                    } else {
+                        Updater.install(this, f) { ok, msg ->
+                            ui.post { toast(if (ok) getString(R.string.update_done) else getString(R.string.update_failed, msg)) }
+                        }
+                    }
+                }
+            },
+            onError = { msg ->
+                ui.post {
+                    dlg.dismiss()
+                    toast(getString(R.string.update_failed, msg))
+                }
+            }
+        )
+    }
+
+    // ---------- تغییر مبدأ/مقصد دستی روی نقشه ----------
+    private fun pointName(lat: Double, lon: Double): String {
+        val la = String.format(java.util.Locale.US, "%.4f", lat)
+        val lo = String.format(java.util.Locale.US, "%.4f", lon)
+        return getString(R.string.point_on_map, la, lo)
+    }
+
+    /** لمس/لمس طولانی روی نقشه: در حالت انتخاب مستقیماً مبدأ/مقصد؛ در غیر این صورت لمس طولانی گزینه می‌دهد */
+    private fun onMapPointChosen(lat: Double, lon: Double, longPress: Boolean) {
+        if (pick != Pick.NONE) {
+            val p = Place(pointName(lat, lon), lat, lon)
+            resultsCard.visibility = View.GONE
+            hideKeyboard()
+            assignPickedPoint(p)
+            return
+        }
+        if (longPress) showPointOptionsDialog(lat, lon)
+    }
+
+    /** گفت‌وگوی نقطه انتخابی روی نقشه: مقصد، مبدأ، گزارش رویداد، نمایش برگه مکان */
+    private fun showPointOptionsDialog(lat: Double, lon: Double) {
+        val name = pointName(lat, lon)
+        val items = arrayOf(
+            getString(R.string.set_as_dest),
+            getString(R.string.set_as_origin),
+            getString(R.string.report_here),
+            getString(R.string.show_place)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(name)
+            .setItems(items) { _, i ->
+                when (i) {
+                    0 -> {
+                        val p = Place(name, lat, lon)
+                        selected = p
+                        originPlace = null
+                        setDestMarker(p)
+                        store.addRecent(p)
+                        refreshRecents()
+                        requestRoute(navProfile)
+                    }
+                    1 -> {
+                        originPlace = Place(name, lat, lon)
+                        toast(R.string.origin_set)
+                        if (selected != null) requestRoute(navProfile)
+                    }
+                    2 -> showReportTypePicker(lat, lon)
+                    else -> {
+                        val p = Place(name, lat, lon)
+                        selected = p
+                        originPlace = null
+                        setDestMarker(p)
+                        map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 15.0))
+                        showPlaceSheet(p)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     // ---------- چرخه حیات ----------
     override fun onStart() {
         super.onStart()
         mapView.onStart()
         NavigationController.addUiListener(uiListener)
         NavigationController.addFixListener(fixListener)
+        NavigationController.addAlertListener(alertListener)
+        if (NavigationController.freeMode) freeCard.visibility = View.VISIBLE
+        // با بسته صدای داخل برنامه، هیچ‌وقت پیام «صدای فارسی یافت نشد» نشان داده نمی‌شود
+        if (!voiceDialogShown && !NavigationController.voiceHasPersian() &&
+            !prefs.getBoolean("voice_dialog_shown", false)
+        ) {
+            voiceDialogShown = true
+            prefs.edit().putBoolean("voice_dialog_shown", true).apply()
+            ui.post { showVoiceDialog() }
+        }
         // اگر ناوبری در سرویس در جریان است (مثلاً پس از بازگشت به برنامه)، رابط همگام شود
         if (NavigationController.navigating) onNavState(
             NavigationController.UiState(true, NavigationController.lastRemainingM, NavigationController.lastRemainingS,
@@ -1436,11 +2531,15 @@ class MainActivity : AppCompatActivity() {
         OfflineData.onDataChanged = { ui.post { loadStyle() } }
         buildCategoryChips()
         refreshRecents()
+        trafficOn = TrafficModule.isEnabled(this)
+        refreshWeatherCard()
+        refreshTrafficData()
     }
 
     override fun onStop() {
         NavigationController.removeUiListener(uiListener)
         NavigationController.removeFixListener(fixListener)
+        NavigationController.removeAlertListener(alertListener)
         mapView.onStop()
         super.onStop()
     }

@@ -4,6 +4,8 @@
     <string name="pkg_note">برای نقشه، جست‌وجو و مسیریابی بدون انترنت، بسته منطقه خود را دانلود کنید. دانلود با وای‌فای توصیه می‌شود. پس از نصب، برنامه بدون انترنت کار می‌کند.</string>
     <string name="pkg_loading">در حال خواندن فهرست بسته‌ها…</string>
     <string name="pkg_manifest_error">فهرست بسته‌ها خوانده نشد. انترنت یا نشانی منبع را بررسی کنید و دوباره «بروزرسانی» را بزنید.</string>
+    <string name="manifest_local">داخل برنامه (بدون انترنت)</string>
+    <string name="pkg_local_note">انترنت در دسترس نیست؛ فهرست محلی نمایش داده شد. بسته پایه کشوری همه ۳۴ ولایت همراه خود برنامه نصب است و برنامه بدون انترنت کار می‌کند.</string>
     <string name="pkg_available">بسته‌های موجود:</string>
     <string name="pkg_empty">در حال حاضر هیچ بسته‌ای منتشر نشده است. بعداً «بروزرسانی» را بزنید.</string>
     <string name="pkg_installed_list">بسته‌های نصب‌شده:</string>
@@ -36,4 +38,8 @@
     <string name="notif_nav_title">ناوبری فعال است</string>
     <string name="notif_nav_text">راه‌یاب در حال راهنمایی شماست</string>
     <string name="notif_nav_stop">توقف</string>
+    <!-- پیام‌های دقیق‌تر دانلود (0.9.5) -->
+    <string name="pkg_manifest_not_published">فهرست بسته‌های آنلاین هنوز منتشر نشده است؛ فهرست داخل برنامه نمایش داده شد. بسته‌های ولایتی از همین فهرست بدون انترنت نصب می‌شوند.</string>
+    <string name="err_asset_missing">فایل این بسته در نسخهٔ نصب‌شدهٔ برنامه یافت نشد. لطفاً نسخهٔ کامل برنامه را نصب کنید.</string>
+    <string name="err_network_dl">اتصال برقرار نشد. انترنت را بررسی کنید و دوباره تلاش کنید.</string>
 </resources>

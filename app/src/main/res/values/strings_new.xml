@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- v0.8.1 — ترافیک، رادیو، گزارش حوادث، هوا، صوت، به‌روزرسانی، دری‌سازی -->
+    <string name="tab_moto">موتورسکل</string>
+    <string name="tab_bike">بایسکل</string>
+    <string name="route_moto">با موتورسکل</string>
+    <string name="route_bike">با بایسکل</string>
+
+    <string name="traffic_item">ترافیک زنده</string>
+    <string name="traffic_settings">تنظیمات ترافیک</string>
+    <string name="traffic_tomtom_hint">کلید API تام‌تام (اختیاری — فقط برای پوشش موجود)</string>
+    <string name="traffic_feed_hint">نشانی فید جامعه (پیش‌فرض: مخزن رسمی راه‌یاب)</string>
+    <string name="traffic_turn_off">خاموش‌کردن لایه ترافیک</string>
+    <string name="traffic_turn_on">روشن‌کردن لایه ترافیک</string>
+    <string name="traffic_on">لایه ترافیک روشن شد</string>
+    <string name="traffic_off">لایه ترافیک خاموش شد</string>
+    <string name="traffic_disabled_state">لایه ترافیک خاموش است</string>
+    <string name="traffic_src_reports">گزارش‌های کاربران: %1$d</string>
+    <string name="traffic_src_feed_ok">فید جامعه وصل است</string>
+    <string name="traffic_src_feed_old">فید جامعه: داده اخیر</string>
+    <string name="traffic_src_feed_none">فید جامعه: در دسترس نیست</string>
+    <string name="traffic_updated">آخرین دریافت %1$s</string>
+    <string name="traffic_report">گزارش ترافیک</string>
+
+    <string name="radio">رادیو</string>
+    <string name="radio_channel">رادیو</string>
+    <string name="radio_playing">در حال پخش: %1$s</string>
+    <string name="radio_notif_text">رادیو در پس‌زمینه پخش می‌شود</string>
+    <string name="radio_stop">توقف پخش</string>
+    <string name="radio_loading">در حال خواندن فهرست ایستگاه‌ها…</string>
+    <string name="radio_failed">ایستگاهی پیدا نشد</string>
+    <string name="radio_playing_toast">پخش: %1$s — اگر پخش نشد، انترنت را بررسی کنید</string>
+    <string name="radio_title">رادیو افغانستان</string>
+    <string name="radio_cat_all">همه</string>
+    <string name="radio_cat_dari">دری و فارسی</string>
+    <string name="radio_cat_pashto">پشتو</string>
+    <string name="radio_cat_other">انگلیسی و سایر</string>
+    <string name="radio_source_note">ایستگاه‌های تأییدشده بدون انترنت همیشه در فهرست‌اند؛ با انترنت ایستگاه‌های زنده بیشتری از Radio Browser اضافه می‌شود. پخش در پس‌زمینه ادامه می‌یابد.</string>
+    <string name="radio_now_playing">در حال پخش: %1$s</string>
+    <string name="radio_connecting">در حال اتصال به %1$s…</string>
+    <string name="radio_loading_online">در حال خواندن ایستگاه‌های زنده…</string>
+    <string name="radio_empty_category">در این دسته ایستگاهی نیست</string>
+    <string name="radio_verified">تأییدشده</string>
+    <string name="radio_live">زنده</string>
+
+    <string name="report_title">گزارش رویداد جاده‌ای</string>
+    <string name="report_accident">حادثه (تصادف)</string>
+    <string name="report_damage">خرابی جاده</string>
+    <string name="report_closed">بسته‌بودن جاده</string>
+    <string name="report_jam">ترافیک سنگین</string>
+    <string name="report_hazard">خطر جاده‌ای</string>
+    <string name="report_note_title">توضیح (اختیاری)</string>
+    <string name="report_note_hint">مثلاً: سر راه سنگر برف بسته است</string>
+    <string name="report_save">ثبت گزارش</string>
+    <string name="report_saved">گزارش ثبت شد و ۲۴ ساعت معتبر است</string>
+    <string name="report_saved_local">گزارش ثبت شد — چون حاوی اطلاعات حساس امنیتی است فقط روی همین گوشی می‌ماند و انتشار نمی‌شود</string>
+    <string name="report_failed">گزارش ثبت نشد</string>
+    <string name="report_here">گزارش رویداد در این نقطه</string>
+
+    <string name="weather_title">هوا و کیفیت هوا</string>
+    <string name="weather_short">%1$s  %2$d°  %3$s  •  کیفیت هوا: %4$s</string>
+    <string name="weather_feels">حس می‌شود: %1$d درجه</string>
+    <string name="weather_humidity">رطوبت: %1$d٪</string>
+    <string name="weather_wind">باد: %1$d کیلومتر در ساعت</string>
+    <string name="weather_pm25">ذرات PM2.5: %1$s میکروگرم</string>
+    <string name="weather_pm10">ذرات PM10: %1$s میکروگرم</string>
+    <string name="weather_aqi">کیفیت هوا: %1$s</string>
+    <string name="weather_rain_prob">احتمال باران %1$d٪</string>
+    <string name="weather_model_note">منبع: Open-Meteo — این داده «پیش‌بینی مدل» است نه اندازه‌گیری ایستگاه واقعی.</string>
+    <string name="weather_updated">آخرین دریافت: %1$s</string>
+    <string name="weather_fetching">در حال دریافت اطلاعات هوا…</string>
+
+    <string name="voice_title">راهنمای صوتی</string>
+    <string name="voice_ready">راهنمای صوتی آماده است. صدای دری/فارسی گوشی شما فعال است.</string>
+    <string name="voice_no_persian_guide">موتور صوتی گوشی شما صدای فارسی/دری ندارد (این محدودیت رایج موتور گوگل است).\n\nراه‌حل‌ها:\n۱) دکمه «نصب صدای فارسی» را بزنید تا صفحه نصب صدای گوشی باز شود.\n۲) موتور رایگان eSpeak NG را از فروشگاه نصب کنید — صدای فارسی آفلاین دارد؛ سپس در تنظیمات متن‌به‌گفتار گوشی، eSpeak NG را انتخاب کنید.\nتا آن وقت دستورها روی صفحه و در اعلان نمایش داده می‌شوند.</string>
+    <string name="voice_test">آزمایش صدا</string>
+    <string name="voice_install">نصب صدای فارسی</string>
+    <string name="voice_test_failed">صدای فارسی پیدا نشد — از راهنمای داخل این پنجره استفاده کنید</string>
+
+    <string name="update_checking">در حال بررسی نسخه جدید…</string>
+    <string name="update_latest">شما آخرین نسخه را دارید</string>
+    <string name="update_available">نسخه جدید: %1$s</string>
+    <string name="update_info">حجم فایل: %1$d مگابایت — اطلاعات شما پس از نصب حفظ می‌شود.</string>
+    <string name="update_download">دانلود و نصب</string>
+    <string name="update_downloading">در حال دانلود نسخه جدید…</string>
+    <string name="update_progress">%1$d٪ دانلود شد</string>
+    <string name="update_done">دانلود کامل شد؛ تأییدیه نصب از شما پرسیده می‌شود</string>
+    <string name="update_failed">دانلود یا نصب ناموفق: %1$s</string>
+    <string name="update_unavailable">در حال حاضر نسخه جدید در دسترس نیست</string>
+
+    <string name="shared_location">مکان مشترک‌شده</string>
+    <string name="link_location">مکان از لینک</string>
+    <string name="resolving_link">در حال بازکردن لینک…</string>
+
+    <string name="point_on_map">نقطه روی نقشه (%1$s، %2$s)</string>
+    <string name="set_as_dest">تعیین به‌عنوان مقصد و محاسبه مسیر</string>
+    <string name="set_as_origin">تعیین به‌عنوان مبدأ</string>
+    <string name="show_place">نمایش این نقطه</string>
+
+    <string name="check_update">بررسی به‌روزرسانی</string>
+    <string name="save_ok">ذخیره</string>
+</resources>

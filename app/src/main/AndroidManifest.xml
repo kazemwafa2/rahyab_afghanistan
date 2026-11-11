@@ -10,6 +10,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-feature android:name="android.hardware.location.gps" android:required="false" />
 
     <application
@@ -40,6 +41,32 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="rahyab" android:host="navigate" />
             </intent-filter>
+            <!-- دریافت مقصد از لینک geo: استاندارد اندروید (مرورگر، واتساپ، برنامه‌های دیگر) -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="geo" />
+            </intent-filter>
+            <!-- بازکردن لینک‌های نقشه (Google Maps، لینک‌های کوتاه goo.gl، OpenStreetMap) در راه‌یاب -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="https" android:host="maps.google.com" />
+                <data android:scheme="http" android:host="maps.google.com" />
+                <data android:scheme="https" android:host="www.google.com" android:pathPrefix="/maps" />
+                <data android:scheme="https" android:host="maps.app.goo.gl" />
+                <data android:scheme="https" android:host="goo.gl" />
+                <data android:scheme="https" android:host="www.openstreetmap.org" />
+                <data android:scheme="https" android:host="openstreetmap.org" />
+            </intent-filter>
+            <!-- دریافت مکان/متن مشترک‌شده از واتساپ و سایر برنامه‌ها -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
 
         <activity
@@ -47,10 +74,22 @@
             android:exported="false"
             android:parentActivityName=".MainActivity" />
 
+        <!-- صفحه رادیو افغانستان (فهرست ایستگاه‌ها با دسته‌بندی) -->
+        <activity
+            android:name=".RadioActivity"
+            android:exported="false"
+            android:parentActivityName=".MainActivity" />
+
         <service
             android:name=".NavigationService"
             android:exported="false"
             android:foregroundServiceType="location" />
+
+        <!-- پخش رادیو در پس‌زمینه -->
+        <service
+            android:name=".RadioService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
 
         <service
             android:name="androidx.appcompat.app.AppLocalesMetadataHolderService"

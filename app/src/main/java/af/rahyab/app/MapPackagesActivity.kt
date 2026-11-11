@@ -102,23 +102,86 @@ class MapPackagesActivity : AppCompatActivity() {
         listBox = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL; setPadding(0, dp(8), 0, 0) }
         col.addView(listBox)
 
+        // کاتالوگ ۳۴ ولایت — مثل فهرست ولایات نشان؛ بسته‌های ولایتی با انتشارهای بعدی همین‌جا ظاهر می‌شوند
+        col.addView(hintText(getString(R.string.pkg_provinces_title)))
+        col.addView(TextView(this).apply {
+            text = provinceCatalogText()
+            textSize = 13f
+            setTextColor(0xFF3A4A5E.toInt())
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+            setPadding(0, dp(4), 0, dp(12))
+        })
+        col.addView(TextView(this).apply {
+            text = getString(R.string.pkg_provinces_note)
+            textSize = 11f
+            setTextColor(0xFF666666.toInt())
+            textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        })
+
         loadManifest()
+    }
+
+    /** فهرست نام دری ۳۴ ولایت از پایگاه‌داده داخلی مکان‌ها */
+    private fun provinceCatalogText(): String {
+        return try {
+            val s = assets.open("places/af_places.geojson").bufferedReader().use { it.readText() }
+            val o = org.json.JSONObject(s)
+            val names = ArrayList<String>()
+            val arr = o.getJSONArray("features")
+            for (i in 0 until arr.length()) {
+                val pr = arr.getJSONObject(i).getJSONObject("properties")
+                if (pr.optString("c") == "province") names.add(pr.getString("n"))
+            }
+            names.joinToString(" • ")
+        } catch (e: Exception) {
+            getString(R.string.pkg_provinces_error)
+        }
     }
 
     private fun manifestUrl(): String =
         getSharedPreferences("settings", MODE_PRIVATE).getString("manifest_url", null) ?: Config.MANIFEST_URL
 
     private fun loadManifest() {
-        tvManifest.text = getString(R.string.manifest_source, manifestUrl())
         tvStatus.text = getString(R.string.pkg_loading)
         io.execute {
             val pkgs = try {
                 PackageDownloader.fetchManifest(manifestUrl())
             } catch (e: Exception) {
-                ui.post { onManifestError(e) }
+                // منبع انترنت/فهرست آنلاین در دسترس نیست — فهرست محلی داخل برنامه نمایش داده می‌شود.
+                // بسته‌های asset:// که فایل‌شان در این APK نیست حذف می‌شوند تا دکمه کارنکننده نمایش داده نشود.
+                val local = try {
+                    val json = assets.open("packages/manifest.json").bufferedReader().use { it.readText() }
+                    PackageDownloader.fetchManifestFromJson(json, applicationContext)
+                } catch (e2: Exception) { null }
+                ui.post {
+                    if (local != null) onLocalManifest(local, e is BadResponseException) else onManifestError(e)
+                }
                 return@execute
             }
             ui.post { showPackages(pkgs) }
+        }
+    }
+
+    /** فهرست محلی (بسته‌های همراه برنامه) — هیچ خطایی نشان نمی‌دهد */
+    private fun onLocalManifest(pkgs: List<PackageDownloader.RemotePkg>, onlineMissing: Boolean = false) {
+        remote = pkgs
+        cleanupStaleParts()
+        tvManifest.text = getString(R.string.manifest_source, getString(R.string.manifest_local))
+        tvStatus.text = getString(R.string.pkg_free_space, humanBytes(OfflineData.freeBytes(this)))
+        rebuildRows()
+        Toast.makeText(
+            this,
+            if (onlineMissing) R.string.pkg_manifest_not_published else R.string.pkg_local_note,
+            Toast.LENGTH_LONG
+        ).show()
+    }
+
+    /** فایل‌های نیمه‌کارهٔ بسته‌های asset:// معنی ندارند (کپی همیشه از نو) — پاک می‌شوند */
+    private fun cleanupStaleParts() {
+        io.execute {
+            for (p in remote) if (p.url.startsWith("asset://")) {
+                PackageDownloader.clearPartial(applicationContext, p.id)
+            }
         }
     }
 
@@ -131,6 +194,7 @@ class MapPackagesActivity : AppCompatActivity() {
 
     private fun showPackages(pkgs: List<PackageDownloader.RemotePkg>) {
         remote = pkgs
+        cleanupStaleParts()
         tvStatus.text = getString(R.string.pkg_free_space, humanBytes(OfflineData.freeBytes(this)))
         rebuildRows()
     }
@@ -149,7 +213,12 @@ class MapPackagesActivity : AppCompatActivity() {
             }
         } else {
             listBox.addView(hintText(getString(R.string.pkg_available)))
-            for (p in remote) listBox.addView(buildRow(p, installed.firstOrNull { it.id == p.id }))
+            // حذف تکراری‌ها (مثلاً وقتی manifest سرور و منبع محلی هردو یک بسته را دارند)
+            val seen = HashSet<String>()
+            for (p in remote) {
+                if (!seen.add(p.id)) continue
+                listBox.addView(buildRow(p, installed.firstOrNull { it.id == p.id }))
+            }
         }
 
         // بسته‌های نصب‌شده‌ای که در manifest نیستند (مثلاً نصب دستی)
@@ -246,7 +315,8 @@ class MapPackagesActivity : AppCompatActivity() {
                 rv.tvState.visibility = View.GONE
                 rv.bar.visibility = View.GONE
                 rv.action.visibility = View.VISIBLE
-                val resume = PackageDownloader.hasPartial(applicationContext, p.id)
+                // بسته‌های asset:// همیشه از نو کپی می‌شوند؛ «ادامه دانلود» فقط برای منابع انترنت
+                val resume = !p.url.startsWith("asset://") && PackageDownloader.hasPartial(applicationContext, p.id)
                 rv.action.text = getString(if (resume) R.string.pkg_resume else R.string.pkg_download)
                 rv.action.setOnClickListener { startDownload(p) }
             }
@@ -365,6 +435,8 @@ class MapPackagesActivity : AppCompatActivity() {
                     "no_space" -> getString(R.string.err_no_space)
                     "checksum" -> getString(R.string.err_checksum)
                     "invalid" -> getString(R.string.err_invalid)
+                    "asset_missing" -> getString(R.string.err_asset_missing)
+                    "network" -> getString(R.string.err_network_dl)
                     else -> getString(R.string.pkg_failed_generic)
                 }
                 Toast.makeText(this, R.string.pkg_failed_generic, Toast.LENGTH_LONG).show()

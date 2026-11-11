@@ -5,8 +5,8 @@ plugins {
 
 val ksFile: String? = System.getenv("KEYSTORE_FILE")
 
-// نشانی مخزن — یک بار در gradle.properties تغییر دهید (rahyabGithubUser=نام_کاربری_شما)
-val ghUser: String = (project.findProperty("rahyabGithubUser") as String? ?: "kazemwafa2")
+// نشانی مخزن — یک بار در gradle.properties تغییر دهید (rahyabGithubRepo=کاربر/مخزن)
+val ghRepo: String = (project.findProperty("rahyabGithubRepo") as String? ?: "kazemwafa2/rahyab_afghanistan")
 
 android {
     namespace = "af.rahyab.app"
@@ -16,12 +16,12 @@ android {
         applicationId = "af.rahyab.app"
         minSdk = 21          // Android 5.0+
         targetSdk = 35
-        versionCode = 7
-        versionName = "0.7.0"
+        versionCode = 15
+        versionName = "0.9.5"
 
         // نشانی مخزن در BuildConfig قرار می‌گیرد تا User-Agent و نشانی manifest
         // بسته‌ها به‌صورت متمرکز ساخته شوند (Config.kt).
-        buildConfigField("String", "RAHYAB_REPO_URL", "\"https://github.com/$ghUser/rahyab-afghanistan\"")
+        buildConfigField("String", "RAHYAB_REPO_URL", "\"https://github.com/$ghRepo\"")
     }
 
     buildFeatures {
@@ -65,6 +65,12 @@ android {
         // آزمون‌های واحد از android.util.Log و… استفاده می‌کنند (مقدار پیش‌فرض برگردانده شود)
         unitTests.isReturnDefaultValues = true
     }
+
+    androidResources {
+        // فایل‌های صدای دری باید بدون فشرده‌سازی ذخیره شوند تا MediaPlayer
+        // بتواند مستقیم از داخل APK بخواند (openFd)
+        noCompress.addAll(listOf("ogg", "wav", "mp3"))
+    }
 }
 
 dependencies {
@@ -75,4 +81,6 @@ dependencies {
     implementation("org.maplibre.gl:android-sdk:11.11.0")
 
     testImplementation("junit:junit:4.13.2")
+    // org.json واقعی برای آزمون‌های واحد (شبیه‌ساز اندروید خروجی خالی می‌دهد)
+    testImplementation("org.json:json:20240303")
 }

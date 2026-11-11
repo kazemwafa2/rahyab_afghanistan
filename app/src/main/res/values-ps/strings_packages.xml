@@ -4,6 +4,8 @@
     <string name="pkg_note">د انټرنېټ پرته نقشې، لټون او لارموندنې لپاره، خپل د سیمې بنډل ډاونلوډ کړئ. ډاونلوډ په وایفای سپارښتنه کیږي. له نصب وروسته برنامه پرته له انټرنېټ کار کوي.</string>
     <string name="pkg_loading">د بنډلونو لیست لوستل کیږي…</string>
     <string name="pkg_manifest_error">د بنډلونو لیست ونه لوستل شو. انټرنېټ یا د سرچینې پته وګورئ او بیا «نوي کول» فشار کړئ.</string>
+    <string name="manifest_local">د پروګرام دن (انټرنېټ ته اړتیا نشته)</string>
+    <string name="pkg_local_note">انټرنېټ ته لاسرسی نشته؛ سیمه‌ایز لیست وښودل شو. د ۳۴ ټولو ولایتونو بنډلیز بنسټ له ځان سره پروګرام نصب دی او پروګرام له انټرنېټ پرته کار کوي.</string>
     <string name="pkg_available">موجود بنډلونه:</string>
     <string name="pkg_empty">اوسمهال هېڅ بنډل خپور نه دی. وروسته «نوي کول» فشار کړئ.</string>
     <string name="pkg_installed_list">نصب شوي بنډلونه:</string>
@@ -36,4 +38,8 @@
     <string name="notif_nav_title">لارښودنه فعاله ده</string>
     <string name="notif_nav_text">لارښود ستاسو لارښوونه کوي</string>
     <string name="notif_nav_stop">دروول</string>
+    <!-- دقیق پيغامونه د ډاونلوډ لپاره (0.9.5) -->
+    <string name="pkg_manifest_not_published">د آنلاین بنډو لست تر اوسه خپور نه دی؛ د پروګرام دننه لست وښودل شو. ولایتي بنډې له همدې لست څخه پرته له انټرنټ نصب کېږي.</string>
+    <string name="err_asset_missing">د دې بنډې فایل په نصب شوي پروګرام کې نه موندل شو. مهرباني وکړئ بشپړ نسخه نصب کړئ.</string>
+    <string name="err_network_dl">نښلول بریالی نه شو. انټرنټ وګورئ او بیا هڅه وکړئ.</string>
 </resources>

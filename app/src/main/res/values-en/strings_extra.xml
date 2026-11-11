@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== English translation — v0.9.3 ===== -->
+
+    <!-- Speaker -->
+    <string name="voice_state">Speaker</string>
+    <string name="voice_source">Choose a voice</string>
+    <string name="voice_system_option">Phone speech engine (needs a voice for this language installed)</string>
+    <string name="voice_volume">Volume</string>
+    <string name="voice_speed">Speech speed</string>
+    <string name="voice_list_note">Each voice includes %1$d recorded phrases — fully offline; listen with the play button before choosing.</string>
+    <string name="voice_female">Female voice</string>
+    <string name="voice_male">Male voice</string>
+    <string name="voice_play">Preview</string>
+    <string name="voice_bluetooth">Play over Bluetooth</string>
+    <string name="voice_during_call">Speak during phone calls</string>
+    <string name="voice_system_unavailable">No voice for this language is installed on this phone</string>
+    <string name="voice_saved_msg">Voice settings saved</string>
+    <string name="voice_lang_note">Voice guidance follows the app language (independent of the phone language). Current language: %1$s</string>
+    <string name="voice_group_dari">Dari voices</string>
+    <string name="voice_group_pashto">Pashto voices</string>
+    <string name="voice_group_english">English voices</string>
+    <string name="voice_active_tag">Active — currently used for guidance</string>
+    <string name="voice_lang_mismatch_toast">%1$s saved — it will speak once you switch the app language to %2$s.</string>
+    <string name="voice_lang_dari_name">Dari</string>
+    <string name="voice_lang_pashto_name">Pashto</string>
+    <string name="voice_lang_english_name">English</string>
+
+    <!-- Alerts -->
+    <string name="alerts_title">Alert settings</string>
+    <string name="alert_bump">Speed bump alert</string>
+    <string name="alert_accident">Accident alert</string>
+    <string name="alert_traffic">Traffic jam alert</string>
+    <string name="alert_closed">Road closure alert</string>
+    <string name="alert_hazard">Road hazard alert</string>
+    <string name="alert_cam">Speed camera alert</string>
+    <string name="alert_speed">Over-speeding alert</string>
+    <string name="alert_speed_limit">Alert threshold: %1$d km/h</string>
+    <string name="alerts_note">Alerts come only from Rahyab user reports confirmed in the last 24 hours; reports with sensitive security information are never shown.</string>
+
+    <string name="alert_bump_text">Caution. Speed bump ahead</string>
+    <string name="alert_accident_text">Caution. An accident has been reported ahead</string>
+    <string name="alert_traffic_text">Traffic jam reported ahead</string>
+    <string name="alert_closed_text">A roadblock has been reported ahead</string>
+    <string name="alert_hazard_text">Caution. Hazard ahead</string>
+    <string name="alert_cam_text">Caution. Speed camera ahead</string>
+    <string name="alert_speed_text">You are driving too fast. Please slow down</string>
+
+    <!-- Free driving -->
+    <string name="free_title">Free driving</string>
+    <string name="free_end">End</string>
+    <string name="free_started">Free driving mode started</string>
+    <string name="stop_nav_first">Stop the current navigation first</string>
+    <string name="speed_unit">km/h</string>
+    <string name="tab_free">Free</string>
+</resources>

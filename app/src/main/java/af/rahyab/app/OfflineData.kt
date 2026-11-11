@@ -3,6 +3,7 @@ package af.rahyab.app
 import android.content.Context
 import android.os.StatFs
 import android.util.Log
+import android.util.AtomicFile
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
@@ -84,6 +85,17 @@ object OfflineData {
     fun activeMapPackage(): Installed? {
         return installed.filter { it.hasTiles && !isBaseId(it.id) }
             .maxByOrNull { it.dataDate } ?: basePackage()?.takeIf { it.hasTiles }
+    }
+
+    /**
+     * بسته نقشه مناسب برای این نقطه: اولویت با بسته ولایتیِ شامل نقطه است
+     * (کاشی ریزتر/تازه‌تر)؛ اگر هیچ بسته ولایتی نقطه را نپوشاند → بسته پایه کشوری.
+     * این یعنی با نصب «کابل» و سفر به هرات، نقشه هرات همچنان از بسته پایه می‌آید.
+     */
+    fun activeMapPackage(lat: Double, lon: Double): Installed? {
+        ensureLoaded()
+        return installed.filter { it.hasTiles && !isBaseId(it.id) && it.contains(lat, lon) }
+            .maxByOrNull { it.dataDate } ?: activeMapPackage()
     }
 
     fun dirOf(pkg: Installed): File = File(File(baseDir, "packages"), pkg.dirName)
@@ -318,52 +330,122 @@ object OfflineData {
         }
     }
 
-    /** اعتبارسنجی و ثبت نهایی بسته از پوشه staging (نصب اتمیک) */
+    /** اعتبارسنجی و ثبت نهایی بسته از پوشه staging */
+    @Synchronized
     fun installFromStaging(staging: File): Installed? {
+        ensureLoaded()
+
         val m = readPkgManifest(staging) ?: return null
-        // اعتبارسنجی سرآیند فایل‌های اصلی
+
+        if (!m.id.matches(Regex("^[A-Za-z0-9_-]+$")) ||
+            (m.dataDate.isNotEmpty() &&
+             !m.dataDate.matches(Regex("^[A-Za-z0-9_-]+$")))) {
+            Log.e(TAG, "شناسه یا تاریخ بسته نامعتبر است")
+            return null
+        }
+
+        // اعتبارسنجی مستقیم فایل‌های داخل staging
         try {
-            if (m.hasGraph) OfflineRouter.Graph.probe(graphFile(m))
-            if (m.hasIndex) OfflineGeocoder.Index.probe(indexFile(m))
+            if (m.hasGraph) {
+                OfflineRouter.Graph.probe(File(staging, "${m.id}.rafgraph"))
+            }
+            if (m.hasIndex) {
+                OfflineGeocoder.Index.probe(File(staging, "${m.id}.rafidx"))
+            }
             if (m.hasTiles) {
-                val tf = tilesFile(m)
-                if (tf.length() < 1000) throw IllegalArgumentException("فایل کاشی‌ها ناقص است")
+                val tf = File(staging, "${m.id}.pmtiles")
+                if (!tf.isFile || tf.length() < 1000) {
+                    throw IllegalArgumentException("فایل کاشی‌ها ناقص است")
+                }
             }
         } catch (e: Exception) {
             Log.e(TAG, "اعتبارسنجی بسته ناموفق", e)
             return null
         }
-        val dirName = if (m.dataDate.isEmpty()) m.id else "${m.id}-${m.dataDate}"
-        val finalDir = File(File(baseDir, "packages"), dirName)
-        if (finalDir.exists()) finalDir.deleteRecursively()
-        if (!staging.renameTo(finalDir)) {
-            // در صورت شکست rename (cross-device نباید رخ دهد) کپی می‌کنیم
-            if (!staging.copyRecursively(finalDir, overwrite = true)) return null
-            staging.deleteRecursively()
+
+        val previous = registry.toList()
+        val packagesDir = File(baseDir, "packages")
+        packagesDir.mkdirs()
+
+        val baseName = if (m.dataDate.isEmpty()) m.id
+                       else "${m.id}-${m.dataDate}"
+
+        // پوشه مستقل؛ نسخه قبلی هرگز پیش از ثبت موفق حذف نمی‌شود
+        var dirName = baseName
+        var finalDir = File(packagesDir, dirName)
+        if (finalDir.exists()) {
+            dirName = "$baseName-${System.currentTimeMillis()}"
+            finalDir = File(packagesDir, dirName)
         }
+
+        if (!staging.renameTo(finalDir)) {
+            Log.e(TAG, "انتقال پوشه staging ناموفق بود")
+            return null
+        }
+
         val inst = Installed(
             m.id, m.name, m.region, m.dataDate, m.builderVersion, dirName,
-            finalDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum(),
+            finalDir.walkTopDown().filter { it.isFile }.sumOf { it.length() },
             System.currentTimeMillis(), m.hasTiles, m.hasGraph, m.hasIndex,
             m.west, m.south, m.east, m.north
         )
+
         registry.removeAll { it.id == inst.id }
         registry.add(inst)
-        saveRegistry()
+
+        if (!saveRegistry()) {
+            registry.clear()
+            registry.addAll(previous)
+            finalDir.deleteRecursively()
+            Log.e(TAG, "ثبت Registry ناموفق بود؛ نسخه قبلی حفظ شد")
+            return null
+        }
+
+        // حذف نسخه‌های قدیمی فقط پس از ثبت موفق
+        previous.filter { it.id == inst.id && it.dirName != dirName }
+            .forEach { dirOf(it).deleteRecursively() }
+
         invalidate()
         return inst
     }
 
+    @Synchronized
     fun delete(id: String): Boolean {
         ensureLoaded()
-        // بسته پایه کشوری همراه APK حذف نمی‌شود؛ نسخه کامل دانلودی قابل حذف است
+
         if (id == Config.BASE_PACKAGE_ID) return false
+
         val pkg = registry.firstOrNull { it.id == id } ?: return false
-        val ok = dirOf(pkg).deleteRecursively()
+        val originalDir = dirOf(pkg)
+        if (!originalDir.isDirectory) return false
+
+        val trashDir = File(
+            File(baseDir, "staging"),
+            "deleting-$id-${System.currentTimeMillis()}"
+        )
+
+        if (!originalDir.renameTo(trashDir)) {
+            Log.e(TAG, "انتقال بسته برای حذف ناموفق بود")
+            return false
+        }
+
+        val previous = registry.toList()
         registry.removeAll { it.id == id }
-        saveRegistry()
+
+        if (!saveRegistry()) {
+            registry.clear()
+            registry.addAll(previous)
+
+            if (!trashDir.renameTo(originalDir)) {
+                Log.e(TAG, "بازگردانی پوشه بسته ناموفق بود: ${pkg.id}")
+            }
+
+            return false
+        }
+
+        trashDir.deleteRecursively()
         invalidate()
-        return ok
+        return true
     }
 
     /**
@@ -448,27 +530,44 @@ object OfflineData {
     }
 
     @Synchronized
-    private fun saveRegistry() {
-        val arr = JSONArray()
-        registry.forEach { p ->
-            arr.put(
-                JSONObject()
-                    .put("id", p.id).put("name", p.name).put("region", p.region)
-                    .put("dataDate", p.dataDate).put("builderVersion", p.builderVersion)
-                    .put("dir", p.dirName).put("sizeBytes", p.sizeBytes)
-                    .put("installedAt", p.installedAt)
-                    .put("hasTiles", p.hasTiles).put("hasGraph", p.hasGraph).put("hasIndex", p.hasIndex)
-                    .put("west", p.west).put("south", p.south).put("east", p.east).put("north", p.north)
-            )
-        }
+    private fun saveRegistry(): Boolean {
+        val atomic = AtomicFile(File(baseDir, "registry.json"))
+        var output: FileOutputStream? = null
+
         try {
-            val f = File(baseDir, "registry.json")
-            val tmp = File(baseDir, "registry.json.tmp")
-            tmp.writeText(arr.toString())
-            if (f.exists()) f.delete()
-            tmp.renameTo(f)
+            val arr = JSONArray()
+            registry.forEach { p ->
+                arr.put(
+                    JSONObject()
+                        .put("id", p.id).put("name", p.name).put("region", p.region)
+                        .put("dataDate", p.dataDate).put("builderVersion", p.builderVersion)
+                        .put("dir", p.dirName).put("sizeBytes", p.sizeBytes)
+                        .put("installedAt", p.installedAt)
+                        .put("hasTiles", p.hasTiles).put("hasGraph", p.hasGraph)
+                        .put("hasIndex", p.hasIndex)
+                        .put("west", p.west).put("south", p.south)
+                        .put("east", p.east).put("north", p.north)
+                )
+            }
+
+            output = atomic.startWrite()
+            output.write(arr.toString().toByteArray(Charsets.UTF_8))
+            output.fd.sync()
+            atomic.finishWrite(output)
+            output = null
+            return true
         } catch (e: Exception) {
             Log.e(TAG, "ذخیره registry ناموفق", e)
+            return false
+        } finally {
+            if (output != null) {
+                try {
+                    atomic.failWrite(output)
+                } catch (e: Exception) {
+                    Log.e(TAG, "بازگردانی registry ناموفق", e)
+                }
+            }
         }
     }
+
 }

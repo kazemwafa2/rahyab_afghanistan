@@ -4,6 +4,8 @@
     <string name="pkg_note">For maps, search and directions without internet, download the package for your region. Wi-Fi is recommended. After installation the app works offline.</string>
     <string name="pkg_loading">Reading package list…</string>
     <string name="pkg_manifest_error">Could not read the package list. Check your internet or the source address, then tap “Refresh”.</string>
+    <string name="manifest_local">Built-in (offline)</string>
+    <string name="pkg_local_note">Internet is unavailable; the built-in list is shown. The national base package covering all 34 provinces ships with the app and works fully offline.</string>
     <string name="pkg_available">Available packages:</string>
     <string name="pkg_empty">No packages have been published yet. Tap “Refresh” later.</string>
     <string name="pkg_installed_list">Installed packages:</string>
@@ -36,4 +38,8 @@
     <string name="notif_nav_title">Navigation active</string>
     <string name="notif_nav_text">Rahyab is guiding you</string>
     <string name="notif_nav_stop">Stop</string>
+    <!-- More precise download messages (0.9.5) -->
+    <string name="pkg_manifest_not_published">The online package list is not published yet; the built-in list is shown. Province packages install from this list without internet.</string>
+    <string name="err_asset_missing">This package file is not included in the installed app version. Please install the full app build.</string>
+    <string name="err_network_dl">Connection failed. Check your internet and try again.</string>
 </resources>
