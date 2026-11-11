@@ -437,7 +437,12 @@ class MapPackagesActivity : AppCompatActivity() {
                     "invalid" -> getString(R.string.err_invalid)
                     "asset_missing" -> getString(R.string.err_asset_missing)
                     "network" -> getString(R.string.err_network_dl)
-                    else -> getString(R.string.pkg_failed_generic)
+                    else -> {
+                        val m = pr.message ?: ""
+                        if (m.startsWith("http_") || m.startsWith("network:"))
+                            getString(R.string.err_network_dl) + "\n[" + m + "]"
+                        else getString(R.string.pkg_failed_generic)
+                    }
                 }
                 Toast.makeText(this, R.string.pkg_failed_generic, Toast.LENGTH_LONG).show()
             }
