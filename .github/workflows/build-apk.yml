@@ -62,15 +62,43 @@ jobs:
         run: gradle "$TASK" --stacktrace
 
       - name: Collect APKs and checksums
+        shell: bash
         run: |
-          mkdir -p dist
-          find app/build/outputs/apk/$KIND -name '*.apk' -exec cp {} dist/ \;
-          # نام‌گذاری شفاف: APK بدون کلید امضای معتبر هرگز رسمی شمرده نمی‌شود
-          if [ "$KIND" = "debug" ]; then
-            cd dist
-            for f in *.apk; do mv "$f" "${f%.apk}-debug-signed.apk"; done
+          set -euo pipefail
+
+          DIST_DIR="$GITHUB_WORKSPACE/dist"
+          APK_DIR="$GITHUB_WORKSPACE/app/build/outputs/apk/$KIND"
+
+          mkdir -p "$DIST_DIR"
+
+          if [ ! -d "$APK_DIR" ]; then
+            echo "::error::APK output directory not found: $APK_DIR"
+            exit 1
           fi
-          cd dist && sha256sum *.apk > SHA256SUMS.txt && cat SHA256SUMS.txt
+
+          mapfile -d '' -t APK_FILES < <(
+            find "$APK_DIR" -type f -name '*.apk' -print0
+          )
+
+          if [ "${#APK_FILES[@]}" -eq 0 ]; then
+            echo "::error::No APK file was generated."
+            exit 1
+          fi
+
+          for apk in "${APK_FILES[@]}"; do
+            cp "$apk" "$DIST_DIR/"
+          done
+
+          cd "$DIST_DIR"
+
+          if [ "$KIND" = "debug" ]; then
+            for f in *.apk; do
+              mv "$f" "${f%.apk}-debug-signed.apk"
+            done
+          fi
+
+          sha256sum *.apk > SHA256SUMS.txt
+          cat SHA256SUMS.txt
 
       - name: Upload unit test reports (on failure)
         if: failure()
