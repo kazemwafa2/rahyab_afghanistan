@@ -334,6 +334,10 @@ class MainActivity : AppCompatActivity() {
             m.addOnCameraMoveListener { positionBubbles() }
             m.addOnCameraIdleListener {
                 positionBubbles()
+                // آفلاین: اگر دوربین به ولایت دیگری رفت، بسته نقشهٔ همان ولایت (یا بسته پایه) بار شود
+                if (offlineStyleActive) {
+                    try { pickOfflinePackage()?.let { applyOfflineStyle(it) } } catch (_: Exception) { }
+                }
                 // ذخیره مرکز نقشه برای کارت هوا
                 m.cameraPosition.target?.let { t ->
                     prefs.edit().putFloat("map_lat", t.latitude.toFloat())
@@ -351,6 +355,10 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             hideMapAttribution()
+            // اگر بارگیری سبک آنلاین شکست خورد (انترنت ناپایدار) → خودکار سبک آفلاین
+            mapView.addOnDidFailLoadingMapListener {
+                try { handleOnlineStyleFailure() } catch (e: Exception) { }
+            }
             loadStyle()
         }
         mapView.post { hideMapAttribution() }
@@ -720,6 +728,15 @@ class MainActivity : AppCompatActivity() {
                         is ForbiddenException -> toast(R.string.service_forbidden)
                         else -> toast(R.string.error_network)
                     }
+                    if (local.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local) }
+                    else showResults(emptyList())
+                }
+            } catch (e: Exception) {
+                // هیچ استثنایی نباید نخ اجرا را بیندازد (کرش هنگام قطع انترنت)
+                val local = try { store.searchLocal(q) } catch (ex: Exception) { emptyList<Place>() }
+                ui.post {
+                    showSource("")
+                    toast(R.string.error_network)
                     if (local.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local) }
                     else showResults(emptyList())
                 }
@@ -1396,6 +1413,13 @@ class MainActivity : AppCompatActivity() {
 
     private var styleUrl = ""
 
+    // شنوندهٔ تغییر وضعیت انترنت — سوییچ خودکار آنلاین/آفلاین نقشه.
+    // فقط یک نمونه ثبت می‌شود (در onStart) و در onStop آزاد می‌شود تا هیچ نشتی و
+    // هیچ انباشتِ شنونده‌ای رخ ندهد؛ انباشت شنونده‌ها هنگام خاموش/روشن‌کردن
+    // انترنت باعث سنگینی و بسته‌شدن برنامه می‌شد.
+    private var netListener: android.net.ConnectivityManager.NetworkCallback? = null
+    private var netListenerInstalled = false
+
     private fun wantDark(): Boolean {
         val mode = prefs.getInt("night", 0)
         val sysNight = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
@@ -1403,52 +1427,83 @@ class MainActivity : AppCompatActivity() {
     }
 
     /**
-     * بارگذاری سبک نقشه.
-     * اگر بسته نقشه آفلاین نصب باشد → سبک محلی (PMTiles روی خود گوشی، بدون انترنت).
-     * در غیر این صورت سبک آنلاین OpenFreeMap (روز یا شب)؛ اگر انترنت نبود پیام مناسب نمایش داده می‌شود.
+     * بارگذاری سبک نقشه — سوییچ خودکار آنلاین/آفلاین:
+     *  - انترنت (وای‌فای/داده) روشن باشد → سبک آنلاین کامل؛ نقشه همان نمایش همیشگی دارد.
+     *  - انترنت خاموش باشد → خودکار سبک آفلاین از بستهٔ نصب‌شده (کاشی روی خود گوشی).
+     *  - هیچ‌کدام نبود → پیام روشن به کاربر.
+     * تغییر وضعیت انترنت با netListener خودکار شنیده می‌شود و نقشه بدون هیچ اقدامی
+     * از کاربر بین آنلاین و آفلاین جابه‌جا می‌شود — بدون تغییر در کارکرد برنامه.
      */
     private fun loadStyle() {
         val m = map ?: return
-        // بسته نقشه بر اساس مکان فعلی/مرکز نقشه انتخاب می‌شود تا اگر چند ولایت
-        // نصب باشد، بسته همان ولایتِ کاربر استفاده شود؛ بیرون آن → بسته پایه
-        val loc = lastKnown()
-        val target = m.cameraPosition?.target
-        val pkg = when {
-            loc != null -> OfflineData.activeMapPackage(loc.latitude, loc.longitude)
-            target != null -> OfflineData.activeMapPackage(target.latitude, target.longitude)
-            else -> OfflineData.activeMapPackage()
+        if (isNetworkAvailable()) {
+            applyOnlineStyle()
+            return
         }
+        // بدون انترنت — بستهٔ نقشهٔ بر اساس مکان فعلی/مرکز نقشه انتخاب می‌شود تا اگر
+        // چند ولایت نصب باشد، بستهٔ همان ولایتِ کاربر استفاده شود؛ بیرون آن → بستهٔ پایه
+        val pkg = pickOfflinePackage()
         if (pkg != null) {
-            val base = OfflineData.basePackage()
-            val localJson = buildOfflineStyleJson(pkg, base?.takeIf { it.id != pkg.id })
-            if (localJson != null) {
-                val key = "offline:${pkg.dirName}+${base?.dirName ?: "-"}:${if (wantDark()) "d" else "l"}"
-                if (styleUrl == key && style != null) return
-                styleUrl = key
-                offlineStyleActive = true
-                findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
-                locationEnabled = false
-                m.setStyle(Style.Builder().fromJson(localJson)) { s ->
-                    style = s
-                    addRouteLayers(s)
-                }
-                return
-            }
+            applyOfflineStyle(pkg)
+            return
         }
         offlineStyleActive = false
+        if (style == null) toast(R.string.map_offline_unavailable)
+    }
+
+    /** بستهٔ آفلاین مناسب موقعیت فعلی/مرکز نقشه */
+    private fun pickOfflinePackage(): OfflineData.Installed? {
+        // مرکز دیدِ نقشه اولویت دارد: کاربر همان‌جا را نگاه می‌کند (نه لزوماً جایی که GPS نشان می‌دهد)
+        val target = map?.cameraPosition?.target
+        val loc = lastKnown()
+        return when {
+            target != null -> OfflineData.activeMapPackage(target.latitude, target.longitude)
+            loc != null -> OfflineData.activeMapPackage(loc.latitude, loc.longitude)
+            else -> OfflineData.activeMapPackage()
+        }
+    }
+
+    /** سبک آفلاین: کاشی‌های PMTiles روی خود گوشی — بدون هیچ درخواست انترنت */
+    private fun applyOfflineStyle(pkg: OfflineData.Installed) {
+        val m = map ?: return
+        val base = OfflineData.basePackage()
+        val localJson = buildOfflineStyleJson(pkg, base?.takeIf { it.id != pkg.id }) ?: return
+        val key = "offline:${pkg.dirName}+${base?.dirName ?: "-"}:${if (wantDark()) "d" else "l"}"
+        if (styleUrl == key && style != null) return
+        styleUrl = key
+        offlineStyleActive = true
         findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
+        locationEnabled = false
+        m.setStyle(Style.Builder().fromJson(localJson)) { s ->
+            style = s
+            addRouteLayers(s)
+        }
+    }
+
+    /** سبک آنلاین OpenFreeMap (روز یا شب) — همان نمایش کامل همیشگی */
+    private fun applyOnlineStyle() {
+        val m = map ?: return
         val url = if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT
         if (url == styleUrl && style != null) return
         styleUrl = url
+        offlineStyleActive = false
+        findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
         locationEnabled = false
-        if (!isNetworkAvailable()) {
-            // بدون بسته آفلاین و بدون انترنت: پیام روشن به کاربر
-            toast(R.string.map_offline_unavailable)
-        }
         m.setStyle(Style.Builder().fromUri(url)) { s ->
             style = s
             addRouteLayers(s)
         }
+    }
+
+    /**
+     * اگر بارگیری سبک آنلاین شکست خورد (مثلاً وای‌فای وصل است ولی انترنت واقعی
+     * پاسخ نمی‌دهد) → بی‌درنگ سبک آفلاین از بستهٔ نصب‌شده بار می‌شود تا نقشه هرگز
+     * خالی/خاکستری نماند.
+     */
+    private fun handleOnlineStyleFailure() {
+        if (offlineStyleActive) return
+        val pkg = pickOfflinePackage() ?: return
+        applyOfflineStyle(pkg)
     }
 
     private fun isNetworkAvailable(): Boolean {
@@ -1456,10 +1511,61 @@ class MainActivity : AppCompatActivity() {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
             val net = cm.activeNetwork ?: return false
             val caps = cm.getNetworkCapabilities(net) ?: return false
-            caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+            if (!caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)) return false
+            // از API ۲۳ به بالا «تأییدشده» یعنی انترنت واقعاً پاسخ می‌دهد —
+            // وای‌فای بدون انترنت (مثل کپتیو پورتال) → حالت آفلاین، نه نقشهٔ خالی
+            if (Build.VERSION.SDK_INT >= 23 &&
+                !caps.hasCapability(android.net.NetworkCapabilities.NET_CAPABILITY_VALIDATED)
+            ) return false
+            true
         } catch (e: Exception) {
             true // در صورت تردید، تلاش برای بارگذاری آنلاین
         }
+    }
+
+    /** شنیدن تغییر انترنت — یک نمونهٔ واحد؛ بدون ثبت تکراری و بدون نشت حافظه */
+    private fun ensureNetListener() {
+        if (netListenerInstalled) return
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            val cb = object : android.net.ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: android.net.Network) {
+                    ui.post {
+                        if (!isDestroyed && !isFinishing) {
+                            loadStyle()
+                            if (trafficOn) refreshTrafficData()
+                        }
+                    }
+                }
+
+                override fun onLost(network: android.net.Network) {
+                    ui.post {
+                        if (!isDestroyed && !isFinishing) loadStyle()
+                    }
+                }
+            }
+            if (Build.VERSION.SDK_INT >= 24) {
+                cm.registerDefaultNetworkCallback(cb)
+            } else {
+                cm.registerNetworkCallback(
+                    android.net.NetworkRequest.Builder()
+                        .addCapability(android.net.NetworkCapabilities.NET_CAPABILITY_INTERNET)
+                        .build(), cb
+                )
+            }
+            netListener = cb
+            netListenerInstalled = true
+        } catch (e: Exception) { }
+    }
+
+    private fun clearNetListener() {
+        if (!netListenerInstalled) return
+        try {
+            val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
+            netListener?.let { cm.unregisterNetworkCallback(it) }
+        } catch (e: Exception) { }
+        netListener = null
+        netListenerInstalled = false
     }
 
     private fun addRouteLayers(s: Style) {
@@ -1642,8 +1748,12 @@ class MainActivity : AppCompatActivity() {
                     val o = org.json.JSONObject(json)
                     val sources = o.getJSONObject("sources")
                     // منبع پایه — همان قالب کاشی
+                    // ⚠️ رفع اشکال: منبع پایه از روی منبع اصلی کپی می‌شد و فیلد «url» (که به فایل
+                    // ولایت اشاره داشت) می‌ماند؛ MapLibre «url» را بر «tiles» ترجیح می‌دهد، پس
+                    // «پایه» هم از فایل ولایت خوانده می‌شد و بیرون از ولایت نقشه خاکستری بود.
                     val baseSrc = org.json.JSONObject(sources.getJSONObject("rahyab").toString())
-                    baseSrc.put("tiles", org.json.JSONArray().put("pmtiles://file://" + baseTiles.absolutePath))
+                    baseSrc.remove("tiles")
+                    baseSrc.put("url", "pmtiles://file://" + baseTiles.absolutePath)
                     sources.put("rahyab-base", baseSrc)
                     // لایه‌ها: نسخه پایه (زوم ≤ ۸) + نسخه اصلی (زوم ≥ ۹)
                     val layers = o.getJSONArray("layers")
@@ -1655,7 +1765,9 @@ class MainActivity : AppCompatActivity() {
                             baseLayer.put("id", layer.getString("id") + "-base")
                             baseLayer.put("source", "rahyab-base")
                             val mz = if (baseLayer.has("maxzoom")) baseLayer.getInt("maxzoom") else 22
-                            baseLayer.put("maxzoom", minOf(mz, 8))
+                            // maxzoom در MapLibre انحصاری است (زیر این زوم دیده می‌شود): ۹ یعنی تا ۸٫۹۹
+                            // و لایه ولایتی از ۹ شروع می‌شود → بدون «نوار خالی» بین زوم ۸ و ۹
+                            baseLayer.put("maxzoom", minOf(mz, 9))
                             out.put(baseLayer)
                             val mz0 = if (layer.has("minzoom")) layer.getInt("minzoom") else 0
                             layer.put("minzoom", maxOf(mz0, 9))
@@ -1828,18 +1940,10 @@ class MainActivity : AppCompatActivity() {
         refreshTrafficData()
     }
 
-    /** تازه‌سازی فید ترافیک؛ شکست شبکه بی‌صدا است (قانون بدون داده جعلی) */
+    /** تازه‌سازی فید ترافیک؛ شکست شبکه بی‌صدا است (قانون بدون داده جعلی).
+     *  شنوندهٔ شبکه در ensureNetListener یک بار ثبت می‌شود — ثبت تکراری در هر فراخوانی،
+     *  انباشت شنونده و بسته‌شدن برنامه هنگام تغییر انترنت می‌ساخت. */
     private fun refreshTrafficData() {
-        if (Build.VERSION.SDK_INT >= 24) {
-            try {
-                val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
-                cm.registerDefaultNetworkCallback(object : android.net.ConnectivityManager.NetworkCallback() {
-                    override fun onAvailable(network: android.net.Network) {
-                        ui.post { refreshTrafficData() }
-                    }
-                })
-            } catch (e: Exception) { }
-        }
         io.execute {
             TrafficModule.refreshFeed(this@MainActivity)
             ui.post { renderTraffic() }
@@ -2502,6 +2606,8 @@ class MainActivity : AppCompatActivity() {
     override fun onStart() {
         super.onStart()
         mapView.onStart()
+        // سوییچ خودکار آنلاین/آفلاین نقشه با تغییر انترنت (یک نمونه؛ در onStop آزاد می‌شود)
+        ensureNetListener()
         NavigationController.addUiListener(uiListener)
         NavigationController.addFixListener(fixListener)
         NavigationController.addAlertListener(alertListener)
@@ -2537,6 +2643,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     override fun onStop() {
+        clearNetListener()
         NavigationController.removeUiListener(uiListener)
         NavigationController.removeFixListener(fixListener)
         NavigationController.removeAlertListener(alertListener)

@@ -16,8 +16,8 @@ android {
         applicationId = "af.rahyab.app"
         minSdk = 21          // Android 5.0+
         targetSdk = 35
-        versionCode = 15
-        versionName = "0.9.5"
+        versionCode = 16
+        versionName = "0.9.6"
 
         // نشانی مخزن در BuildConfig قرار می‌گیرد تا User-Agent و نشانی manifest
         // بسته‌ها به‌صورت متمرکز ساخته شوند (Config.kt).
@@ -69,7 +69,7 @@ android {
     androidResources {
         // فایل‌های صدای دری باید بدون فشرده‌سازی ذخیره شوند تا MediaPlayer
         // بتواند مستقیم از داخل APK بخواند (openFd)
-        noCompress.addAll(listOf("ogg", "wav", "mp3"))
+        noCompress.addAll(listOf("ogg", "wav", "mp3", "zip", "pmtiles", "rafgraph", "rafidx"))
     }
 }
 

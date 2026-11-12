@@ -137,13 +137,26 @@ object PackageDownloader {
                     partFile.outputStream().use { out ->
                         val buf = ByteArray(CHUNK)
                         var done = 0L
-                        val total = s.available().toLong().let { if (it > 0) it else pkg.sizeBytes }
+                        // حجم واقعی از manifest؛ available() روی دارایی فشرده‌شده نادرست است
+                        val total = if (pkg.sizeBytes > 0) pkg.sizeBytes else s.available().toLong()
+                        listener.onProgress(Progress(pkg.id, State.DOWNLOADING, 0, total))
+                        var lastReport = 0L
                         while (true) {
+                            if (isCancelled()) {
+                                partFile.delete()
+                                listener.onProgress(Progress(pkg.id, State.CANCELLED, 0, 0))
+                                return null
+                            }
                             val n = s.read(buf)
                             if (n < 0) break
                             out.write(buf, 0, n)
                             done += n
-                            if (done % (CHUNK * 40) == 0L) listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
+                            // ⚠️ رفع اشکال: قبلاً «done % (CHUNK*40) == 0» بود که تقریباً هرگز برقرار
+                            // نمی‌شد و نوار پیشرفت خالی می‌ماند
+                            if (done - lastReport >= 262_144) {
+                                lastReport = done
+                                listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
+                            }
                         }
                         listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, done))
                         done

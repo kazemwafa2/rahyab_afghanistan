@@ -144,22 +144,45 @@ class MapPackagesActivity : AppCompatActivity() {
     private fun loadManifest() {
         tvStatus.text = getString(R.string.pkg_loading)
         io.execute {
-            val pkgs = try {
+            // فهرست محلی: بسته‌هایی که فایل‌شان واقعاً داخل همین APK است
+            val local: List<PackageDownloader.RemotePkg> = try {
+                val json = assets.open("packages/manifest.json").bufferedReader().use { it.readText() }
+                PackageDownloader.fetchManifestFromJson(json, applicationContext)
+            } catch (e: Exception) { emptyList() }
+
+            val online: List<PackageDownloader.RemotePkg>? = try {
                 PackageDownloader.fetchManifest(manifestUrl())
             } catch (e: Exception) {
-                // منبع انترنت/فهرست آنلاین در دسترس نیست — فهرست محلی داخل برنامه نمایش داده می‌شود.
-                // بسته‌های asset:// که فایل‌شان در این APK نیست حذف می‌شوند تا دکمه کارنکننده نمایش داده نشود.
-                val local = try {
-                    val json = assets.open("packages/manifest.json").bufferedReader().use { it.readText() }
-                    PackageDownloader.fetchManifestFromJson(json, applicationContext)
-                } catch (e2: Exception) { null }
-                ui.post {
-                    if (local != null) onLocalManifest(local, e is BadResponseException) else onManifestError(e)
+                if (local.isEmpty()) {
+                    ui.post { onManifestError(e) }
+                    return@execute
                 }
+                ui.post { onLocalManifest(local, e is BadResponseException) }
                 return@execute
             }
-            ui.post { showPackages(pkgs) }
+            // ⚠️ رفع اشکال اصلی «دانلود نمی‌شود»: قبلاً وقتی فهرست آنلاین (گیت‌هاب) می‌رسید،
+            // فقط آدرس‌های گیت‌هاب نمایش داده می‌شد و بسته‌های داخل APK نادیده گرفته می‌شدند؛
+            // گیت‌هاب در افغانستان/با فیلترشکن کند یا قطع است و دانلود همیشه نیمه‌کاره می‌ماند.
+            // حالا اگر بسته در APK باشد، همان (asset://) ترجیح داده می‌شود: فوری و بی‌انترنت.
+            val merged = mergePreferLocal(local, online ?: emptyList())
+            ui.post { showPackages(merged) }
         }
+    }
+
+    /** ادغام فهرست‌ها بر اساس شناسه؛ نسخهٔ محلی (داخل APK) بر نسخهٔ آنلاین ارجحیت دارد */
+    private fun mergePreferLocal(
+        local: List<PackageDownloader.RemotePkg>,
+        online: List<PackageDownloader.RemotePkg>
+    ): List<PackageDownloader.RemotePkg> {
+        val localById = local.associateBy { it.id }
+        val out = ArrayList<PackageDownloader.RemotePkg>()
+        val seen = HashSet<String>()
+        for (o in online) {
+            if (!seen.add(o.id)) continue
+            out.add(localById[o.id] ?: o)
+        }
+        for (l in local) if (seen.add(l.id)) out.add(l)
+        return out
     }
 
     /** فهرست محلی (بسته‌های همراه برنامه) — هیچ خطایی نشان نمی‌دهد */
