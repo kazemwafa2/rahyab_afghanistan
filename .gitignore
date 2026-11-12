@@ -15,4 +15,6 @@ dist/
 *.pmtiles
 *.rafgraph
 *.rafidx
-*.rahpkg.zip
+
+!app/src/main/assets/packages/*.rahpkg.zip
+!app/src/main/assets/initial/afghanistan.rahpkg.zip
