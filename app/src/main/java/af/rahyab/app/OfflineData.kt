@@ -336,10 +336,13 @@ object OfflineData {
         val m = readPkgManifest(staging) ?: return null
         // اعتبارسنجی سرآیند فایل‌های اصلی
         try {
-            if (m.hasGraph) OfflineRouter.Graph.probe(graphFile(m))
-            if (m.hasIndex) OfflineGeocoder.Index.probe(indexFile(m))
+            // ⚠️ رفع اشکال اصلی «بسته نصب نمی‌شود»: اینجا dirName هنوز خالی است و graphFile(m) و
+            // امثال آن به پوشهٔ packages/ اشاره می‌کردند (نه staging)؛ فایل پیدا نمی‌شد و نصب هر
+            // بسته با «نامعتبر» رد می‌شد. حالا فایل‌ها از خود پوشهٔ staging بررسی می‌شوند.
+            if (m.hasGraph) OfflineRouter.Graph.probe(File(staging, "${m.id}.rafgraph"))
+            if (m.hasIndex) OfflineGeocoder.Index.probe(File(staging, "${m.id}.rafidx"))
             if (m.hasTiles) {
-                val tf = tilesFile(m)
+                val tf = File(staging, "${m.id}.pmtiles")
                 if (tf.length() < 1000) throw IllegalArgumentException("فایل کاشی‌ها ناقص است")
             }
         } catch (e: Exception) {
