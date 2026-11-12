@@ -25,9 +25,9 @@ object Config {
     /** سیاست رسمی: حداکثر یک درخواست در ثانیه برای استفاده‌های کم‌حجم */
     const val GEOCODER_MIN_INTERVAL_MS = 1100L
     /** عمر اعتبار کش نتایج جست‌وجو روی گوشی */
-    const val SEARCH_CACHE_TTL_MS = 24 * 60 * 60 * 1000L
+    const val SEARCH_CACHE_TTL_MS = 30L * 24 * 60 * 60 * 1000L
     /** حداکثر تعداد نتایج ذخیره‌شده در کش جست‌وجو */
-    const val SEARCH_CACHE_MAX = 120
+    const val SEARCH_CACHE_MAX = 300
 
     // ---------- مسیریابی آنلاین ----------
     // فقط برای نمونه اولیه و آزمایش؛ محدودیت سرور عمومی FOSSGIS باید رعایت شود

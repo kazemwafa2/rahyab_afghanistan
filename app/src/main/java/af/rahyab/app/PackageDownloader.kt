@@ -164,7 +164,7 @@ object PackageDownloader {
                 }
             } else {
                 listener.onProgress(Progress(pkg.id, State.DOWNLOADING, 0, pkg.sizeBytes, "connecting"))
-                downloadWithResume(pkg.url, partFile, pkg.sizeBytes) { done, total ->
+                downloadWithResume(pkg.url, partFile, pkg.sizeBytes, isCancelled) { done, total ->
                     listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
                 } ?: return null // لغو شد
             }
@@ -208,11 +208,11 @@ object PackageDownloader {
     }
 
     /** دانلود با ادامه از سر گرفته‌شده؛ خروجی: حجم نهایی یا null در صورت لغو */
-    private fun downloadWithResume(url: String, target: File, knownSize: Long, onProgress: (Long, Long) -> Unit): Long? {
+    private fun downloadWithResume(url: String, target: File, knownSize: Long, isCancelled: () -> Boolean = { false }, onProgress: (Long, Long) -> Unit): Long? {
         var attempt = 0
         var downloaded = if (target.isFile) target.length() else 0L
         while (true) {
-            if (Thread.currentThread().isInterrupted) return null
+            if (Thread.currentThread().isInterrupted || isCancelled()) return null
             attempt++
             val c = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 20000
@@ -239,6 +239,7 @@ object PackageDownloader {
                 var lastReport = 0L
                 try {
                     while (true) {
+                        if (isCancelled()) return null
                         val n = ins.read(buf)
                         if (n < 0) break
                         out.write(buf, 0, n)
@@ -256,7 +257,8 @@ object PackageDownloader {
                 }
                 return downloaded
             } catch (e: IOException) {
-                if (e is HttpFatal || attempt >= 8) throw e
+                // اگر هیچ بایتی نرسیده (اینترنت/گیت‌هاب بسته است) زود تسلیم می‌شویم تا نسخهٔ سبک داخل برنامه جایگزین شود
+                if (e is HttpFatal || attempt >= 8 || (!target.isFile || target.length() == 0L) && attempt >= 3) throw e
                 Log.w(TAG, "قطع اتصال در دانلود؛ پس از مکث ادامه می‌دهیم (تلاش $attempt)", e)
                 Thread.sleep(2000L * attempt)
                 downloaded = if (target.isFile) target.length() else 0L

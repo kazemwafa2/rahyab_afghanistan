@@ -51,6 +51,8 @@ class MapPackagesActivity : AppCompatActivity() {
 
     private val rows = ArrayList<RowViews>()
     private val lastError = HashMap<String, String>()
+    /** نسخهٔ سبک داخل APK برای هر شناسه؛ اگر دانلود نسخهٔ کامل ناموفق شد جایگزین می‌شود */
+    private var localById: Map<String, PackageDownloader.RemotePkg> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -158,30 +160,28 @@ class MapPackagesActivity : AppCompatActivity() {
                     ui.post { onManifestError(e) }
                     return@execute
                 }
+                localById = local.associateBy { it.id }
                 ui.post { onLocalManifest(local, e is BadResponseException) }
                 return@execute
             }
-            // ⚠️ رفع اشکال اصلی «دانلود نمی‌شود»: قبلاً وقتی فهرست آنلاین (گیت‌هاب) می‌رسید،
-            // فقط آدرس‌های گیت‌هاب نمایش داده می‌شد و بسته‌های داخل APK نادیده گرفته می‌شدند؛
-            // گیت‌هاب در افغانستان/با فیلترشکن کند یا قطع است و دانلود همیشه نیمه‌کاره می‌ماند.
-            // حالا اگر بسته در APK باشد، همان (asset://) ترجیح داده می‌شود: فوری و بی‌انترنت.
-            val merged = mergePreferLocal(local, online ?: emptyList())
+            // نسخهٔ کامل (آنلاین) اولویت دارد؛ نسخهٔ سبک داخل APK فقط پشتیبان است
+            localById = local.associateBy { it.id }
+            val merged = mergePreferOnline(local, online ?: emptyList())
             ui.post { showPackages(merged) }
         }
     }
 
-    /** ادغام فهرست‌ها بر اساس شناسه؛ نسخهٔ محلی (داخل APK) بر نسخهٔ آنلاین ارجحیت دارد */
-    private fun mergePreferLocal(
+    /**
+     * ادغام بر اساس شناسه: نسخهٔ کامل آنلاین (کاشی تا زوم ۱۴ + اندیس کامل جست‌وجو) اولویت دارد.
+     * بسته‌هایی که فقط داخل APK هستند (یا وقتی فهرست آنلاین نیامد) نسخهٔ سبک نمایش داده می‌شوند.
+     */
+    private fun mergePreferOnline(
         local: List<PackageDownloader.RemotePkg>,
         online: List<PackageDownloader.RemotePkg>
     ): List<PackageDownloader.RemotePkg> {
-        val localById = local.associateBy { it.id }
         val out = ArrayList<PackageDownloader.RemotePkg>()
         val seen = HashSet<String>()
-        for (o in online) {
-            if (!seen.add(o.id)) continue
-            out.add(localById[o.id] ?: o)
-        }
+        for (o in online) if (seen.add(o.id)) out.add(o)
         for (l in local) if (seen.add(l.id)) out.add(l)
         return out
     }
@@ -308,7 +308,8 @@ class MapPackagesActivity : AppCompatActivity() {
     private fun bindRow(rv: RowViews, p: PackageDownloader.RemotePkg, inst: OfflineData.Installed?) {
         rv.pkgId = p.id
         val size = humanBytes(if (p.sizeBytes > 0) p.sizeBytes else 0)
-        rv.tvMeta.text = listOf(p.region, p.dataDate, size).filter { it.isNotEmpty() }.joinToString(" • ")
+        val kind = if (p.id == Config.BASE_PACKAGE_ID) "" else if (p.url.startsWith("asset://")) "نسخه سبک (داخل برنامه)" else "نسخه کامل"
+        rv.tvMeta.text = listOf(p.region, p.dataDate, size, kind).filter { it.isNotEmpty() }.joinToString(" • ")
 
         when {
             isDownloading(p.id) -> {
@@ -427,8 +428,24 @@ class MapPackagesActivity : AppCompatActivity() {
                 }
                 null
             }
+            // اگر دانلود نسخهٔ کامل از اینترنت ناموفق بود (نه لغو)، نسخهٔ سبک داخل APK نصب می‌شود
+            var finalResult = result
+            val lite = localById[p.id]
+            var usedLite = false
+            if (result == null && !d.cancelled && lite != null && !p.url.startsWith("asset://")) {
+                finalResult = try {
+                    PackageDownloader.downloadAndInstall(applicationContext, lite,
+                        object : PackageDownloader.Listener {
+                            override fun onProgress(pr: PackageDownloader.Progress) { ui.post { onProgress(pr) } }
+                        }, { d.cancelled })
+                } catch (t: Throwable) { null }
+                usedLite = finalResult != null
+                if (usedLite) ui.post { lastError.remove(p.id) }
+            }
             ui.post {
-                if (result != null) {
+                if (usedLite) {
+                    Toast.makeText(this, "دانلود از اینترنت ممکن نشد؛ نسخهٔ سبک از داخل برنامه نصب شد", Toast.LENGTH_LONG).show()
+                } else if (finalResult != null) {
                     Toast.makeText(this, R.string.pkg_done, Toast.LENGTH_LONG).show()
                 }
                 current = null; currentId = null
