@@ -242,6 +242,7 @@ class MainActivity : AppCompatActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        window.decorView.post { CrashReporter.showIfAny(this) }
         MapLibre.getInstance(this)
         setContentView(R.layout.activity_main)
 

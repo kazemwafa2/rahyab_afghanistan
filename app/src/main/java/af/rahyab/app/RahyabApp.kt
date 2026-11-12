@@ -9,6 +9,7 @@ import kotlin.concurrent.thread
 class RahyabApp : Application() {
     override fun onCreate() {
         super.onCreate()
+        CrashReporter.install(this)
         // سرویس‌ها، کش شبکه و مدیریت بسته‌های آفلاین
         Services.init(this)
         NavigationController.init(this)

@@ -35,6 +35,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Verify bundled map packages exist
+        run: |
+          n=$(ls app/src/main/assets/packages/*.rahpkg.zip 2>/dev/null | wc -l)
+          echo "provincial packages in repo: $n"
+          test -f app/src/main/assets/initial/afghanistan.rahpkg.zip || { echo "::error::base package missing (check .gitignore)"; exit 1; }
+          test "$n" -ge 34 || { echo "::error::expected 34 provincial packages, found $n (check .gitignore)"; exit 1; }
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin

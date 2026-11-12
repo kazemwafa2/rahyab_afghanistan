@@ -50,6 +50,7 @@ class MapPackagesActivity : AppCompatActivity() {
     )
 
     private val rows = ArrayList<RowViews>()
+    private val lastError = HashMap<String, String>()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -335,7 +336,12 @@ class MapPackagesActivity : AppCompatActivity() {
                 }
             }
             else -> {
-                rv.tvState.visibility = View.GONE
+                val err = lastError[p.id]
+                if (err != null) {
+                    rv.tvState.visibility = View.VISIBLE
+                    rv.tvState.setTextColor(0xFFB00020.toInt())
+                    rv.tvState.text = err
+                } else rv.tvState.visibility = View.GONE
                 rv.bar.visibility = View.GONE
                 rv.action.visibility = View.VISIBLE
                 // بسته‌های asset:// همیشه از نو کپی می‌شوند؛ «ادامه دانلود» فقط برای منابع انترنت
@@ -399,12 +405,13 @@ class MapPackagesActivity : AppCompatActivity() {
                 .show()
             return
         }
+        lastError.remove(p.id)
         val d = Downloading(false)
         current = d
         currentId = p.id
 
         io.execute {
-            val result = PackageDownloader.downloadAndInstall(
+            val result = try { PackageDownloader.downloadAndInstall(
                 applicationContext, p,
                 object : PackageDownloader.Listener {
                     override fun onProgress(pr: PackageDownloader.Progress) {
@@ -412,7 +419,14 @@ class MapPackagesActivity : AppCompatActivity() {
                     }
                 },
                 { d.cancelled }
-            )
+            ) } catch (t: Throwable) {
+                // هر خطای پیش‌بینی‌نشده (حتی OutOfMemory) به‌جای بسته‌شدن برنامه نمایش داده می‌شود
+                ui.post {
+                    onProgress(PackageDownloader.Progress(p.id, PackageDownloader.State.FAILED, 0, 0,
+                        "network:" + t.javaClass.simpleName + " " + (t.message ?: "")))
+                }
+                null
+            }
             ui.post {
                 if (result != null) {
                     Toast.makeText(this, R.string.pkg_done, Toast.LENGTH_LONG).show()
@@ -454,7 +468,7 @@ class MapPackagesActivity : AppCompatActivity() {
                 rv.bar.visibility = View.GONE
                 rv.tvState.visibility = View.VISIBLE
                 rv.tvState.setTextColor(0xFFB00020.toInt())
-                rv.tvState.text = when (pr.message) {
+                val errText = when (pr.message) {
                     "no_space" -> getString(R.string.err_no_space)
                     "checksum" -> getString(R.string.err_checksum)
                     "invalid" -> getString(R.string.err_invalid)
@@ -467,6 +481,10 @@ class MapPackagesActivity : AppCompatActivity() {
                         else getString(R.string.pkg_failed_generic)
                     }
                 }
+                rv.tvState.text = errText
+                // ⚠️ رفع اشکال: پس از شکست، فهرست از نو ساخته می‌شد و پیام خطا ناپدید می‌شد؛
+                // کاربر فقط «هیچ اتفاقی نیفتاد» می‌دید. حالا پیام تا تلاش بعدی می‌ماند.
+                lastError[pr.pkgId] = errText
                 Toast.makeText(this, R.string.pkg_failed_generic, Toast.LENGTH_LONG).show()
             }
             else -> { }
