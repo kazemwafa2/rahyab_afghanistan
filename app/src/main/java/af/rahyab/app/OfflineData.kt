@@ -333,6 +333,7 @@ object OfflineData {
 
     /** اعتبارسنجی و ثبت نهایی بسته از پوشه staging (نصب اتمیک) */
     fun installFromStaging(staging: File): Installed? {
+        ensureLoaded()
         val m = readPkgManifest(staging) ?: return null
         // اعتبارسنجی سرآیند فایل‌های اصلی
         try {
@@ -363,6 +364,10 @@ object OfflineData {
             System.currentTimeMillis(), m.hasTiles, m.hasGraph, m.hasIndex,
             m.west, m.south, m.east, m.north
         )
+        // نسخهٔ قبلی همین بسته (مثلاً نسخهٔ سبک) با پوشهٔ متفاوت: پوشهٔ قدیمی حذف شود تا فضا اشغال نماند
+        registry.filter { it.id == inst.id && it.dirName != dirName }.forEach {
+            try { dirOf(it).deleteRecursively() } catch (_: Exception) { }
+        }
         registry.removeAll { it.id == inst.id }
         registry.add(inst)
         saveRegistry()

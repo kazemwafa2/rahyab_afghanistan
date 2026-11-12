@@ -330,10 +330,17 @@ class MapPackagesActivity : AppCompatActivity() {
                 if (p.id == Config.BASE_PACKAGE_ID) {
                     // بسته پایه کشوری همراه برنامه است؛ نه حذف دارد نه دوباره‌کاری
                     rv.action.visibility = View.GONE
+                } else if (!p.url.startsWith("asset://") && p.sizeBytes > 0 && inst.sizeBytes < p.sizeBytes * 0.6) {
+                    // نسخهٔ نصب‌شده سبک است و نسخهٔ کامل آنلاین موجود است → ارتقا (نگه‌داشتن = حذف)
+                    rv.action.visibility = View.VISIBLE
+                    rv.action.text = "ارتقا به نسخه کامل (" + humanBytes(p.sizeBytes) + ")"
+                    rv.action.setOnClickListener { startDownload(p) }
+                    rv.action.setOnLongClickListener { confirmDelete(inst); true }
                 } else {
                     rv.action.visibility = View.VISIBLE
                     rv.action.text = getString(R.string.pkg_delete)
                     rv.action.setOnClickListener { confirmDelete(inst) }
+                    rv.action.setOnLongClickListener(null)
                 }
             }
             else -> {
