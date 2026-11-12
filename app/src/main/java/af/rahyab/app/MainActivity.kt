@@ -96,6 +96,10 @@ class MainActivity : AppCompatActivity() {
     private var style: Style? = null
     private var locationEnabled = false
     private var offlineStyleActive = false
+    /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
+    @Volatile private var netReallyDown = false
+    @Volatile private var lastProbeMs = 0L
+    @Volatile private var probing = false
 
     private lateinit var store: PlacesStore
     private lateinit var prefs: SharedPreferences
@@ -338,6 +342,20 @@ class MainActivity : AppCompatActivity() {
                 // آفلاین: اگر دوربین به ولایت دیگری رفت، بسته نقشهٔ همان ولایت (یا بسته پایه) بار شود
                 if (offlineStyleActive) {
                     try { pickOfflinePackage()?.let { applyOfflineStyle(it) } } catch (_: Exception) { }
+                    // اگر اینترنت دوباره واقعاً برگشت (VPN درست شد)، به سبک آنلاین برگرد
+                    if (netReallyDown && System.currentTimeMillis() - lastProbeMs > 30_000L) {
+                        lastProbeMs = System.currentTimeMillis()
+                        io.execute {
+                            val ok = try {
+                                val c = java.net.URL(Config.STYLE_LIGHT).openConnection() as java.net.HttpURLConnection
+                                c.connectTimeout = 3000; c.readTimeout = 3000
+                                try { c.responseCode; true } finally { c.disconnect() }
+                            } catch (e: Exception) { false }
+                            if (ok) ui.post { netReallyDown = false; loadStyle() }
+                        }
+                    }
+                } else if (System.currentTimeMillis() - lastProbeMs > 25_000L) {
+                    probeOnlineReachability()
                 }
                 // ذخیره مرکز نقشه برای کارت هوا
                 m.cameraPosition.target?.let { t ->
@@ -357,8 +375,10 @@ class MainActivity : AppCompatActivity() {
             }
             hideMapAttribution()
             // اگر بارگیری سبک آنلاین شکست خورد (انترنت ناپایدار) → خودکار سبک آفلاین
-            mapView.addOnDidFailLoadingMapListener {
-                try { handleOnlineStyleFailure() } catch (e: Exception) { }
+            mapView.addOnDidFailLoadingMapListener { errMsg ->
+                try {
+                    if (offlineStyleActive) handleOfflineStyleFailure(errMsg) else handleOnlineStyleFailure()
+                } catch (e: Exception) { }
             }
             loadStyle()
         }
@@ -1439,6 +1459,7 @@ class MainActivity : AppCompatActivity() {
         val m = map ?: return
         if (isNetworkAvailable()) {
             applyOnlineStyle()
+            probeOnlineReachability()
             return
         }
         // بدون انترنت — بستهٔ نقشهٔ بر اساس مکان فعلی/مرکز نقشه انتخاب می‌شود تا اگر
@@ -1464,12 +1485,22 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** سطح عقب‌نشینی سبک آفلاین: ۰ = ولایت+پایه، ۱ = فقط ولایت، ۲ = فقط بسته پایه */
+    private var offlineLevel = 0
+    private var offlinePkgId = ""
+    private var lastOfflinePkg: OfflineData.Installed? = null
+
     /** سبک آفلاین: کاشی‌های PMTiles روی خود گوشی — بدون هیچ درخواست انترنت */
-    private fun applyOfflineStyle(pkg: OfflineData.Installed) {
+    private fun applyOfflineStyle(pkg0: OfflineData.Installed) {
         val m = map ?: return
-        val base = OfflineData.basePackage()
-        val localJson = buildOfflineStyleJson(pkg, base?.takeIf { it.id != pkg.id }) ?: return
-        val key = "offline:${pkg.dirName}+${base?.dirName ?: "-"}:${if (wantDark()) "d" else "l"}"
+        if (pkg0.id != offlinePkgId) { offlinePkgId = pkg0.id; offlineLevel = 0 }
+        lastOfflinePkg = pkg0
+        val baseAll = OfflineData.basePackage()
+        // سطح ۲: فقط بسته پایه؛ سطح ۱: فقط ولایت؛ سطح ۰: ولایت + پایه
+        val pkg = if (offlineLevel >= 2 && baseAll != null) baseAll else pkg0
+        val base = if (offlineLevel == 0) baseAll?.takeIf { it.id != pkg.id } else null
+        val localJson = buildOfflineStyleJson(pkg, base) ?: return
+        val key = "offline:${pkg.dirName}+${base?.dirName ?: "-"}:${if (wantDark()) "d" else "l"}:L$offlineLevel"
         if (styleUrl == key && style != null) return
         styleUrl = key
         offlineStyleActive = true
@@ -1478,6 +1509,22 @@ class MainActivity : AppCompatActivity() {
         m.setStyle(Style.Builder().fromJson(localJson)) { s ->
             style = s
             addRouteLayers(s)
+        }
+    }
+
+    /**
+     * رفع «نقشهٔ خاکستری»: اگر منبعی از سبک آفلاین بارگذاری نشود (مثلاً فایل کاشی ولایت یا پایه
+     * مشکل دارد)، MapLibre کل نقشه را خالی نگه می‌دارد. پس به‌ترتیب ساده‌تر می‌شویم:
+     * ولایت+پایه ← فقط ولایت ← فقط پایه؛ و پیام خطا نمایش داده می‌شود.
+     */
+    private fun handleOfflineStyleFailure(errMsg: String?) {
+        val pkg = lastOfflinePkg ?: return
+        android.util.Log.e("RahyabMap", "خطای سبک آفلاین (سطح $offlineLevel، بسته ${pkg.id}): $errMsg")
+        Toast.makeText(this, "نقشه آفلاین (سطح $offlineLevel، ${pkg.id}): ${errMsg ?: "?"}".take(160), Toast.LENGTH_LONG).show()
+        if (offlineLevel < 2) {
+            offlineLevel++
+            styleUrl = ""
+            applyOfflineStyle(pkg)
         }
     }
 
@@ -1507,7 +1554,35 @@ class MainActivity : AppCompatActivity() {
         applyOfflineStyle(pkg)
     }
 
+    /**
+     * رفع اشکال «نقشه خالی با VPN/وای‌فایِ بدون اینترنت واقعی»: اندروید شبکه را «وصل» می‌بیند
+     * ولی سرور نقشه جواب نمی‌دهد، پس سبک آنلاین بدون کاشی می‌ماند. اینجا یک بررسی سریع
+     * (۳ ثانیه) انجام می‌شود و اگر شکست خورد، سبک آفلاین بسته نصب‌شده بار می‌شود.
+     */
+    private fun probeOnlineReachability() {
+        if (probing || offlineStyleActive) return
+        if (pickOfflinePackage() == null) return // بدون بستهٔ آفلاین راهی برای جایگزینی نیست
+        probing = true
+        lastProbeMs = System.currentTimeMillis()
+        io.execute {
+            val ok = try {
+                val u = java.net.URL(if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT)
+                val c = u.openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 3000; c.readTimeout = 3000; c.requestMethod = "GET"
+                try { c.responseCode; true } finally { c.disconnect() }
+            } catch (e: Exception) { false }
+            ui.post {
+                probing = false
+                if (!ok && !isDestroyed && !isFinishing) {
+                    netReallyDown = true
+                    loadStyle()
+                } else if (ok) netReallyDown = false
+            }
+        }
+    }
+
     private fun isNetworkAvailable(): Boolean {
+        if (netReallyDown) return false
         return try {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as android.net.ConnectivityManager
             val net = cm.activeNetwork ?: return false
@@ -1533,6 +1608,7 @@ class MainActivity : AppCompatActivity() {
                 override fun onAvailable(network: android.net.Network) {
                     ui.post {
                         if (!isDestroyed && !isFinishing) {
+                            netReallyDown = false
                             loadStyle()
                             if (trafficOn) refreshTrafficData()
                         }
