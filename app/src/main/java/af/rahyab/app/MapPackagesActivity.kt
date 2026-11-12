@@ -28,7 +28,7 @@ import java.util.concurrent.Executors
  */
 class MapPackagesActivity : AppCompatActivity() {
 
-    private val io = Executors.newSingleThreadExecutor()
+    private val io = SafeExecutors.fixed(1)
     private val ui = Handler(Looper.getMainLooper())
 
     private lateinit var listBox: LinearLayout

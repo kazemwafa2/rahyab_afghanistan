@@ -280,8 +280,16 @@ object Services {
      * خطاهای آنلاین به بالا منتقل می‌شود تا رابط کاربری پیام مناسب نشان دهد.
      */
     fun search(query: String, lang: String, userLat: Double? = null, userLon: Double? = null): SearchResult {
-        val ix = OfflineData.indexForSearch()
-        val local = if (ix != null) ix.search(query, userLat, userLon) else emptyList()
+        // رفع اشکال: قبلاً فقط اندیس «یک» بستهٔ دلخواه جست‌وجو می‌شد؛ حالا همهٔ بسته‌های نصب‌شده
+        val local = ArrayList<Place>()
+        run {
+            val seenLocal = HashSet<Pair<Long, Long>>()
+            for (ix in OfflineData.indexesForSearch()) {
+                for (p in ix.search(query, userLat, userLon)) {
+                    if (seenLocal.add(Math.round(p.lat * 1e4) to Math.round(p.lon * 1e4))) local.add(p)
+                }
+            }
+        }
         // اگر جست‌وجوی محلی جواب داد، به سرور عمومی کاری نداریم
         if (local.size >= 3) return SearchResult(local, Source.OFFLINE)
 

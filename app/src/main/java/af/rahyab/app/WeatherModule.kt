@@ -42,7 +42,7 @@ object WeatherModule {
             "&forecast_days=5&timezone=Asia%2FKabul"
         val aqiUrl = "https://air-quality-api.open-meteo.com/v1/air-quality" +
             "?latitude=$lat&longitude=$lon&current=pm10,pm2_5,us_aqi&timezone=Asia%2FKabul"
-        val temp = Http.get(url, readTimeoutMs = 10000)
+        val temp = try { Http.get(url, readTimeoutMs = 10000) } catch (e: Exception) { return last } // بدون اینترنت: بی‌صدا
         val aqiBody = try { Http.get(aqiUrl, readTimeoutMs = 8000) } catch (e: Exception) { null }
         val d = parse(temp, aqiBody)
         if (d != null) { last = d; lastFetchMs = System.currentTimeMillis(); lastKey = key }

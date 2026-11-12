@@ -111,7 +111,7 @@ class MainActivity : AppCompatActivity() {
     private var routeSourceOffline = true
     private var deepLinkReturn = false
 
-    private val io = Executors.newFixedThreadPool(2)
+    private val io = SafeExecutors.fixed(2)
     private val ui = android.os.Handler(android.os.Looper.getMainLooper())
 
     private lateinit var etSearch: EditText

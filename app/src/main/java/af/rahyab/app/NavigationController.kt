@@ -46,7 +46,7 @@ object NavigationController {
     )
 
     private val ui = Handler(Looper.getMainLooper())
-    private val io = Executors.newSingleThreadExecutor()
+    private val io = SafeExecutors.fixed(1)
 
     private val uiListeners = CopyOnWriteArrayList<(UiState) -> Unit>()
     private val fixListeners = CopyOnWriteArrayList<(Location) -> Unit>()
