@@ -1812,6 +1812,20 @@ class MainActivity : AppCompatActivity() {
      *  - منبع «rahyab-base» → بسته پایه (فقط زوم ≤ ۸)
      * لایه‌های سبک برای منبع پایه با سقف زوم ۸ و برای منبع اصلی با کف زوم ۹ بازسازی می‌شوند.
      */
+    /** بازهٔ زوم واقعی فایل PMTiles از سرآیند (بایت ۱۰۰ و ۱۰۱)؛ null اگر خوانده نشد */
+    private fun pmtilesZoomRange(f: java.io.File): Pair<Int, Int>? {
+        return try {
+            java.io.FileInputStream(f).use { ins ->
+                val h = ByteArray(127)
+                val n = ins.read(h)
+                if (n < 102 || String(h, 0, 7, Charsets.US_ASCII) != "PMTiles") null
+                else Pair(h[100].toInt() and 0xFF, h[101].toInt() and 0xFF)
+            }
+        } catch (e: Exception) {
+            null
+        }
+    }
+
     private fun buildOfflineStyleJson(pkg: OfflineData.Installed, base: OfflineData.Installed?): String? {
         return try {
             // سبک روز/شب داخل خود برنامه (ظاهر نقشه بدون بازسازی بسته‌های داده)؛ در صورت نبود، سبک خود بسته
