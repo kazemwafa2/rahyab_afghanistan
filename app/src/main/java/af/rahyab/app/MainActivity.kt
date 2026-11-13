@@ -1512,8 +1512,13 @@ class MainActivity : AppCompatActivity() {
             // پیام تشخیصی: کدام بسته و تا کدام زوم داده دارد (برای پیدا کردن علت نقشهٔ خالی)
             try {
                 val z = pmtilesZoomRange(OfflineData.tilesFile(pkg))
+                // بدون فایل گلیف (فونت) هیچ نامی روی نقشه نمی‌آید؛ اینجا وجودش را بررسی و گزارش می‌کنیم
+                val fontFile = java.io.File(OfflineData.effectiveFontsDir(this, pkg), "Noto Sans Regular/0-255.pbf")
+                val fontOk = fontFile.isFile && fontFile.length() > 0
                 Toast.makeText(this, "نقشه آفلاین: ${pkg.id}" + (if (base != null) " + پایه" else "") +
-                    (if (z != null) " • زوم داده ${z.first}–${z.second}" else ""), Toast.LENGTH_SHORT).show()
+                    (if (z != null) " • زوم داده ${z.first}–${z.second}" else "") +
+                    (if (fontOk) " • فونت ✓" else " • ⚠ فونت نام‌ها در برنامه نیست"),
+                    Toast.LENGTH_LONG).show()
             } catch (_: Exception) { }
         }
     }
