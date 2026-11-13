@@ -20,3 +20,4 @@ dist/
 # بسته‌های نقشه همراه برنامه باید در مخزن باشند تا داخل APK بروند (وگرنه دانلود ولایت‌ها کار نمی‌کند)
 !app/src/main/assets/initial/*.rahpkg.zip
 !app/src/main/assets/packages/*.rahpkg.zip
+!app/src/main/assets/fonts/**/*.pbf

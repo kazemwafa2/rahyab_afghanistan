@@ -1836,7 +1836,9 @@ class MainActivity : AppCompatActivity() {
             var json: String = assetStyle ?: (OfflineData.styleFile(pkg).takeIf { it.isFile }?.readText() ?: return null)
             val tiles = OfflineData.tilesFile(pkg)
             if (!tiles.isFile) return null
-            json = json.replace("__PMTILES__", "pmtiles://file://" + tiles.absolutePath)
+            // قالب استایل خودش «pmtiles://__PMTILES__» است؛ پس اینجا فقط «file://» + مسیر می‌آید (نتیجه pmtiles://file:///…).
+            // ⚠️ این خط را به «pmtiles://file://» برنگردانید: می‌شود pmtiles://pmtiles://file://… و نقشه خالی می‌ماند.
+            json = json.replace("__PMTILES__", "file://" + tiles.absolutePath)
             json = json.replace("__FONTS__", "file://" + OfflineData.effectiveFontsDir(this, pkg).absolutePath)
 
             if (base != null) {
