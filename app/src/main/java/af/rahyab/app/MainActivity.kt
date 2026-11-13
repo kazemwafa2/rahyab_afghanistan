@@ -95,6 +95,8 @@ class MainActivity : AppCompatActivity() {
     private var map: MapLibreMap? = null
     private var style: Style? = null
     private var locationEnabled = false
+    /** دوربین دنبال موقعیت کاربر باشد؟ بعد از انتخاب مکان/مسیر یا حرکت دستی نقشه false می‌شود */
+    private var followUser = true
     private var offlineStyleActive = false
     /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
     @Volatile private var netReallyDown = false
@@ -374,6 +376,9 @@ class MainActivity : AppCompatActivity() {
                 true
             }
             hideMapAttribution()
+            map?.addOnCameraMoveStartedListener { reason ->
+                if (reason == org.maplibre.android.maps.MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) followUser = false
+            }
             // اگر بارگیری سبک آنلاین شکست خورد (انترنت ناپایدار) → خودکار سبک آفلاین
             mapView.addOnDidFailLoadingMapListener { errMsg ->
                 try {
@@ -833,6 +838,7 @@ class MainActivity : AppCompatActivity() {
             }
             Pick.NONE -> {}
         }
+        followUser = false
         selected = p
         originPlace = null
         store.addRecent(p)
@@ -1004,6 +1010,14 @@ class MainActivity : AppCompatActivity() {
             if (!hasLocationPermission()) permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION)
             return
         }
+        // موقعیت کاربر بیرون از افغانستان است و مبدأ دستی هم نداریم: مسیر آفلاین از آنجا ممکن نیست
+        val outside = o.first < 28.9 || o.first > 38.7 || o.second < 60.3 || o.second > 75.4
+        if (outside && originPlace == null) {
+            Toast.makeText(this, "موقعیت شما بیرون از افغانستان است؛ مبدأ مسیر را (مثلاً یک جای کابل) از جست‌وجو انتخاب کنید", Toast.LENGTH_LONG).show()
+            startPick(Pick.ORIGIN)
+            return
+        }
+        followUser = false
         requestRouteFrom(profile, o.first, o.second)
     }
 
@@ -1344,6 +1358,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun onMyLocation() {
         if (!hasLocationPermission()) { permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION); return }
+        followUser = true
         if (!locationEnabled) enableLocation()
         if (locationEnabled && !NavigationController.navigating) map?.locationComponent?.cameraMode = CameraMode.TRACKING
     }
@@ -1358,7 +1373,9 @@ class MainActivity : AppCompatActivity() {
             lc.isLocationComponentEnabled = true
             locationEnabled = true
         }
-        if (!NavigationController.navigating) lc.cameraMode = CameraMode.TRACKING
+        // ⚠️ رفع اشکال: قبلاً بعد از هر بارگذاری سبک نقشه (مثلاً رفتن دوربین به کابل و فعال‌شدن بسته کابل)
+        // اینجا TRACKING دوباره روشن می‌شد و دوربین به موقعیت کاربر برمی‌گشت → نقشهٔ خالی خارج از افغانستان
+        if (!NavigationController.navigating) lc.cameraMode = if (followUser) CameraMode.TRACKING else CameraMode.NONE
     }
 
     // ---------- تنظیمات: صدا، شب، زبان، درباره ----------
