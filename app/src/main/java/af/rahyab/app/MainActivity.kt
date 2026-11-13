@@ -1509,6 +1509,12 @@ class MainActivity : AppCompatActivity() {
         m.setStyle(Style.Builder().fromJson(localJson)) { s ->
             style = s
             addRouteLayers(s)
+            // پیام تشخیصی: کدام بسته و تا کدام زوم داده دارد (برای پیدا کردن علت نقشهٔ خالی)
+            try {
+                val z = pmtilesZoomRange(OfflineData.tilesFile(pkg))
+                Toast.makeText(this, "نقشه آفلاین: ${pkg.id}" + (if (base != null) " + پایه" else "") +
+                    (if (z != null) " • زوم داده ${z.first}–${z.second}" else ""), Toast.LENGTH_SHORT).show()
+            } catch (_: Exception) { }
         }
     }
 
@@ -1855,6 +1861,19 @@ class MainActivity : AppCompatActivity() {
                     json = o.toString()
                 }
             }
+            // بازهٔ زوم واقعی هر فایل را صریحاً در سبک می‌گذاریم تا MapLibre بالاتر از زوم داده،
+            // کاشی آخرین زوم را بزرگ‌نمایی کند (overzoom) و نقشه در بزرگ‌نمایی زیاد خالی نماند
+            try {
+                val o2 = org.json.JSONObject(json)
+                val srcs = o2.getJSONObject("sources")
+                pmtilesZoomRange(tiles)?.let { (mn, mx) ->
+                    srcs.optJSONObject("rahyab")?.apply { put("minzoom", mn); put("maxzoom", mx) }
+                }
+                if (base != null) pmtilesZoomRange(OfflineData.tilesFile(base))?.let { (mn, mx) ->
+                    srcs.optJSONObject("rahyab-base")?.apply { put("minzoom", mn); put("maxzoom", mx) }
+                }
+                json = o2.toString()
+            } catch (_: Exception) { }
             json
         } catch (e: Exception) {
             null
