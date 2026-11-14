@@ -35,8 +35,8 @@
     <string name="nav_map_note">نقشه سراسری</string>
     <string name="mode_unsupported">این حالت هنوز پشتیبانی نمی‌شود</string>
     <string name="nav_origin_note">مسیریابی از موقعیت فعلی شما ادامه می‌یابد</string>
-    <string name="deep_link_dest_default">مقصد فارسیافتی</string>
-    <string name="deep_link_invalid">درخواست فارسیافتی نامعتبر است</string>
+    <string name="deep_link_dest_default">مقصد دریافتی</string>
+    <string name="deep_link_invalid">درخواست دریافتی نامعتبر است</string>
     <string name="pkg_system">همراه برنامه — نصب خودکار (قابل حذف نیست)</string>
 </resources>
 

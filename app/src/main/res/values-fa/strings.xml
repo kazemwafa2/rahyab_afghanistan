@@ -89,8 +89,6 @@
     <string name="cat_empty">در داده موجود این ناحیه، مکانی از این دسته پیدا نشد. کامل بودن فهرست به داده OpenStreetMap بستگی دارد.</string>
     <string name="data_note">فهرست مکان‌ها به داده موجود OpenStreetMap بستگی دارد و ممکن است ناقص باشد.</string>
     <string name="distance_from_here">فاصله</string>
-    <string name="deep_link_dest_default">مقصد دریافتی</string>
-    <string name="deep_link_invalid">درخواست دریافتی نامعتبر است</string>
     <!-- ===== بستهٔ اصلاح ۱ ===== -->
     <string name="report_type_accident">سانحه ترافیکی</string>
     <string name="report_type_road_damage">خرابی جاده</string>
