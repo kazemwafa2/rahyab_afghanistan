@@ -85,7 +85,23 @@ object WeatherModule {
         } catch (e: Exception) { null }
     }
 
-    /** توضیح دری وضعیت هوا بر اساس کد استاندارد WMO */
+    /** توضیح وضعیت هوا به زبان انتخابی برنامه، بر اساس کد استاندارد WMO */
+    fun describe(ctx: Context, code: Int, isDay: Boolean): String = when (code) {
+        0 -> if (isDay) ctx.getString(R.string.weather_w_clear_day) else ctx.getString(R.string.weather_w_clear_night)
+        1, 2 -> ctx.getString(R.string.weather_w_partly)
+        3 -> ctx.getString(R.string.weather_w_cloudy)
+        45, 48 -> ctx.getString(R.string.weather_w_fog)
+        in 51..55 -> ctx.getString(R.string.weather_w_drizzle)
+        in 56..57, 66, 67 -> ctx.getString(R.string.weather_w_freezing_rain)
+        in 61..65 -> ctx.getString(R.string.weather_w_rain)
+        in 71..77 -> ctx.getString(R.string.weather_w_snow)
+        80, 81, 82 -> ctx.getString(R.string.weather_w_showers)
+        85, 86 -> ctx.getString(R.string.weather_w_snow_showers)
+        in 95..99 -> ctx.getString(R.string.weather_w_thunder)
+        else -> "—"
+    }
+
+    /** توضیح دری (نسخهٔ قدیمی، برای زمینه‌های بدون Context) */
     fun describe(code: Int, isDay: Boolean): String = when (code) {
         0 -> if (isDay) "آفتابی" else "صاف شب"
         1, 2 -> "کمی ابری"
@@ -114,7 +130,18 @@ object WeatherModule {
         else -> "🌡️"
     }
 
-    /** دسته کیفیت هوا بر اساس AQI آمریکا */
+    /** دسته کیفیت هوا بر اساس AQI آمریکا — به زبان انتخابی برنامه */
+    fun aqiLabel(ctx: Context, aqi: Double?): String = when {
+        aqi == null -> ctx.getString(R.string.weather_aqi_unavailable)
+        aqi <= 50 -> ctx.getString(R.string.weather_aqi_good, aqi.toInt())
+        aqi <= 100 -> ctx.getString(R.string.weather_aqi_moderate, aqi.toInt())
+        aqi <= 150 -> ctx.getString(R.string.weather_aqi_sensitive, aqi.toInt())
+        aqi <= 200 -> ctx.getString(R.string.weather_aqi_unhealthy, aqi.toInt())
+        aqi <= 300 -> ctx.getString(R.string.weather_aqi_very_unhealthy, aqi.toInt())
+        else -> ctx.getString(R.string.weather_aqi_hazardous, aqi.toInt())
+    }
+
+    /** دسته کیفیت هوا — نسخهٔ دری (نسخهٔ قدیمی، برای زمینه‌های بدون Context) */
     fun aqiLabel(aqi: Double?): String = when {
         aqi == null -> "در دسترس نیست"
         aqi <= 50 -> "خوب (${aqi.toInt()})"

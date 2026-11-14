@@ -308,7 +308,7 @@ class MapPackagesActivity : AppCompatActivity() {
     private fun bindRow(rv: RowViews, p: PackageDownloader.RemotePkg, inst: OfflineData.Installed?) {
         rv.pkgId = p.id
         val size = humanBytes(if (p.sizeBytes > 0) p.sizeBytes else 0)
-        val kind = if (p.id == Config.BASE_PACKAGE_ID) "" else if (p.url.startsWith("asset://")) "نسخه سبک (داخل برنامه)" else "نسخه کامل"
+        val kind = if (p.id == Config.BASE_PACKAGE_ID) "" else if (p.url.startsWith("asset://")) getString(R.string.pkg_kind_lite) else getString(R.string.pkg_kind_full)
         rv.tvMeta.text = listOf(p.region, p.dataDate, size, kind).filter { it.isNotEmpty() }.joinToString(" • ")
 
         when {
@@ -333,7 +333,7 @@ class MapPackagesActivity : AppCompatActivity() {
                 } else if (!p.url.startsWith("asset://") && p.sizeBytes > 0 && inst.sizeBytes < p.sizeBytes * 0.6) {
                     // نسخهٔ نصب‌شده سبک است و نسخهٔ کامل آنلاین موجود است → ارتقا (نگه‌داشتن = حذف)
                     rv.action.visibility = View.VISIBLE
-                    rv.action.text = "ارتقا به نسخه کامل (" + humanBytes(p.sizeBytes) + ")"
+                    rv.action.text = getString(R.string.pkg_upgrade_full, humanBytes(p.sizeBytes))
                     rv.action.setOnClickListener { startDownload(p) }
                     rv.action.setOnLongClickListener { confirmDelete(inst); true }
                 } else {
@@ -451,7 +451,7 @@ class MapPackagesActivity : AppCompatActivity() {
             }
             ui.post {
                 if (usedLite) {
-                    Toast.makeText(this, "دانلود از اینترنت ممکن نشد؛ نسخهٔ سبک از داخل برنامه نصب شد", Toast.LENGTH_LONG).show()
+                    Toast.makeText(this, R.string.pkg_lite_fallback_toast, Toast.LENGTH_LONG).show()
                 } else if (finalResult != null) {
                     Toast.makeText(this, R.string.pkg_done, Toast.LENGTH_LONG).show()
                 }
@@ -474,7 +474,7 @@ class MapPackagesActivity : AppCompatActivity() {
                 rv.tvState.text = getString(
                     R.string.pkg_downloading, humanBytes(pr.downloadedBytes),
                     humanBytes(if (pr.totalBytes > 0) pr.totalBytes else 0)
-                ) + "  ($pct٪)"
+                ) + "  (" + getString(R.string.pkg_percent, pct) + ")"
             }
             PackageDownloader.State.VERIFYING -> {
                 rv.bar.isIndeterminate = true

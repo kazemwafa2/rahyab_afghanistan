@@ -1060,7 +1060,7 @@ class MainActivity : AppCompatActivity() {
         // موقعیت کاربر بیرون از افغانستان است و مبدأ دستی هم نداریم: مسیر آفلاین از آنجا ممکن نیست
         val outside = o.first < 28.9 || o.first > 38.7 || o.second < 60.3 || o.second > 75.4
         if (outside && originPlace == null) {
-            Toast.makeText(this, "موقعیت شما بیرون از افغانستان است؛ مبدأ مسیر را (مثلاً یک جای کابل) از جست‌وجو انتخاب کنید", Toast.LENGTH_LONG).show()
+            Toast.makeText(this, R.string.outside_afghanistan_origin, Toast.LENGTH_LONG).show()
             startPick(Pick.ORIGIN)
             return
         }
@@ -1908,9 +1908,11 @@ class MainActivity : AppCompatActivity() {
                 // بدون فایل گلیف (فونت) هیچ نامی روی نقشه نمی‌آید؛ اینجا وجودش را بررسی و گزارش می‌کنیم
                 val fontFile = java.io.File(OfflineData.effectiveFontsDir(this, pkg), "Noto Sans Regular/0-255.pbf")
                 val fontOk = fontFile.isFile && fontFile.length() > 0
-                Toast.makeText(this, "نقشه آفلاین: ${pkg.id}" + (if (base != null) " + پایه" else "") +
-                    (if (z != null) " • زوم داده ${z.first}–${z.second}" else "") +
-                    (if (fontOk) " • فونت ✓" else " • ⚠ فونت نام‌ها در برنامه نیست"),
+                Toast.makeText(this,
+                    getString(R.string.offline_diag_map, pkg.id,
+                        if (base != null) getString(R.string.offline_diag_base_suffix) else "",
+                        if (z != null) getString(R.string.offline_diag_zoom, z.first, z.second) else "",
+                        if (fontOk) getString(R.string.offline_diag_font_ok) else getString(R.string.offline_diag_font_missing)),
                     Toast.LENGTH_LONG).show()
             } catch (_: Exception) { }
         }
@@ -1924,7 +1926,7 @@ class MainActivity : AppCompatActivity() {
     private fun handleOfflineStyleFailure(errMsg: String?) {
         val pkg = lastOfflinePkg ?: return
         android.util.Log.e("RahyabMap", "خطای سبک آفلاین (سطح $offlineLevel، بسته ${pkg.id}): $errMsg")
-        Toast.makeText(this, "نقشه آفلاین (سطح $offlineLevel، ${pkg.id}): ${errMsg ?: "?"}".take(160), Toast.LENGTH_LONG).show()
+        Toast.makeText(this, getString(R.string.offline_diag_fail, offlineLevel, pkg.id, errMsg ?: "?").take(160), Toast.LENGTH_LONG).show()
         if (offlineLevel < 2) {
             offlineLevel++
             styleUrl = ""
@@ -2902,8 +2904,8 @@ class MainActivity : AppCompatActivity() {
                 if (d != null) {
                     weatherCard.visibility = View.VISIBLE
                     tvWeather.text = getString(R.string.weather_short,
-                        WeatherModule.emoji(d.code), d.tempC.roundToInt(), WeatherModule.describe(d.code, d.isDay),
-                        WeatherModule.aqiLabel(d.aqi))
+                        WeatherModule.emoji(d.code), d.tempC.roundToInt(), WeatherModule.describe(this, d.code, d.isDay),
+                        WeatherModule.aqiLabel(this, d.aqi))
                 }
             }
         }
@@ -2913,13 +2915,13 @@ class MainActivity : AppCompatActivity() {
         val d = WeatherModule.last
         if (d == null) { toast(R.string.weather_fetching); refreshWeatherCard(); return }
         val sb = StringBuilder()
-        sb.append(WeatherModule.emoji(d.code) + " " + WeatherModule.describe(d.code, d.isDay) + " — " + d.tempC.roundToInt() + " درجه\n")
+        sb.append(WeatherModule.emoji(d.code) + " " + WeatherModule.describe(this, d.code, d.isDay) + " — " + getString(R.string.weather_temp_deg, d.tempC.roundToInt()) + "\n")
         sb.append(getString(R.string.weather_feels, d.feelsC.roundToInt()) + "\n")
         sb.append(getString(R.string.weather_humidity, d.humidity) + "\n")
         sb.append(getString(R.string.weather_wind, d.windKmh.roundToInt()) + "\n")
         if (d.pm25 != null) sb.append(getString(R.string.weather_pm25, d.pm25) + "\n")
         if (d.pm10 != null) sb.append(getString(R.string.weather_pm10, d.pm10) + "\n")
-        sb.append(getString(R.string.weather_aqi, WeatherModule.aqiLabel(d.aqi)) + "\n\n")
+        sb.append(getString(R.string.weather_aqi, WeatherModule.aqiLabel(this, d.aqi)) + "\n\n")
         for (day in d.daily) {
             sb.append(day.dateIso + ": " + WeatherModule.emoji(day.code) + " " +
                 day.minC.roundToInt() + "° — " + day.maxC.roundToInt() + "° • " +

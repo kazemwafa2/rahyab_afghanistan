@@ -215,7 +215,11 @@ object RoadPois {
             .edit().putString("poi_api_base", v.trim()).apply()
     }
 
-    fun serverConfigured(ctx: Context): Boolean = serverUrl(ctx).startsWith("http")
+    /** سرور تنظیم شده؟ — نشانی جای‌نگهدار و خالی هرگز «تنظیم‌شده» شمرده نمی‌شود */
+    fun serverConfigured(ctx: Context): Boolean {
+        val u = serverUrl(ctx)
+        return u.startsWith("http") && !u.contains("YOUR-ACCOUNT") && !u.isBlank()
+    }
 
     /** لایه نقشه فعال است؟ */
     fun layerVisible(ctx: Context): Boolean =

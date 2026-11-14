@@ -108,7 +108,7 @@ object TrafficModule {
                     level == 0 -> "#23A455"
                     else -> "#F5A623"
                 }
-                val title = prop.optString("title", prop.optString("note", "ترافیک"))
+                val title = prop.optString("title", prop.optString("note", ctx.getString(R.string.traffic_fallback_title)))
                 when (type) {
                     "Point" -> {
                         val c = geom.optJSONArray("coordinates") ?: continue
@@ -163,7 +163,7 @@ object TrafficModule {
         if (!isEnabled(ctx)) return emptyList()
         val out = ArrayList<TrafficPoint>()
         for (r in ReportsModule.active(ctx)) {
-            out.add(TrafficPoint(r.lat, r.lon, r.type, r.mapColor(), r.typeLabel))
+            out.add(TrafficPoint(r.lat, r.lon, r.type, r.mapColor(), r.typeLabel(ctx)))
         }
         out.addAll(feedPoints)
         return out

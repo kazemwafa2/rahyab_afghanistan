@@ -49,9 +49,9 @@ object Config {
     const val BASE_PACKAGE_ASSET = "initial/afghanistan.rahpkg.zip"
 
     // ---------- سرور اطلاعات جاده‌ای (ضمیمهٔ ۱ — Cloudflare Worker + D1) ----------
-    // نشانی Worker خودتان را اینجا بگذارید (docs: worker/README.md).
-    // تا وقتی خالی/تنظیم‌نشده باشد، برنامه کاملاً آفلاین با کش محلی کار می‌کند.
-    const val POI_API_BASE = "https://rahyab-worker.YOUR-ACCOUNT.workers.dev"
+    // ورکر مستقر و زندهٔ پروژه (نام: rahyab-api) — بدون هیچ توکن یا کلید مخفی.
+    // کاربر می‌تواند در «تنظیمات پیشرفته» نشانی دیگری بگذارد (کلید poi_api_base).
+    const val POI_API_BASE = "https://rahyab-api.ghznywalghznywal8.workers.dev"
 
     // ---------- انکر نقشه ----------
     // شروع نقشه: کابل
