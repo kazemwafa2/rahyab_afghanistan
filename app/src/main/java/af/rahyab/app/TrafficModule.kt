@@ -22,6 +22,16 @@ import java.io.File
  */
 object TrafficModule {
 
+    /** نشانی پیش‌فرض فید جامعه — فایل داخل خود مخزن (شاخهٔ main).
+     *  این فایل در مسیر traffic/traffic.geojson مخزن نگهداری می‌شود و با هر
+     *  push به‌روز می‌شود؛ برخلاف ریلیز، هیچ‌گاه ۴۰۴ نمی‌دهد. */
+    const val DEFAULT_FEED_URL =
+        "https://raw.githubusercontent.com/kazemwafa2/rahyab_afghanistan/main/traffic/traffic.geojson"
+
+    /** نشانی قدیمی (ریلیز map-data) که همیشه ۴۰۴ می‌داد — برای مهاجرت خودکار */
+    const val LEGACY_FEED_URL =
+        "https://github.com/kazemwafa2/rahyab_afghanistan/releases/download/map-data/traffic.geojson"
+
     data class TrafficPoint(
         val lat: Double, val lon: Double,
         val kind: String,     // report نوع گزارش یا feed
@@ -36,11 +46,19 @@ object TrafficModule {
     fun isEnabled(ctx: Context): Boolean = prefs(ctx).getBoolean("enabled", true)
     fun setEnabled(ctx: Context, v: Boolean) = prefs(ctx).edit().putBoolean("enabled", v).apply()
 
-    /** نشانی فید جامعه — پیش‌فرض از مخزن رسمی؛ کاربر می‌تواند در تنظیمات پیشرفته عوضش کند */
-    fun feedUrl(ctx: Context): String =
-        prefs(ctx).getString("feed_url", "${Config.REPO_URL}/releases/download/map-data/traffic.geojson")!!
+    /** نشانی فید جامعه — پیش‌فرض فایل رسمی مخزن؛ اگر نسخهٔ قدیمی ذخیره شده
+     *  باشد (ریلیز map-data که ۴۰۴ می‌داد) خودکار به نشانی تازه مهاجرت می‌کند */
+    fun feedUrl(ctx: Context): String {
+        val v = prefs(ctx).getString("feed_url", DEFAULT_FEED_URL)!!
+        return if (v == LEGACY_FEED_URL) DEFAULT_FEED_URL else v
+    }
 
-    fun setFeedUrl(ctx: Context, v: String) = prefs(ctx).edit().putString("feed_url", v.trim()).apply()
+    fun setFeedUrl(ctx: Context, v: String) {
+        val trimmed = v.trim()
+        // اگر کاربر متن قدیمی را برگرداند، همان به نشانی تازه تبدیل شود
+        prefs(ctx).edit().putString("feed_url",
+            if (trimmed == LEGACY_FEED_URL) DEFAULT_FEED_URL else trimmed).apply()
+    }
 
     /** کلید TomTom (اختیاری کامل) */
     fun tomtomKey(ctx: Context): String = prefs(ctx).getString("tomtom_key", "") ?: ""

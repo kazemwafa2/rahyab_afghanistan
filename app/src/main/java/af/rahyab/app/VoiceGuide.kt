@@ -21,9 +21,9 @@ import java.util.Locale
  *  ۱. زبان راهنمای صوتی **همیشه از زبان خود برنامه** گرفته می‌شود، نه از زبان گوشی.
  *     اگر زبان برنامه پشتو باشد پشتو صحبت می‌کند، اگر انگلیسی باشد انگلیسی و
  *     اگر دری باشد دری — مستقل از این که گوشی به چه زبانی تنظیم شده باشد.
- *  ۲. صداهای ضبط‌شده برای هر سه زبان داخل برنامه هست: دری (امیر، دلارا، فرید،
- *     همایون، نگار، عطیه، بانو، مرد)، پشتو (گل‌نواز، لطیفه) و انگلیسی (اریا، دیوید).
- *     هر بسته ۲۹ پیام کامل دارد و همیشه قابل انتخاب و پیش‌نمایش است.
+ *  ۲. صداهای ضبط‌شده برای هر سه زبان داخل برنامه هست: دری/فارسی (دلارا زن،
+ *     فرید مرد)، پشتو (لطیفه زن، گل‌نواز مرد) و انگلیسی (اریا زن) — همه با
+ *     صدای عصبی واقعی و هر بسته ۹۲ پیام کامل، همیشه قابل انتخاب و پیش‌نمایش.
  *  ۳. ارقام پیش از گفتن به حروف تبدیل می‌شوند (TtsText) تا موتور گوشی
  *     «۲۰۰» را «دوصد» بگوید نه «دویست» — کاملاً دری افغانستان.
  *  ۴. زبان موتور گفتار گوشی هم مطابق زبان برنامه تنظیم می‌شود
@@ -167,7 +167,7 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
         packsFor(lang).firstOrNull()?.id ?: when (lang) {
             "ps" -> "gulnawaz"
             "en" -> "aria"
-            else -> "dari"
+            else -> "farid"
         }
 
     /** آیا فایل‌های صدای بسته انتخابی موجودند؟ */
@@ -225,11 +225,8 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             val files = clipNames.map { clipFile(it) }
             if (files.all { it != null }) { play(files.filterNotNull(), packId, text); return }
         }
-        // بسته انتخابی از زبان برنامه است ولی این عبارت در آن ضبط نشده:
-        // برای همگون‌ماندن صدا، این عبارت با صدای ضبط‌شده گفته نمی‌شود (فقط دری)
-        if (source() == "pack" && packAvailable() && packLang() == appLang() && appLang() == "fa") {
-            return
-        }
+        // بسته انتخابی این عبارت را ندارد → با موتور گفتار گوشی پخش می‌شود تا
+        // هیچ‌گاه دستور بدون صدا نماند (نسخه ۰٫۹٫۷ — عبارت‌های واژه‌نامه کامل شد)
         speakText(text)
     }
 
@@ -255,7 +252,7 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
         if (!speakDuringCalls && inCall()) return
         if (source() == "pack") {
             val lang = appLang()
-            val fallback = packsFor(lang).firstOrNull()?.id ?: "dari"
+            val fallback = packsFor(lang).firstOrNull()?.id ?: "farid"
             val chime = clipFile(packId, "chime") ?: clipFile(fallback, "chime")
             val clip = clipFile(packId, key) ?: clipFile(fallback, key)
             if (clip != null) {
@@ -526,9 +523,10 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             afd.close()
             val vol = volumeLevel()
             m.setVolume(vol, vol)
-            if (Build.VERSION.SDK_INT >= 23) {
-                try { m.playbackParams = m.playbackParams.setSpeed(speechRate()) } catch (e: Exception) { }
-            }
+            // نکتهٔ مهم (گزارش کاربر: «صدا قطع‌قطع می‌شود»): کلیپ‌های ضبط‌شده همیشه با
+            // سرعت طبیعی خودشان پخش می‌شوند. تغییر سرعت پخش (playbackParams.setSpeed)
+            // روی بسیاری از گوشی‌ها صدا را بریده/لرزان می‌کند؛ تنظیم «سرعت گفتار» فقط
+            // روی موتور گفتار گوشی (TTS) اعمال می‌شود.
             if (!bluetoothAllowed) routeToSpeaker(m)
             if (!gainFocus()) { try { m.release() } catch (e: Exception) { }; onDone(); return }
             m.setOnPreparedListener { it.start() }

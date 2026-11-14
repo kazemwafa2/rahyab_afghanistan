@@ -3,7 +3,8 @@
  "name": "فرید",
  "gender": "male",
  "lang": "fa-AF",
- "engine": "recorded",
- "clips": 29,
- "note": "ضبط‌شده — کاملاً آفلاین"
+ "engine": "recorded-azure-neural",
+ "clips": 92,
+ "phrases": 92,
+ "note": "صدای عصبی واقعی — کاملاً آفلاین در برنامه"
 }

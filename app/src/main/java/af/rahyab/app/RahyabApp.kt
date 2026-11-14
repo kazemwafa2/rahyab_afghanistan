@@ -17,7 +17,22 @@ class RahyabApp : Application() {
         if (AppCompatDelegate.getApplicationLocales().isEmpty) {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa-AF"))
         }
+        resetLanguageOnceAfterUpdate()
         installBasePackageIfNeeded()
+    }
+
+    /**
+     * یک‌بار پس از به‌روزرسانی به نسخهٔ ۲۲: بازگشت به زبان پیش‌فرض دری.
+     * روی برخی گوشی‌ها (اندروید ۱۳+) زبان انگلیسی در تنظیمات سیستم برای برنامه
+     * ثبت شده بود و با هر به‌روزرسانی انگلیسی می‌ماند؛ اینجا یک‌بار به دری
+     * برمی‌گردیم و پس از آن انتخاب خود کاربر همیشه محترم شمرده می‌شود
+     * (پرچم ذخیره می‌شود و این کار هرگز دوباره تکرار نمی‌شود).
+     */
+    private fun resetLanguageOnceAfterUpdate() {
+        val sp = getSharedPreferences("settings", MODE_PRIVATE)
+        if (sp.getInt("lang_reset_v", 0) >= 22) return
+        sp.edit().putInt("lang_reset_v", 22).apply()
+        AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa-AF"))
     }
 
     /**

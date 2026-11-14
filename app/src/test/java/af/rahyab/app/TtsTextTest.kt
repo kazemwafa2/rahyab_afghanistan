@@ -14,7 +14,7 @@ class TtsTextTest {
         assertEquals("صد و پنج", TtsText.forTts("105", "fa"))
         assertEquals("دوصد و پانزده", TtsText.forTts("215", "fa"))
         assertEquals("چهل", TtsText.forTts("40", "fa"))
-        assertEquals("پنجصد", TtsText.forTts("۵۰۰", "fa"))
+        assertEquals("پانصد", TtsText.forTts("۵۰۰", "fa"))
         assertEquals("هزار و دوصد", TtsText.forTts("1200", "fa"))
         assertEquals("بیست و پنج هزار", TtsText.forTts("25000", "fa"))
         // ارقام عربی-فارسی هم پوشش داده می‌شوند

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- نشانگر مسیریابی — انتخاب وسیله روی نقشه (به سبک نشان/بلد) -->
+    <string name="veh_title">نشانگر مسیریابی</string>
+    <string name="veh_arrow">فلش</string>
+    <string name="veh_landcruiser">لنڈکروزر</string>
+    <string name="veh_toyota_suv">تویوتا سوف</string>
+    <string name="veh_lexus">لکسیس</string>
+    <string name="veh_mercedes">مرسیدس</string>
+    <string name="veh_bmw">بی‌ام‌و</string>
+    <string name="veh_camry">تویوتا کمری</string>
+    <string name="veh_hyundai">هیوندای</string>
+    <string name="veh_kia">کیا</string>
+    <string name="veh_hiaze">هایس</string>
+    <string name="veh_mercedes_van">مرسیدس وان</string>
+    <string name="veh_bus">بس</string>
+    <string name="veh_tuktuk">ریکشه</string>
+    <string name="veh_moto">موترسایکل</string>
+    <string name="veh_cargo_trike">ریکشه باری</string>
+    <string name="veh_bike">بایسکل</string>
+    <string name="veh_selected">نشانگر مسیریابی تغییر کرد</string>
+</resources>

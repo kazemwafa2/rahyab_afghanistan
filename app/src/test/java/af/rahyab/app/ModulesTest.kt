@@ -42,7 +42,8 @@ class ModulesTest {
     @Test
     fun reportTypeLabelsAreDari() {
         val r = ReportsModule.Report(1, ReportsModule.TYPE_HEAVY_TRAFFIC, "", 34.5, 69.1, System.currentTimeMillis())
-        assertTrue(r.typeLabel.contains("زحمت ترافیکی"))
+        // واژه‌نامه رسمی دری: «ترافیک سنگین» (نه «زحمت ترافیکی»)
+        assertTrue(r.typeLabel.contains("ترافیک سنگین"))
         assertTrue(r.mapColor() == "#F5A623")
         val closed = ReportsModule.Report(2, ReportsModule.TYPE_ROAD_CLOSED, "", 34.5, 69.1, System.currentTimeMillis())
         assertTrue(closed.mapColor() == "#E0342C")
@@ -52,10 +53,11 @@ class ModulesTest {
     fun newReportTypesValid() {
         assertTrue(ReportsModule.validType(ReportsModule.TYPE_SPEED_BUMP))
         assertTrue(ReportsModule.validType(ReportsModule.TYPE_SPEED_CAMERA))
+        // واژه‌نامه رسمی دری: «دست‌انداز» (نه سرعت‌گیر) و «کمره کنترول سرعت»
         val bump = ReportsModule.Report(3, ReportsModule.TYPE_SPEED_BUMP, "", 34.5, 69.1, System.currentTimeMillis())
-        assertEquals("سرعت‌گیر", bump.typeLabel)
+        assertEquals("دست‌انداز", bump.typeLabel)
         val cam = ReportsModule.Report(4, ReportsModule.TYPE_SPEED_CAMERA, "", 34.5, 69.1, System.currentTimeMillis())
-        assertEquals("کمره سرعت", cam.typeLabel)
+        assertEquals("کمره کنترول سرعت", cam.typeLabel)
         assertTrue(cam.mapColor() == "#E0342C")
     }
 

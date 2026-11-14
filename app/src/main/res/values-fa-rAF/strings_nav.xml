@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- راهنمای صوتی و متنی مسیریاب — دری افغانستان (واژه‌نامه رسمی نسخه ۰٫۹٫۷) -->
     <string name="start_nav">شروع ناوبری</string>
     <string name="save_place">ذخیره</string>
-    <string name="share">اشتراک</string>
-    <string name="stop_nav">توقف</string>
-    <string name="places">مکان‌های من</string>
+    <string name="share">اشتراک‌گذاری</string>
+    <string name="stop_nav">پایان سفر</string>
+    <string name="places">مکان‌های ذخیره‌شده</string>
     <string name="home">خانه</string>
     <string name="work">محل کار</string>
     <string name="set_home">ذخیره به‌عنوان خانه</string>
@@ -17,26 +18,82 @@
     <string name="night_auto">حالت نقشه: خودکار</string>
     <string name="night_day">حالت نقشه: روز</string>
     <string name="night_night">حالت نقشه: شب</string>
-    <string name="no_tts">صدای فارسی روی گوشی شما نصب نیست. از تنظیمات گوشی (متن به گفتار) صدای فارسی را نصب کنید. تا آن وقت دستورها فقط روی صفحه نمایش داده می‌شوند.</string>
-    <string name="offline_search_notice">انترنت وصل نیست؛ فقط در مکان‌های ذخیره‌شده جست‌وجو شد.</string>
-    <string name="nav_depart">حرکت کنید</string>
-    <string name="nav_continue">ادامه دهید در</string>
-    <string name="nav_straight">به مسیر مستقیم ادامه دهید</string>
-    <string name="nav_right">به راست بچرخید</string>
-    <string name="nav_left">به چپ بچرخید</string>
-    <string name="nav_slight_right">کمی به راست بچرخید</string>
-    <string name="nav_slight_left">کمی به چپ بچرخید</string>
-    <string name="nav_sharp_right">تند به راست بچرخید</string>
-    <string name="nav_sharp_left">تند به چپ بچرخید</string>
-    <string name="nav_uturn">دور بزنید</string>
-    <string name="nav_roundabout">وارد میدان شوید</string>
-    <string name="nav_exit_roundabout">از میدان خارج شوید</string>
-    <string name="nav_arrive">به مقصد رسیدید</string>
-    <string name="nav_offroute">از مسیر خارج شدید</string>
-    <string name="nav_rerouted">مسیر جدید محاسبه شد</string>
-    <string name="nav_in">تا %1$s دیگر، %2$s</string>
+    <string name="no_tts">صدای دری روی گوشی شما نصب نیست. از تنظیمات گوشی (متن به گفتار) صدای فارسی/دری را نصب کنید. تا آن وقت دستورها فقط روی صفحه نمایش داده می‌شوند.</string>
+    <string name="offline_search_notice">ارتباط اینترنت برقرار نیست؛ فقط در مکان‌های ذخیره‌شده جست‌وجو شد.</string>
+
+    <!-- ۱. شروع و ادامه مسیر -->
+    <string name="nav_welcome">خوش آمدید. راهنمای صوتی راه‌یاب آماده است.</string>
+    <string name="nav_depart">آماده حرکت شوید.</string>
+    <string name="nav_continue">مستقیم ادامه دهید.</string>
+    <string name="nav_straight">به مسیر خود ادامه دهید.</string>
+    <string name="nav_keep_road">به راه خود ادامه دهید.</string>
+    <string name="nav_route_started">مسیر شما آغاز شد.</string>
+    <string name="nav_new_route_set">مسیر جدید تنظیم شد.</string>
+    <string name="nav_alt_found">مسیر بدیل پیدا شد.</string>
+
+    <!-- ۲. گردش به چپ و راست -->
+    <string name="nav_right">به راست بچرخید.</string>
+    <string name="nav_left">به چپ بچرخید.</string>
+    <string name="nav_slight_right">کمی به راست بروید.</string>
+    <string name="nav_slight_left">کمی به چپ بروید.</string>
+    <string name="nav_sharp_right">تند به راست بچرخید.</string>
+    <string name="nav_sharp_left">تند به چپ بچرخید.</string>
+    <string name="nav_uturn">به عقب برگردید.</string>
+    <string name="nav_go_right_side">به طرف راست بروید.</string>
+    <string name="nav_go_left_side">به طرف چپ بروید.</string>
+    <string name="nav_stay_right">در مسیر راست بمانید.</string>
+    <string name="nav_stay_left">در مسیر چپ بمانید.</string>
+
+    <!-- ۳. چهارراه، دوراهی و دوربرگردان -->
+    <string name="nav_cross1_right">در چهارراه اول به راست بچرخید.</string>
+    <string name="nav_cross1_left">در چهارراه اول به چپ بچرخید.</string>
+    <string name="nav_fork_right">در دوراهی مسیر راست را انتخاب کنید.</string>
+    <string name="nav_fork_left">در دوراهی مسیر چپ را انتخاب کنید.</string>
+    <string name="nav_exit_1">از خروجی اول خارج شوید.</string>
+    <string name="nav_exit_2">از خروجی دوم خارج شوید.</string>
+    <string name="nav_exit_3">از خروجی سوم خارج شوید.</string>
+    <string name="nav_roundabout">وارد دوربرگردان شوید.</string>
+    <string name="nav_exit_roundabout">از دوربرگردان خارج شوید.</string>
+
+    <!-- ۴. ورود و خروج از سرک و لین -->
+    <string name="nav_enter_road">وارد سرک عمومی شوید.</string>
+    <string name="nav_exit_road">از سرک عمومی خارج شوید.</string>
+    <string name="nav_enter_main">وارد مسیر اصلی شوید.</string>
+    <string name="nav_exit_main">از مسیر اصلی خارج شوید.</string>
+    <string name="nav_enter_alt">به مسیر بدیل وارد شوید.</string>
+    <string name="nav_lane_change">لین خود را عوض کنید.</string>
+    <string name="nav_keep_right">در لین راست حرکت کنید.</string>
+    <string name="nav_keep_left">در لین چپ حرکت کنید.</string>
+
+    <!-- پیام‌های ترکیبی فاصله -->
+    <string name="nav_in">پس از %1$s %2$s</string>
+    <string name="nav_now">اکنون %1$s</string>
+    <string name="nav_arrive">به مقصد رسیدید.</string>
+    <string name="nav_offroute">از مسیر خارج شدید.</string>
+    <string name="nav_rerouted">مسیر جدید تنظیم شد.</string>
     <string name="nav_remaining">باقی‌مانده: %1$s • %2$s</string>
+
+    <!-- ۷. خروج از مسیر و تنظیم دوباره -->
+    <string name="nav_locating">موقعیت شما در حال بررسی است.</string>
+    <string name="nav_gps_lost">ارتباط GPS قطع شده است.</string>
+    <string name="nav_gps_restored">ارتباط GPS دوباره برقرار شد.</string>
+    <string name="nav_route_changed">مسیر شما تغییر کرد.</string>
+    <string name="nav_faster_found">مسیر سریع‌تری پیدا شد.</string>
+
+    <!-- ۸. نزدیک شدن به مقصد -->
+    <string name="nav_approaching">به مقصد نزدیک می‌شوید.</string>
+    <string name="nav_dest_right">مقصد شما در طرف راست قرار دارد.</string>
+    <string name="nav_dest_left">مقصد شما در طرف چپ قرار دارد.</string>
+    <string name="nav_dest_500">تا مقصد ۵۰۰ متر باقی مانده است.</string>
+    <string name="nav_dest_200">تا مقصد ۲۰۰ متر باقی مانده است.</string>
+
+    <!-- ۹. پایان مسیر و خداحافظی -->
+    <string name="nav_arrive_farewell">به مقصد رسیدید. سفر خوبی داشته باشید.</string>
+    <string name="nav_trip_end">سفر شما به پایان رسید. از همراهی شما سپاسگزاریم.</string>
+    <string name="nav_thanks_bye">ممنون که از راهنمای ما استفاده کردید. روز خوبی داشته باشید.</string>
+    <string name="nav_be_safe">به سلامت باشید. امیدواریم سفر خوبی داشته باشید.</string>
+
     <string name="route_tag_fastest">سریع‌ترین</string>
     <string name="route_tag_shortest">کوتاه‌ترین</string>
-    <string name="route_tag_alt">جایگزین %1$d</string>
+    <string name="route_tag_alt">مسیر بدیل %1$d</string>
 </resources>

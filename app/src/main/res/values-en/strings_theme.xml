@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Map theme colors -->
+<resources>
+    <string name="map_colors_title">Map colors</string>
+    <string name="map_colors_saved">Map colors saved.</string>
+    <string name="th_background">Background land</string>
+    <string name="th_street">Streets</string>
+    <string name="th_highway">Highways</string>
+    <string name="th_alley">Alleys and lanes</string>
+    <string name="th_building">Buildings</string>
+    <string name="th_park">Parks and gardens</string>
+    <string name="th_water">Water and rivers</string>
+    <string name="th_label">Label color on map</string>
+    <string name="theme_presets">Ready themes</string>
+    <string name="theme_classic">Classic</string>
+    <string name="theme_green">Green</string>
+    <string name="theme_desert">Desert</string>
+    <string name="theme_ocean">Ocean</string>
+    <string name="theme_reset_all">Reset all to default</string>
+    <string name="color_choose">Choose color</string>
+    <string name="color_hue">Hue</string>
+    <string name="color_sat">Saturation</string>
+    <string name="color_val">Brightness</string>
+    <string name="color_use_default">Default color</string>
+    <string name="color_pick">Apply</string>
+    <string name="color_apply_note">Colors apply to the map immediately.</string>
+</resources>

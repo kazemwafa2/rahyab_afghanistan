@@ -48,6 +48,11 @@ object Config {
     /** مسیر دارایی بسته پایه داخل APK */
     const val BASE_PACKAGE_ASSET = "initial/afghanistan.rahpkg.zip"
 
+    // ---------- سرور اطلاعات جاده‌ای (ضمیمهٔ ۱ — Cloudflare Worker + D1) ----------
+    // نشانی Worker خودتان را اینجا بگذارید (docs: worker/README.md).
+    // تا وقتی خالی/تنظیم‌نشده باشد، برنامه کاملاً آفلاین با کش محلی کار می‌کند.
+    const val POI_API_BASE = "https://rahyab-worker.YOUR-ACCOUNT.workers.dev"
+
     // ---------- انکر نقشه ----------
     // شروع نقشه: کابل
     const val START_LAT = 34.5281

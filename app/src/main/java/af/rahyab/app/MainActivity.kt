@@ -97,6 +97,8 @@ class MainActivity : AppCompatActivity() {
     private var locationEnabled = false
     /** دوربین دنبال موقعیت کاربر باشد؟ بعد از انتخاب مکان/مسیر یا حرکت دستی نقشه false می‌شود */
     private var followUser = true
+    /** آخرین زمان لمس نقشه هنگام ناوبری — پس از ۵ ثانیه دنبال‌کردن دوباره آغاز می‌شود */
+    @Volatile private var navPanMs = 0L
     private var offlineStyleActive = false
     /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
     @Volatile private var netReallyDown = false
@@ -230,7 +232,7 @@ class MainActivity : AppCompatActivity() {
         tvFreeAlert.text = NavigationController.alertText(clip)
     }
 
-    // دسته‌بندی‌های جست‌وجوی سریع (نماد + نام + شناسه دسته در اندیس آفلاین)
+    // دسته‌بندی‌های جست‌وجوی سریع — واژه‌نامه دری افغانستان (نماد + نام + شناسه دسته در اندیس آفلاین)
     private val categories = listOf(
         Triple("🕌", R.string.cat_religion, OfflineGeocoder.C_RELIGION),
         Triple("🏥", R.string.cat_health, OfflineGeocoder.C_HEALTH),
@@ -244,6 +246,9 @@ class MainActivity : AppCompatActivity() {
         Triple("🌳", R.string.cat_park, OfflineGeocoder.C_PARK),
         Triple("🚓", R.string.cat_police, OfflineGeocoder.C_SERVICES),
         Triple("🚌", R.string.cat_transport, OfflineGeocoder.C_TRANSPORT),
+        Triple("🏛️", R.string.cat_gov, OfflineGeocoder.C_GOV),
+        Triple("🅿️", R.string.cat_parking, OfflineGeocoder.C_PARKING),
+        Triple("📚", R.string.cat_culture, OfflineGeocoder.C_CULTURE)
     )
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -363,6 +368,8 @@ class MainActivity : AppCompatActivity() {
                 m.cameraPosition.target?.let { t ->
                     prefs.edit().putFloat("map_lat", t.latitude.toFloat())
                         .putFloat("map_lon", t.longitude.toFloat()).apply()
+                    // ضمیمهٔ ۱: تازه‌سازی مکان‌های جاده‌ای پیرامون (هر ۹۰ ثانیه، کم‌مصرف)
+                    maybeRefreshPois()
                 }
             }
             // تغییر مبدأ/مقصد دستی روی نقشه — لمس طولانی = گفت‌وگوی انتخاب
@@ -372,12 +379,23 @@ class MainActivity : AppCompatActivity() {
             }
             m.addOnMapClickListener { pt ->
                 if (NavigationController.navigating || mode == Mode.NAV) return@addOnMapClickListener false
+                // ضمیمهٔ ۱: اگر روی نقطهٔ جاده‌ای لمس شد، برگهٔ همان مکان باز شود
+                if (poiHitAt(pt)) return@addOnMapClickListener true
+                // ضمیمهٔ ۱: حالت «انتخاب روی نقشه» برای ثبت مکان جدید
+                if (poiPick) { onPoiLocationPicked(pt.latitude, pt.longitude); return@addOnMapClickListener true }
                 onMapPointChosen(pt.latitude, pt.longitude, false)
                 true
             }
             hideMapAttribution()
             map?.addOnCameraMoveStartedListener { reason ->
-                if (reason == org.maplibre.android.maps.MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) followUser = false
+                if (reason == org.maplibre.android.maps.MapLibreMap.OnCameraMoveStartedListener.REASON_API_GESTURE) {
+                    followUser = false
+                    // هنگام ناوبری: کاربر بتواند اطراف را ببیند؛ ۵ ثانیه بعد دوربین دوباره
+                    // نرم روی مسیر برمی‌گردد (هماهنگی دوربین با مسیر — درخواست کاربر)
+                    if (NavigationController.navigating || NavigationController.freeMode) {
+                        navPanMs = System.currentTimeMillis()
+                    }
+                }
             }
             // اگر بارگیری سبک آنلاین شکست خورد (انترنت ناپایدار) → خودکار سبک آفلاین
             mapView.addOnDidFailLoadingMapListener { errMsg ->
@@ -737,16 +755,38 @@ class MainActivity : AppCompatActivity() {
         io.execute {
             try {
                 val res = Services.search(q, lang, loc?.latitude, loc?.longitude)
+                // ضمیمهٔ ۱: نتایج مکان‌های جاده‌ای (کش محلی + سرور در صورت دسترسی)
+                val poiPlaces = ArrayList<Place>()
+                try {
+                    val remote = if (RoadPois.serverConfigured(this@MainActivity) &&
+                        !RoadPois.serverUrl(this@MainActivity).contains("YOUR-ACCOUNT"))
+                        RoadPois.searchRemote(this@MainActivity, q) else emptyList()
+                    val merged = HashMap<Long, RoadPois.Poi>()
+                    for (p in remote) merged[p.id] = p
+                    for (p in RoadPois.searchCached(this@MainActivity, q)) if (!merged.containsKey(p.id)) merged[p.id] = p
+                    for (p in merged.values.take(8)) {
+                        val resId = resources.getIdentifier("cat_" + p.category, "string", packageName)
+                        val cat = if (resId != 0) getString(resId) else p.category
+                        poiPlaces.add(Place("$cat — ${p.name}", p.lat, p.lon))
+                    }
+                } catch (e: Exception) { }
                 ui.post {
                     when (res.source) {
                         Services.Source.OFFLINE -> showSource(getString(R.string.source_offline))
                         Services.Source.ONLINE -> showSource(getString(R.string.source_online))
                     }
-                    showResults(res.places)
+                    showResults(res.places + poiPlaces)
                 }
             } catch (e: ServiceException) {
                 // خطای سرویس آنلاین: جست‌وجوی بین مکان‌های ذخیره‌شده روی گوشی
                 val local = store.searchLocal(q)
+                val poiLocal = try {
+                    RoadPois.searchCached(this@MainActivity, q).take(8).map { p ->
+                        val resId = resources.getIdentifier("cat_" + p.category, "string", packageName)
+                        val cat = if (resId != 0) getString(resId) else p.category
+                        Place("$cat — ${p.name}", p.lat, p.lon)
+                    }
+                } catch (ex: Exception) { emptyList<Place>() }
                 ui.post {
                     showSource("")
                     when (e) {
@@ -754,16 +794,23 @@ class MainActivity : AppCompatActivity() {
                         is ForbiddenException -> toast(R.string.service_forbidden)
                         else -> toast(R.string.error_network)
                     }
-                    if (local.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local) }
+                    if (local.isNotEmpty() || poiLocal.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local + poiLocal) }
                     else showResults(emptyList())
                 }
             } catch (e: Exception) {
                 // هیچ استثنایی نباید نخ اجرا را بیندازد (کرش هنگام قطع انترنت)
                 val local = try { store.searchLocal(q) } catch (ex: Exception) { emptyList<Place>() }
+                val poiLocal = try {
+                    RoadPois.searchCached(this@MainActivity, q).take(8).map { p ->
+                        val resId = resources.getIdentifier("cat_" + p.category, "string", packageName)
+                        val cat = if (resId != 0) getString(resId) else p.category
+                        Place("$cat — ${p.name}", p.lat, p.lon)
+                    }
+                } catch (ex: Exception) { emptyList<Place>() }
                 ui.post {
                     showSource("")
                     toast(R.string.error_network)
-                    if (local.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local) }
+                    if (local.isNotEmpty() || poiLocal.isNotEmpty()) { toast(R.string.offline_search_notice); showResults(local + poiLocal) }
                     else showResults(emptyList())
                 }
             }
@@ -1236,7 +1283,8 @@ class MainActivity : AppCompatActivity() {
         if (locationEnabled) {
             val lc = map?.locationComponent
             lc?.cameraMode = CameraMode.NONE
-            lc?.renderMode = RenderMode.GPS
+            // با نشانگر وسیله، نقطه آبی زیر وسیله نمایش داده می‌شود (نه پیکان دوبار)
+            lc?.renderMode = if (VehicleMarkers.isArrow(prefs)) RenderMode.GPS else RenderMode.NORMAL
         }
 
         val ok = NavigationController.start(r, dest, navProfile)
@@ -1244,7 +1292,31 @@ class MainActivity : AppCompatActivity() {
             toast(R.string.location_denied)
             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
             exitNavChrome(backToRoute = true)
+        } else {
+            // درخواست کاربر: در لحظهٔ شروع سفر، دوربین بی‌درنگ روی مبدأ زوم کند،
+            // نشانگر وسیله روی مبدأ بایستد و رو به مسیر/مقصد باشد
+            focusVehicleAtStart(r)
         }
+    }
+
+    /** در لحظهٔ شروع سفر: زوم فوری دوربین روی مبدأ با جهت نخستین قطعهٔ مسیر */
+    private fun focusVehicleAtStart(r: RouteResult) {
+        if (r.points.size < 2) return
+        val lat0 = r.points[0].second; val lon0 = r.points[0].first
+        val lat1 = r.points[1].second; val lon1 = r.points[1].first
+        val bearing = NavigationController.bearingBetween(lat0, lon0, lat1, lon1)
+        try {
+            val f = Feature.fromGeometry(Point.fromLngLat(lon0, lat0))
+            f.addNumberProperty("bearing", bearing)
+            style?.getSourceAs<GeoJsonSource>("nav-arrow-src")?.setGeoJson(f)
+        } catch (e: Exception) { }
+        val b = if (northUp) 0.0 else bearing
+        map?.animateCamera(
+            CameraUpdateFactory.newCameraPosition(
+                CameraPosition.Builder().target(LatLng(lat0, lon0))
+                    .zoom(17.5).tilt(45.0).bearing(b).build()
+            ), 1400
+        )
     }
 
     /** حالت نمایش ناوبری: بنر مشکی، نوار پایین با ساعت رسیدن، سرعت‌سنج و قطب‌نما */
@@ -1276,7 +1348,10 @@ class MainActivity : AppCompatActivity() {
         if (st.navigating) {
             enterNavChrome()
             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-            val d = if (st.toManeuverM < 1000) (st.toManeuverM / 10).roundToInt() * 10.0 else st.toManeuverM
+            // هنگام «خارج از مسیر» فاصلهٔ پیچ بی‌معناست (عدد گمراه‌کننده مثل «۱۰ متر»)؛
+            // مسافت باقی‌ماندهٔ کل مسیر نشان داده می‌شود تا راننده دید واقعی داشته باشد.
+            val d = if (st.instructionKey == "offroute") st.remainingM
+                    else if (st.toManeuverM < 1000) (st.toManeuverM / 10).roundToInt() * 10.0 else st.toManeuverM
             tvNavDist.text = NavigationController.formatDistance(this, d)
             val instr = NavigationController.instrTitle(st.instructionKey, "")
             tvNavText.text = if (st.instructionName.isNotEmpty()) st.instructionName else instr
@@ -1334,21 +1409,29 @@ class MainActivity : AppCompatActivity() {
                 f.addNumberProperty("bearing", NavigationController.lastSnapBearing)
                 style?.getSourceAs<GeoJsonSource>("nav-arrow-src")?.setGeoJson(f)
             } catch (e: Exception) { }
-            val bearing = if (northUp) 0.0 else NavigationController.lastSnapBearing
-            map?.animateCamera(
-                CameraUpdateFactory.newCameraPosition(
-                    CameraPosition.Builder().target(LatLng(NavigationController.lastSnapLat, NavigationController.lastSnapLon))
-                        .zoom(17.5).tilt(45.0).bearing(bearing).build()
-                ), 900
-            )
+            // اگر کاربر همین حالا نقشه را لمس کرده (۵ ثانیهٔ اخیر)، دوربین را نکش؛
+            // کاربر می‌تواند اطراف را ببیند و پس از آن دوباره نرم روی مسیر می‌آید
+            val panHold = System.currentTimeMillis() - navPanMs < 5000
+            if (!panHold) {
+                val bearing = if (northUp) 0.0 else NavigationController.lastSnapBearing
+                map?.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder().target(LatLng(NavigationController.lastSnapLat, NavigationController.lastSnapLon))
+                            .zoom(17.5).tilt(45.0).bearing(bearing).build()
+                    ), 900
+                )
+            }
         } else {
-            val bearing = if (northUp) 0.0 else if (loc.hasBearing()) loc.bearing.toDouble() else (map?.cameraPosition?.bearing ?: 0.0)
-            map?.animateCamera(
-                CameraUpdateFactory.newCameraPosition(
-                    CameraPosition.Builder().target(LatLng(loc.latitude, loc.longitude))
-                        .zoom(17.0).tilt(40.0).bearing(bearing).build()
-                ), 900
-            )
+            val panHold = System.currentTimeMillis() - navPanMs < 5000
+            if (!panHold) {
+                val bearing = if (northUp) 0.0 else if (loc.hasBearing()) loc.bearing.toDouble() else (map?.cameraPosition?.bearing ?: 0.0)
+                map?.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder().target(LatLng(loc.latitude, loc.longitude))
+                            .zoom(17.0).tilt(40.0).bearing(bearing).build()
+                    ), 900
+                )
+            }
         }
     }
 
@@ -1406,16 +1489,231 @@ class MainActivity : AppCompatActivity() {
             .show()
     }
 
+    // ---------- رنگ‌های نقشه (تم) ----------
+    /** صفحه «رنگ‌های نقشه»: طرح‌های آماده + انتخاب رنگ هر عنصر (زمین، سرک، کوچه، عمارت، پارک، آب، نام‌ها) */
+    private fun showMapColorsDialog() {
+        val dark = wantDark()
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(10), dp(22), dp(4))
+        }
+        val swatches = HashMap<String, android.widget.TextView>()
+
+        fun refreshSwatches() {
+            for ((k, tv) in swatches) {
+                val custom = MapTheme.customOf(prefs, k, dark)
+                val color = if (custom != null) MapTheme.parse(custom) ?: 0
+                else MapTheme.parse(if (dark) MapTheme.ELEMENTS.first { it.key == k }.dark else MapTheme.ELEMENTS.first { it.key == k }.light) ?: 0
+                tv.setBackgroundColor(color)
+            }
+        }
+
+        // طرح‌های آماده
+        c.addView(TextView(this).apply {
+            text = getString(R.string.theme_presets)
+            textSize = 13f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+            setTextColor(0xFF888888.toInt()); setPadding(0, dp(6), 0, dp(4))
+        })
+        val presetsRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        for (p in MapTheme.PRESETS) {
+            presetsRow.addView(MaterialButton(this).apply {
+                text = getString(p.titleRes)
+                textSize = 12f
+                isAllCaps = false
+                setOnClickListener {
+                    MapTheme.applyPreset(prefs, p)
+                    refreshSwatches()
+                    style?.let { s -> MapTheme.applyToStyle(s, prefs, dark) }
+                    toast(R.string.map_colors_saved)
+                }
+            }, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(2), 0, dp(2), 0) })
+        }
+        c.addView(presetsRow)
+
+        // ردیف هر عنصر با نمونهٔ رنگ
+        for (el in MapTheme.ELEMENTS) {
+            val row = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                setPadding(0, dp(10), 0, dp(10))
+                gravity = android.view.Gravity.CENTER_VERTICAL
+            }
+            val sw = android.widget.TextView(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(34), dp(34))
+                background = ContextCompat.getDrawable(context, R.drawable.bg_btn_ghost)
+            }
+            swatches[el.key] = sw
+            row.addView(sw)
+            row.addView(TextView(this).apply {
+                text = getString(el.titleRes)
+                textSize = 15f
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply { setMargins(dp(12), 0, 0, 0) }
+            })
+            val custom = MapTheme.customOf(prefs, el.key, dark)
+            if (custom != null) {
+                row.addView(TextView(this).apply {
+                    text = custom
+                    textSize = 11f; setTextColor(0xFF888888.toInt()); setPadding(dp(4), 0, dp(8), 0)
+                })
+            }
+            row.setOnClickListener {
+                showColorPickerDialog(el, dark) {
+                    refreshSwatches()
+                    style?.let { s -> MapTheme.applyToStyle(s, prefs, dark) }
+                }
+            }
+            c.addView(row)
+        }
+
+        // بازگشت همه به پیش‌فرض
+        c.addView(MaterialButton(this).apply {
+            text = getString(R.string.theme_reset_all)
+            textSize = 13f; isAllCaps = false
+            setOnClickListener {
+                MapTheme.resetAll(prefs)
+                refreshSwatches()
+                style?.let { s -> MapTheme.applyToStyle(s, prefs, dark) }
+                toast(R.string.map_colors_saved)
+            }
+        }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(12), 0, dp(4)) })
+
+        refreshSwatches()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.map_colors_title)
+            .setView(android.widget.ScrollView(this).apply { addView(c) })
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** انتخابگر رنگ: پالت آماده + لغزنده‌های HSV زنده */
+    private fun showColorPickerDialog(el: MapTheme.Elem, dark: Boolean, onChanged: () -> Unit) {
+        val presets = listOf(
+            "#FFFFFF", "#F2F2EC", "#E8E2D4", "#EAE4D8", "#D8D2C6", "#B8B0A4",
+            "#F2B84F", "#E0A44E", "#C9A227", "#F6C878", "#7BB661", "#CDE6B8",
+            "#A9D89B", "#BFC98A", "#9FCFF3", "#5FA8D8", "#4E9FC9", "#0E2B47",
+            "#8B6E4E", "#6B4F3A", "#5C6F86", "#39485A", "#1D2833", "#0B1218",
+            "#3A3F44", "#54432C", "#E4DED4", "#C0392B", "#8E44AD", "#16A085"
+        )
+        val initial = MapTheme.customOf(prefs, el.key, dark) ?: (if (dark) el.dark else el.light)
+        var cur = MapTheme.parse(initial) ?: 0
+        val hsv = FloatArray(3)
+        Color.colorToHSV(cur, hsv)
+
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(10), dp(22), dp(4))
+        }
+        // لغزنده‌ها و به‌روزرسانی زنده — پیش از پالت اعلان می‌شوند تا در همه فراخوان‌ها در دسترس باشند
+        lateinit var sbH: android.widget.SeekBar
+        lateinit var sbS: android.widget.SeekBar
+        lateinit var sbV: android.widget.SeekBar
+
+        // نمونهٔ رنگ زنده + کد رنگ
+        val live = android.widget.TextView(this).apply {
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(44))
+            setBackgroundColor(cur)
+            gravity = android.view.Gravity.CENTER
+            text = MapTheme.toHex(cur)
+            setTextColor(if (hsv[2] > 0.6f) Color.BLACK else Color.WHITE)
+            textSize = 14f
+        }
+
+        fun upd() {
+            cur = try { Color.HSVToColor(hsv) } catch (e: Exception) { cur }
+            live.setBackgroundColor(cur)
+            live.text = MapTheme.toHex(cur)
+            live.setTextColor(if (hsv[2] > 0.6f) Color.BLACK else Color.WHITE)
+        }
+        c.addView(live)
+
+        // پالت رنگ آماده
+        val grid = android.widget.GridLayout(this).apply {
+            columnCount = 10
+            rowCount = 3
+        }
+        for (hex in presets) {
+            val color = MapTheme.parse(hex) ?: continue
+            val cell = android.widget.TextView(this).apply {
+                layoutParams = android.widget.GridLayout.LayoutParams().apply {
+                    width = dp(26); height = dp(26)
+                    setMargins(dp(2), dp(4), dp(2), dp(4))
+                }
+                setBackgroundColor(color)
+                setOnClickListener {
+                    cur = color
+                    Color.colorToHSV(cur, hsv)
+                    upd()
+                    sbH.progress = (hsv[0]).toInt()
+                    sbS.progress = (hsv[1] * 100).toInt()
+                    sbV.progress = (hsv[2] * 100).toInt()
+                }
+            }
+            grid.addView(cell)
+        }
+        c.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply { setMargins(0, dp(8), 0, dp(4)) })
+
+        // لغزنده‌های رنگ/شدت/روشنایی
+        fun bar(labelRes: Int, max: Int, init: Int, on: (Int) -> Unit): LinearLayout {
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
+            row.addView(TextView(this).apply {
+                text = getString(labelRes); textSize = 13f
+                layoutParams = LinearLayout.LayoutParams(dp(88), LinearLayout.LayoutParams.WRAP_CONTENT)
+            })
+            val sb = android.widget.SeekBar(this)
+            sb.max = max; sb.progress = init
+            sb.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(s: android.widget.SeekBar?, p: Int, fromUser: Boolean) {
+                    if (fromUser) on(p)
+                }
+                override fun onStartTrackingTouch(s: android.widget.SeekBar?) { }
+                override fun onStopTrackingTouch(s: android.widget.SeekBar?) { }
+            })
+            row.addView(sb, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+            return row
+        }
+        val rowH = bar(R.string.color_hue, 359, hsv[0].toInt()) { p ->
+            hsv[0] = p.toFloat(); upd()
+        }
+        val rowS = bar(R.string.color_sat, 100, (hsv[1] * 100).toInt()) { p ->
+            hsv[1] = p / 100f; upd()
+        }
+        val rowV = bar(R.string.color_val, 100, (hsv[2] * 100).toInt()) { p ->
+            hsv[2] = p / 100f; upd()
+        }
+        sbH = (rowH.getChildAt(1) as android.widget.SeekBar)
+        sbS = (rowS.getChildAt(1) as android.widget.SeekBar)
+        sbV = (rowV.getChildAt(1) as android.widget.SeekBar)
+        c.addView(rowH); c.addView(rowS); c.addView(rowV)
+
+        AlertDialog.Builder(this)
+            .setTitle(el.titleRes)
+            .setView(android.widget.ScrollView(this).apply { addView(c) })
+            .setPositiveButton(R.string.color_pick) { _, _ ->
+                MapTheme.setCustom(prefs, el.key, MapTheme.toHex(cur), dark)
+                onChanged()
+                toast(R.string.map_colors_saved)
+            }
+            .setNeutralButton(R.string.color_use_default) { _, _ ->
+                MapTheme.setCustom(prefs, el.key, null, dark)
+                onChanged()
+                toast(R.string.map_colors_saved)
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     private fun showSettings() {
         val items = arrayOf(
             getString(R.string.language),
             getString(R.string.night_mode),
+            getString(R.string.map_colors_title),
             getString(R.string.voice_title),
+            getString(R.string.veh_title),
             getString(R.string.alerts_title),
             getString(R.string.routing_title),
             getString(R.string.free_title),
             getString(R.string.map_labels_title),
             getString(R.string.traffic_item),
+            getString(R.string.poi_title),
             getString(R.string.check_update),
             getString(R.string.about)
         )
@@ -1425,13 +1723,16 @@ class MainActivity : AppCompatActivity() {
                 when (i) {
                     0 -> showLanguageDialog()
                     1 -> showMapModeDialog()
-                    2 -> showVoiceDialog()
-                    3 -> showAlertsDialog()
-                    4 -> showRoutingDialog()
-                    5 -> startFreeDriving()
-                    6 -> showMapLabelsDialog()
-                    7 -> showTrafficSettingsDialog()
-                    8 -> checkUpdates()
+                    2 -> showMapColorsDialog()
+                    3 -> showVoiceDialog()
+                    4 -> showVehicleMarkerDialog()
+                    5 -> showAlertsDialog()
+                    6 -> showRoutingDialog()
+                    7 -> startFreeDriving()
+                    8 -> showMapLabelsDialog()
+                    9 -> showTrafficSettingsDialog()
+                    10 -> showPoiFilterDialog()
+                    11 -> checkUpdates()
                     else -> showAbout()
                 }
             }
@@ -1447,6 +1748,81 @@ class MainActivity : AppCompatActivity() {
             .setMessage(msg)
             .setPositiveButton(R.string.close, null)
             .show()
+    }
+
+    // ---------- نشانگر مسیریابی — انتخاب وسیله روی نقشه (به سبک نشان/بلد) ----------
+    /**
+     * صفحه «نشانگر مسیریابی»: شبکه‌ای از فلش + ۱۵ وسیله (نمای بالا، سه‌بعدی)
+     * مطابق ناوگان تکسی افغانستان. نشانگر انتخابی جای تیرک ناوبری روی نقشه
+     * می‌نشیند و با جهت حرکت می‌چرخد.
+     */
+    private fun showVehicleMarkerDialog() {
+        val marks = VehicleMarkers.ALL
+        val selId = prefs.getString("nav_marker", "arrow") ?: "arrow"
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(10), dp(4), dp(10), dp(10))
+        }
+        val grid = android.widget.GridView(this)
+        grid.numColumns = 4
+        grid.verticalSpacing = dp(6)
+        grid.horizontalSpacing = dp(6)
+        grid.choiceMode = android.widget.AbsListView.CHOICE_MODE_SINGLE
+        grid.adapter = object : android.widget.BaseAdapter() {
+            override fun getCount(): Int = marks.size
+            override fun getItem(position: Int): Any = marks[position]
+            override fun getItemId(position: Int): Long = position.toLong()
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup): View {
+                val v = convertView ?: layoutInflater.inflate(R.layout.item_vehicle, parent, false)
+                val m = marks[position]
+                val iv = v.findViewById<ImageView>(R.id.ivVeh)
+                val tv = v.findViewById<TextView>(R.id.tvVeh)
+                val sel = v.findViewById<View>(R.id.vehSel)
+                if (m.drawableRes != 0) iv.setImageResource(m.drawableRes)
+                else iv.setImageResource(R.drawable.ic_navigation)
+                tv.text = getString(m.nameRes)
+                sel.visibility = if (m.id == selId) View.VISIBLE else View.GONE
+                return v
+            }
+        }
+        c.addView(grid, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(320)))
+        val dlg = AlertDialog.Builder(this)
+            .setTitle(R.string.veh_title)
+            .setView(c)
+            .setNegativeButton(R.string.close, null)
+            .show()
+        grid.setOnItemClickListener { _, _, p, _ ->
+            VehicleMarkers.save(prefs, marks[p].id)
+            style?.let { s ->
+                try { s.removeImage("nav-arrow-icon") } catch (e: Exception) { }
+                applyVehicleMarker(s)
+            }
+            toast(R.string.veh_selected)
+            dlg.dismiss()
+        }
+    }
+
+    /** گذاشتن نشانگر انتخابی (وسیله یا فلش) در سبک نقشه */
+    private fun applyVehicleMarker(s: Style) {
+        val mk = VehicleMarkers.selected(prefs)
+        try {
+            if (mk.id == "arrow" || mk.drawableRes == 0) {
+                if (s.getImage("nav-arrow-icon") == null) s.addImage("nav-arrow-icon", makeNavArrowBitmap())
+            } else {
+                s.addImage("nav-arrow-icon", makeVehicleBitmap(mk))
+            }
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "اعمال نشانگر وسیله ناموفق", e)
+            try { if (s.getImage("nav-arrow-icon") == null) s.addImage("nav-arrow-icon", makeNavArrowBitmap()) } catch (e2: Exception) { }
+        }
+    }
+
+    /** تبدیل تصویر وسیله به بیت‌مپ با اندازه مناسب نقشه (۲٫۵× برای وضوح) */
+    private fun makeVehicleBitmap(mk: VehicleMarkers.Marker): android.graphics.Bitmap {
+        val src = android.graphics.BitmapFactory.decodeResource(resources, mk.drawableRes)
+        val wPx = (mk.widthDp * 2.5f * resources.displayMetrics.density).toInt()
+        val hPx = (mk.heightDp * 2.5f * resources.displayMetrics.density).toInt()
+        return android.graphics.Bitmap.createScaledBitmap(src, wPx, hPx, true)
     }
 
     private var styleUrl = ""
@@ -1568,6 +1944,8 @@ class MainActivity : AppCompatActivity() {
         m.setStyle(Style.Builder().fromUri(url)) { s ->
             style = s
             addRouteLayers(s)
+            // رنگ‌های سفارشی کاربر (تم نقشه) روی سبک آنلاین
+            MapTheme.applyToStyle(s, prefs, wantDark())
         }
     }
 
@@ -1743,9 +2121,9 @@ class MainActivity : AppCompatActivity() {
                 circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
             )
         )
-        // تیرک جهت ناوبری — همیشه دقیقاً روی مسیر می‌نشیند (نه روی GPS خام)
+        // تیرک جهت ناوبری — نشانگر وسیله انتخابی یا فلش، همیشه دقیقاً روی مسیر
         try {
-            if (s.getImage("nav-arrow-icon") == null) s.addImage("nav-arrow-icon", makeNavArrowBitmap())
+            applyVehicleMarker(s)
             s.addSource(GeoJsonSource("nav-arrow-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
             s.addLayer(
                 org.maplibre.android.style.layers.SymbolLayer("nav-arrow-layer", "nav-arrow-src").withProperties(
@@ -1762,6 +2140,8 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.w("MainActivity", "لایه تیرک ناوبری ساخته نشد", e)
         }
         addTrafficLayers(s)
+        addPoiLayers(s)
+        renderPois()
         applyAfLabels(s)
         drawnRoute?.let { r ->
             val line = LineString.fromLngLats(r.points.map { Point.fromLngLat(it.first, it.second) })
@@ -1856,6 +2236,8 @@ class MainActivity : AppCompatActivity() {
                     .bufferedReader().use { it.readText() }
             } catch (e: Exception) { null }
             var json: String = assetStyle ?: (OfflineData.styleFile(pkg).takeIf { it.isFile }?.readText() ?: return null)
+            // رنگ‌های سفارشی کاربر (تم نقشه) — روی سبک آفلاین اعمال می‌شود
+            json = MapTheme.applyJson(json, prefs, wantDark())
             val tiles = OfflineData.tilesFile(pkg)
             if (!tiles.isFile) return null
             // قالب استایل خودش «pmtiles://__PMTILES__» است؛ پس اینجا فقط «file://» + مسیر می‌آید (نتیجه pmtiles://file:///…).
@@ -2019,6 +2401,381 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.w("MainActivity", "برچسب‌های افغانی اعمال نشد", e)
         }
     }
+
+    // ================ ضمیمهٔ ۱ — اطلاعات جاده‌ای (POI) ================
+
+    /** حالت «انتخاب روی نقشه» برای ثبت مکان جدید */
+    private var poiPick = false
+    private var poiPickCategory: String? = null
+    private var poiLastRefreshMs = 0L
+
+    /** لایه نقاط جاده‌ای روی نقشه — نقطه‌های رنگی بر اساس دسته + نام از زوم ۱۵ */
+    private fun addPoiLayers(s: Style) {
+        try {
+            s.addSource(GeoJsonSource("poi-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
+            val radius = Expression.interpolate(Expression.linear(), Expression.zoom(),
+                Expression.stop(10, Expression.literal(3.5f)),
+                Expression.stop(13, Expression.literal(5.5f)),
+                Expression.stop(16, Expression.literal(8f)))
+            s.addLayer(
+                CircleLayer("poi-dot", "poi-src").withProperties(
+                    circleColor(Expression.get("color")),
+                    circleRadius(radius),
+                    circleStrokeColor(Color.WHITE), circleStrokeWidth(1.6f),
+                    visibility(if (RoadPois.layerVisible(this)) Property.VISIBLE else Property.NONE)
+                )
+            )
+            s.addLayer(
+                SymbolLayer("poi-label", "poi-src").withProperties(
+                    textField(Expression.get("name")),
+                    textFont(arrayOf("Noto Sans Regular")),
+                    textSize(10.5f),
+                    textColor(Color.parseColor("#223047")),
+                    textHaloColor(Color.WHITE), textHaloWidth(1.3f),
+                    textAllowOverlap(false), textIgnorePlacement(true),
+                    visibility(if (RoadPois.layerVisible(this)) Property.VISIBLE else Property.NONE)
+                ).also { it.minZoom = 14.5f }
+            )
+        } catch (e: Exception) {
+            android.util.Log.w("MainActivity", "لایه مکان‌های جاده‌ای ساخته نشد", e)
+        }
+    }
+
+    /** کشیدن مکان‌های جاده‌ای داخل محدودهٔ دید نقشه از کش محلی */
+    private fun renderPois() {
+        val st = style ?: return
+        if (st.getSource("poi-src") == null) return
+        val b = map?.projection?.visibleRegion?.latLngBounds ?: return
+        io.execute {
+            val pois = try {
+                RoadPois.visibleInBbox(this@MainActivity, b.latitudeSouth, b.longitudeWest, b.latitudeNorth, b.longitudeEast)
+            } catch (e: Exception) { emptyList<RoadPois.Poi>() }
+            ui.post {
+                val s = style ?: return@post
+                val feats = ArrayList<Feature>(pois.size)
+                for (p in pois) {
+                    val f = Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat))
+                    f.addStringProperty("color", p.cat?.color ?: "#F5A623")
+                    f.addStringProperty("name", p.name)
+                    f.addNumberProperty("pid", p.id)
+                    feats.add(f)
+                }
+                try {
+                    s.getSourceAs<GeoJsonSource>("poi-src")?.setGeoJson(FeatureCollection.fromFeatures(feats))
+                } catch (e: Exception) { }
+            }
+        }
+    }
+
+    /** هر ۹۰ ثانیه یک بار: ارسال صف معلق + تازه‌سازی پیرامون + کشیدن دوباره */
+    private fun maybeRefreshPois() {
+        val now = System.currentTimeMillis()
+        if (now - poiLastRefreshMs < 90_000L) { renderPois(); return }
+        poiLastRefreshMs = now
+        val t = map?.cameraPosition?.target ?: return
+        io.execute {
+            try { RoadPois.flushPending(this@MainActivity) } catch (e: Exception) { }
+            try {
+                if (RoadPois.serverConfigured(this@MainActivity) &&
+                    !RoadPois.serverUrl(this@MainActivity).contains("YOUR-ACCOUNT")) {
+                    RoadPois.refreshAround(this@MainActivity, t.latitude, t.longitude, 4000)
+                }
+            } catch (e: Exception) { }
+            ui.post { renderPois() }
+        }
+    }
+
+    /** لمس روی یک نقطهٔ جاده‌ای — برگهٔ مکان باز می‌شود؛ خروجی: لمس مصرف شد؟ */
+    private fun poiHitAt(pt: LatLng): Boolean {
+        val m = map ?: return false
+        val s = style ?: return false
+        if (s.getLayer("poi-dot") == null || !RoadPois.layerVisible(this)) return false
+        return try {
+            val sp = m.projection.toScreenLocation(pt)
+            val feats = m.queryRenderedFeatures(sp, "poi-dot")
+            if (feats.isEmpty()) false
+            else {
+                val pid = try { feats[0].getNumberProperty("pid").toLong() } catch (e: Exception) { 0L }
+                if (pid <= 0) return false
+                io.execute {
+                    val poi = RoadPois.byId(this@MainActivity, pid) ?: return@execute
+                    val loc = lastKnown()
+                    val dist = if (loc != null) Geo.dist(loc.latitude, loc.longitude, poi.lat, poi.lon) else -1.0
+                    ui.post { showPoiDetails(poi, dist) }
+                }
+                true
+            }
+        } catch (e: Exception) { false }
+    }
+
+    private fun poiStatusLabel(status: String): String = getString(
+        when (status) {
+            "official" -> R.string.poi_status_official
+            "user_verified" -> R.string.poi_status_user_verified
+            else -> R.string.poi_status_unverified
+        }
+    )
+
+    /** برگهٔ جزئیات مکان جاده‌ای + رأی/گزارش + مسیریابی (بخش هفتم و هشتم) */
+    private fun showPoiDetails(poi: RoadPois.Poi, distM: Double) {
+        val catLabel = try {
+            val resId = resources.getIdentifier("cat_" + poi.category, "string", packageName)
+            if (resId != 0) getString(resId) else poi.category
+        } catch (e: Exception) { poi.category }
+        val sb = StringBuilder()
+        sb.append(catLabel)
+        sb.append(" • ").append(poiStatusLabel(poi.verificationStatus)).append('\n')
+        if (distM >= 0) sb.append(getString(R.string.poi_distance,
+            NavigationController.formatDistance(this, distM))).append('\n')
+        poi.confirmedSpeedLimit?.let {
+            sb.append(getString(R.string.poi_speed_limit, it)).append('\n')
+        }
+        poi.roadName?.let { sb.append(it).append('\n') }
+        poi.description?.let { sb.append(it).append('\n') }
+        poi.lastVerifiedAt?.let {
+            sb.append(getString(R.string.poi_last_verified,
+                NavigationController.formatTimeOfDay(it))).append('\n')
+        }
+        val items = arrayOf(
+            getString(R.string.poi_confirm),
+            getString(R.string.poi_deny),
+            getString(R.string.poi_report_action),
+            getString(R.string.start_nav)
+        )
+        AlertDialog.Builder(this)
+            .setTitle(poi.name)
+            .setMessage(sb.toString().trim())
+            .setItems(items) { _, i ->
+                when (i) {
+                    0 -> {
+                        val sent = RoadPois.votePoi(this, poi.id, true)
+                        toast(if (sent && RoadPois.serverConfigured(this)) R.string.poi_vote_sent else R.string.poi_vote_pending)
+                    }
+                    1 -> {
+                        val sent = RoadPois.votePoi(this, poi.id, false)
+                        toast(if (sent && RoadPois.serverConfigured(this)) R.string.poi_vote_sent else R.string.poi_vote_pending)
+                    }
+                    2 -> showPoiReportMenu(poi.id)
+                    else -> {
+                        val p = Place(poi.name, poi.lat, poi.lon)
+                        selected = p
+                        setDestMarker(p)
+                        requestRoute(navProfile)
+                    }
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** گزارش وضعیت مکان ثابت: خرابی، حذف، اطلاعات غلط، تعطیلی… */
+    private fun showPoiReportMenu(poiId: Long) {
+        val items = arrayOf(
+            getString(R.string.poi_report_broken),
+            getString(R.string.poi_report_removed),
+            getString(R.string.poi_report_wrong_info),
+            getString(R.string.poi_report_moved),
+            getString(R.string.poi_report_closed),
+            getString(R.string.poi_report_reopened),
+            getString(R.string.poi_report_price_changed)
+        )
+        val types = arrayOf("broken", "removed", "wrong_info", "moved", "closed", "reopened", "price_changed")
+        AlertDialog.Builder(this)
+            .setTitle(R.string.poi_report_desc_hint)
+            .setItems(items) { _, i ->
+                val sent = RoadPois.reportPoi(this, poiId, types[i], null)
+                toast(if (sent && RoadPois.serverConfigured(this)) R.string.poi_report_sent else R.string.poi_report_pending)
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** ثبت مکان جاده‌ای: گروه → دسته → فرم با موقعیت GPS یا انتخاب روی نقشه */
+    private fun showPoiAddDialog(presetLat: Double? = null, presetLon: Double? = null) {
+        val groups = RoadPois.GROUPS
+        val labels = groups.map { g ->
+            val resId = resources.getIdentifier("poi_group_$g", "string", packageName)
+            if (resId != 0) getString(resId) else g
+        }.toTypedArray()
+        AlertDialog.Builder(this)
+            .setTitle(R.string.poi_choose_category)
+            .setItems(labels) { _, gi ->
+                val group = groups[gi]
+                val cats = RoadPois.CATEGORIES.filter { it.group == group }
+                val catLabels = cats.map { c ->
+                    val resId = resources.getIdentifier("cat_" + c.id, "string", packageName)
+                    if (resId != 0) getString(resId) else c.id
+                }.toTypedArray()
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.poi_choose_category)
+                    .setItems(catLabels) { _, ci ->
+                        showPoiAddForm(cats[ci].id, presetLat, presetLon)
+                    }
+                    .setNegativeButton(R.string.close, null)
+                    .show()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    private fun showPoiAddForm(categoryId: String, presetLat: Double?, presetLon: Double?) {
+        val loc = lastKnown()
+        var lat = presetLat ?: loc?.latitude ?: mapCenter()?.first ?: return
+        var lon = presetLon ?: loc?.longitude ?: mapCenter()?.second ?: return
+        val box = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(12), dp(22), dp(6))
+        }
+        fun field(hintRes: Int): EditText {
+            val et = EditText(this)
+            et.hint = getString(hintRes)
+            et.setPadding(dp(12), dp(8), dp(12), dp(8))
+            box.addView(et)
+            return et
+        }
+        val etName = field(R.string.poi_name_hint)
+        val etRoad = field(R.string.poi_road_hint)
+        val etProvince = field(R.string.poi_province_hint)
+        val etDistrict = field(R.string.poi_district_hint)
+        val etDesc = field(R.string.poi_desc_hint)
+        val tvLoc = TextView(this).apply {
+            setPadding(dp(4), dp(10), dp(4), dp(4))
+            text = getString(R.string.poi_location) + ": %.5f, %.5f".format(java.util.Locale.US, lat, lon)
+            textSize = 13f
+        }
+        box.addView(tvLoc)
+        val btnPick = com.google.android.material.button.MaterialButton(this)
+        btnPick.text = getString(R.string.poi_pick_map)
+        btnPick.setOnClickListener {
+            poiPick = true
+            poiPickCategory = categoryId
+            toast(R.string.poi_pick_map_hint)
+            dismissPoiForm?.invoke()
+        }
+        box.addView(btnPick)
+
+        var dialog: AlertDialog? = null
+        dismissPoiForm = { dialog?.dismiss() }
+        dialog = AlertDialog.Builder(this)
+            .setTitle(try {
+                val resId = resources.getIdentifier("cat_$categoryId", "string", packageName)
+                if (resId != 0) getString(resId) else categoryId
+            } catch (e: Exception) { categoryId })
+            .setView(box)
+            .setPositiveButton(R.string.saved_ok) { _, _ ->
+                val name = etName.text.toString().trim()
+                if (name.isEmpty()) { toast(R.string.poi_failed); return@setPositiveButton }
+                io.execute {
+                    val (ok, res) = RoadPois.submitPoi(
+                        this@MainActivity, name, categoryId, lat, lon,
+                        etProvince.text.toString().trim().takeIf { it.isNotEmpty() },
+                        etDistrict.text.toString().trim().takeIf { it.isNotEmpty() },
+                        etRoad.text.toString().trim().takeIf { it.isNotEmpty() },
+                        null, etDesc.text.toString().trim().takeIf { it.isNotEmpty() }
+                    )
+                    ui.post {
+                        when {
+                            !ok -> toast(R.string.poi_failed)
+                            res == -1L -> toast(R.string.poi_saved_pending)
+                            res is Long -> toast(R.string.poi_saved)
+                            else -> toast(R.string.poi_saved)
+                        }
+                        renderPois()
+                    }
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    var dismissPoiForm: (() -> Unit)? = null
+
+    /** فراخوانی پس از انتخاب نقطه روی نقشه در حالت ثبت مکان */
+    private fun onPoiLocationPicked(lat: Double, lon: Double) {
+        poiPick = false
+        val cat = poiPickCategory
+        poiPickCategory = null
+        if (cat == null) { showPoiAddDialog(lat, lon); return }
+        // فرم قبلی بسته شده — فرم تازه با مختصات تازه باز می‌شود
+        showPoiAddForm(cat, lat, lon)
+    }
+
+    /** تنظیمات اطلاعات جاده‌ای: لایه، دسته‌ها، سرور، همگام‌سازی */
+    private fun showPoiFilterDialog() {
+        val hidden = RoadPois.hiddenGroups(this).toMutableSet()
+        val c = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(22), dp(12), dp(22), dp(6))
+        }
+        val swLayer = android.widget.Switch(this)
+        swLayer.text = getString(R.string.poi_title)
+        swLayer.isChecked = RoadPois.layerVisible(this)
+        c.addView(swLayer)
+        c.addView(TextView(this).apply {
+            text = getString(R.string.poi_filter_title)
+            setPadding(0, dp(10), 0, dp(2)); textSize = 14f
+        })
+        val switches = HashMap<String, android.widget.Switch>()
+        for (g in RoadPois.GROUPS) {
+            val sw = android.widget.Switch(this)
+            val resId = resources.getIdentifier("poi_group_$g", "string", packageName)
+            sw.text = if (resId != 0) getString(resId) else g
+            sw.isChecked = g !in hidden
+            c.addView(sw)
+            switches[g] = sw
+        }
+        c.addView(TextView(this).apply {
+            text = getString(R.string.poi_local_count, RoadPois.localCount(this@MainActivity)) +
+                (if (RoadPois.pendingCount(this@MainActivity) > 0)
+                    "\n" + getString(R.string.poi_pending_count, RoadPois.pendingCount(this@MainActivity)) else "")
+            setPadding(0, dp(10), 0, dp(2)); textSize = 12f; setTextColor(0xFF556677.toInt())
+        })
+        c.addView(TextView(this).apply {
+            text = getString(R.string.poi_server_title); setPadding(0, dp(12), 0, dp(2)); textSize = 14f
+        })
+        val etServer = EditText(this)
+        etServer.hint = getString(R.string.poi_server_hint)
+        etServer.setText(RoadPois.serverUrl(this).takeIf { RoadPois.serverConfigured(this) && !it.contains("YOUR-ACCOUNT") } ?: "")
+        etServer.textSize = 13f
+        c.addView(etServer)
+        c.addView(TextView(this).apply {
+            text = getString(R.string.poi_offline_note)
+            textSize = 11f; setTextColor(0xFF666666.toInt()); setPadding(0, dp(8), 0, 0)
+        })
+        AlertDialog.Builder(this)
+            .setTitle(R.string.poi_title)
+            .setView(c)
+            .setPositiveButton(R.string.saved_ok) { _, _ ->
+                RoadPois.setLayerVisible(this, swLayer.isChecked)
+                val newHidden = RoadPois.GROUPS.filter { switches[it]!!.isChecked == false }.toSet()
+                RoadPois.setHiddenGroups(this, newHidden)
+                RoadPois.setServerUrl(this, etServer.text.toString().trim())
+                renderPois()
+                val st = style
+                st?.getLayer("poi-dot")?.setProperties(
+                    visibility(if (swLayer.isChecked) Property.VISIBLE else Property.NONE))
+                st?.getLayer("poi-label")?.setProperties(
+                    visibility(if (swLayer.isChecked) Property.VISIBLE else Property.NONE))
+            }
+            .setNeutralButton(R.string.poi_refresh) { _, _ ->
+                io.execute {
+                    val ok = try {
+                        RoadPois.flushPending(this)
+                        if (RoadPois.serverUrl(this).contains("YOUR-ACCOUNT")) false
+                        else RoadPois.syncDeltas(this) || RoadPois.refreshAround(this,
+                            mapCenter()?.first ?: Config.START_LAT, mapCenter()?.second ?: Config.START_LON)
+                    } catch (e: Exception) { false }
+                    ui.post {
+                        toast(if (ok) R.string.poi_refresh_done else R.string.poi_refresh_failed)
+                        renderPois()
+                    }
+                }
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    // ================ پایان ضمیمهٔ ۱ ================
 
     private fun addTrafficLayers(s: Style) {
         try {
@@ -2208,13 +2965,19 @@ class MainActivity : AppCompatActivity() {
         showReportTypePicker(loc.first, loc.second)
     }
 
-    /** انتخاب نوع گزارش، سپس یادداشت */
+    /** انتخاب نوع گزارش، سپس یادداشت — همه انواع واژه‌نامه دری (بخش ۵) */
     private fun showReportTypePicker(lat: Double, lon: Double) {
         val labels = arrayOf(
             getString(R.string.report_accident), getString(R.string.report_damage),
             getString(R.string.report_closed), getString(R.string.report_jam),
             getString(R.string.report_hazard), getString(R.string.report_bump),
-            getString(R.string.report_cam)
+            getString(R.string.report_cam),
+            getString(R.string.report_police), getString(R.string.report_redlight),
+            getString(R.string.report_slippery), getString(R.string.report_narrow),
+            getString(R.string.report_school), getString(R.string.report_crosswalk),
+            getString(R.string.report_rail), getString(R.string.report_animal),
+            getString(R.string.report_trafficlight), getString(R.string.report_limit),
+            getString(R.string.report_steep_down), getString(R.string.report_steep_up)
         )
         AlertDialog.Builder(this)
             .setTitle(R.string.report_title)
@@ -2226,7 +2989,19 @@ class MainActivity : AppCompatActivity() {
                     3 -> ReportsModule.TYPE_HEAVY_TRAFFIC
                     4 -> ReportsModule.TYPE_HAZARD
                     5 -> ReportsModule.TYPE_SPEED_BUMP
-                    else -> ReportsModule.TYPE_SPEED_CAMERA
+                    6 -> ReportsModule.TYPE_SPEED_CAMERA
+                    7 -> ReportsModule.TYPE_POLICE
+                    8 -> ReportsModule.TYPE_RED_LIGHT_CAMERA
+                    9 -> ReportsModule.TYPE_SLIPPERY
+                    10 -> ReportsModule.TYPE_NARROW
+                    11 -> ReportsModule.TYPE_SCHOOL_ZONE
+                    12 -> ReportsModule.TYPE_CROSSWALK
+                    13 -> ReportsModule.TYPE_RAIL_CROSSING
+                    14 -> ReportsModule.TYPE_ANIMALS
+                    15 -> ReportsModule.TYPE_BROKEN_TRAFFIC_LIGHT
+                    16 -> ReportsModule.TYPE_SPEED_LIMIT_CHANGE
+                    17 -> ReportsModule.TYPE_STEEP_DOWN
+                    else -> ReportsModule.TYPE_STEEP_UP
                 }
                 showReportNoteDialog(type, lat, lon)
             }
@@ -2442,7 +3217,7 @@ class MainActivity : AppCompatActivity() {
                 if (selectedSource[0] == "system") {
                     edit.putString("voice_source", "system")
                 } else {
-                    val p = selectedPack[0].ifEmpty { "dari" }
+                    val p = selectedPack[0].ifEmpty { "farid" }
                     val pLang = packs.firstOrNull { it.id == p }?.lang ?: curLang
                     edit.putString("voice_source", "pack").putString("voice_pack_$pLang", p)
                     if (pLang != curLang) {
@@ -2498,7 +3273,22 @@ class MainActivity : AppCompatActivity() {
 
     // ---------- تنظیمات هشدارها (مثل «تنظیمات هشدارها» نشان) ----------
     private fun showAlertsDialog() {
-        val p = getSharedPreferences("alerts", Context.MODE_PRIVATE)
+        // اصلاح مهم: کلیدها باید در حافظهٔ «settings» ذخیره شوند چون
+        // NavigationController.alertConfig() از همان حافظه می‌خواند —
+        // نسخه‌های پیشین در حافظهٔ جداگانهٔ alerts می‌نوشتند و هیچ‌گاه اعمال نمی‌شد.
+        val legacy = getSharedPreferences("alerts", Context.MODE_PRIVATE)
+        if (legacy.contains("a_bump")) {
+            for (k in legacy.all.keys) {
+                if (k.startsWith("a_") && !prefs.contains(k)) {
+                    try { prefs.edit().putBoolean(k, legacy.getBoolean(k, true)).apply() } catch (e: Exception) { }
+                }
+                if (k == "a_limit" && !prefs.contains(k)) {
+                    prefs.edit().putInt(k, legacy.getInt(k, 80)).apply()
+                }
+            }
+            legacy.edit().clear().apply()
+        }
+        val p = prefs
         val c = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(22), dp(12), dp(22), dp(6))
@@ -2510,6 +3300,22 @@ class MainActivity : AppCompatActivity() {
             "a_closed" to R.string.alert_closed,
             "a_hazard" to R.string.alert_hazard,
             "a_cam" to R.string.alert_cam,
+            "a_police" to R.string.alert_police,
+            "a_redlight" to R.string.alert_redlight,
+            "a_slippery" to R.string.alert_slippery,
+            "a_narrow" to R.string.alert_narrow,
+            "a_school" to R.string.alert_school,
+            "a_crosswalk" to R.string.alert_crosswalk,
+            "a_rail" to R.string.alert_rail,
+            "a_animal" to R.string.alert_animal,
+            "a_trafficlight" to R.string.alert_trafficlight,
+            "a_limit_change" to R.string.alert_limit,
+            "a_steep_down" to R.string.alert_steep_down,
+            "a_steep_up" to R.string.alert_steep_up,
+            "a_toll" to R.string.alert_toll,
+            "a_border" to R.string.alert_border,
+            "a_bridge" to R.string.alert_bridge,
+            "a_tunnel" to R.string.alert_tunnel,
             "a_speed" to R.string.alert_speed
         )
         val switches = HashMap<String, android.widget.Switch>()
@@ -2701,7 +3507,8 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.set_as_dest),
             getString(R.string.set_as_origin),
             getString(R.string.report_here),
-            getString(R.string.show_place)
+            getString(R.string.show_place),
+            getString(R.string.poi_add)
         )
         AlertDialog.Builder(this)
             .setTitle(name)
@@ -2722,7 +3529,7 @@ class MainActivity : AppCompatActivity() {
                         if (selected != null) requestRoute(navProfile)
                     }
                     2 -> showReportTypePicker(lat, lon)
-                    else -> {
+                    3 -> {
                         val p = Place(name, lat, lon)
                         selected = p
                         originPlace = null
@@ -2730,6 +3537,7 @@ class MainActivity : AppCompatActivity() {
                         map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(lat, lon), 15.0))
                         showPlaceSheet(p)
                     }
+                    else -> showPoiAddDialog(lat, lon)
                 }
             }
             .setNegativeButton(R.string.close, null)

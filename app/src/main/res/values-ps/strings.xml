@@ -63,7 +63,10 @@
     <string name="cat_hotel">هوټلونه</string>
     <string name="cat_park">پارکونه</string>
     <string name="cat_police">پولیس</string>
-    <string name="cat_transport">اډې او ترمینالونه</string>
+    <string name="cat_transport">اډې او هوایي ډګر</string>
+    <string name="cat_gov">ادارې (شاروالي، محکمه، بندر)</string>
+    <string name="cat_parking">د موټرو د درېدو ځایونه</string>
+    <string name="cat_culture">کتابتون، موزیم او لوبغالی</string>
     <string name="tab_map">نقشه</string>
     <string name="tab_saved">خوښ ځایونه</string>
     <string name="tab_packs">آفلاین بنډلونه</string>

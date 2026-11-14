@@ -1,0 +1,14 @@
+{
+  "name": "rahyab-worker",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Rahyab Afghanistan — Road Intelligence API (Cloudflare Worker + D1)",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy",
+    "init-db": "wrangler d1 execute rahyab-reports --file=schema.sql --remote"
+  },
+  "devDependencies": {
+    "wrangler": "^3.90.0"
+  }
+}

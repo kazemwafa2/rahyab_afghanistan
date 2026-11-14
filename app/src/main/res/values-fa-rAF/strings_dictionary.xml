@@ -1,0 +1,153 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ============================================================
+         واژه‌نامه برنامه مسیریاب — دری افغانستان (نسخه ۰٫۹٫۷)
+         تمام اصطلاحات رسمی برنامه در یک جا، مطابق چک‌لیست رسمی.
+         ============================================================ -->
+
+    <!-- ۱. مکان‌ها و خدمات -->
+    <string name="poi_airport">میدان هوایی</string>
+    <string name="poi_hospital">شفاخانه</string>
+    <string name="poi_pharmacy">دواخانه</string>
+    <string name="poi_shop">دکان</string>
+    <string name="poi_market">مارکیت</string>
+    <string name="poi_hotel">هوتل</string>
+    <string name="poi_restaurant">رستورانت</string>
+    <string name="poi_mosque">مسجد</string>
+    <string name="poi_school">مکتب</string>
+    <string name="poi_university">پوهنتون و دانشگاه</string>
+    <string name="poi_library">کتابخانه</string>
+    <string name="poi_bank">بانک</string>
+    <string name="poi_atm">دستگاه ATM</string>
+    <string name="poi_fuel">تانک تیل</string>
+    <string name="poi_carwash">موترشویی</string>
+    <string name="poi_workshop">مستری‌خانه</string>
+    <string name="poi_tire_repair">پنچرگیری</string>
+    <string name="poi_parking">پارکینگ</string>
+    <string name="poi_park">پارک</string>
+    <string name="poi_stadium">ورزشگاه</string>
+    <string name="poi_fire_station">اطفائیه</string>
+    <string name="poi_police_hq">حوزه پولیس</string>
+    <string name="poi_health_center">مرکز صحی</string>
+    <string name="poi_clinic">کلینیک</string>
+    <string name="poi_bus_station">ایستگاه بس</string>
+    <string name="poi_taxi_station">ایستگاه تکسی</string>
+    <string name="poi_rail_station">ایستگاه ریل</string>
+    <string name="poi_municipality">شاروالی</string>
+    <string name="poi_court">محکمه</string>
+    <string name="poi_customs">گمرک</string>
+    <string name="poi_checkpoint">پاسگاه پولیس</string>
+
+    <!-- ۲. بخش‌های نقشه و سرک -->
+    <string name="road_road">سرک</string>
+    <string name="road_public">سرک عمومی</string>
+    <string name="road_alley">کوچه</string>
+    <string name="road_crossroads">چهارراهی</string>
+    <string name="road_tjunction">سه‌راهی</string>
+    <string name="road_tworoads">دوراهی</string>
+    <string name="road_square">چوک</string>
+    <string name="road_bridge">پل</string>
+    <string name="road_tunnel">تونل</string>
+    <string name="road_underpass">زیرگذر</string>
+    <string name="road_overpass">پل هوایی</string>
+    <string name="road_roundabout">دوربرگردان</string>
+    <string name="road_one_way">سرک یک‌طرفه</string>
+    <string name="road_two_way">سرک دوطرفه</string>
+    <string name="road_closed">سرک بسته</string>
+    <string name="road_alternate">مسیر بدیل</string>
+    <string name="road_lane">لین</string>
+    <string name="road_sidewalk">پیاده‌رو</string>
+    <string name="road_crosswalk">گذرگاه عابران پیاده</string>
+    <string name="road_traffic_light">چراغ ترافیکی</string>
+    <string name="road_speed_bump">دست‌انداز</string>
+    <string name="road_dangerous_curve">پیچ خطرناک</string>
+    <string name="road_downhill">سرازیری</string>
+    <string name="road_uphill">سربالایی</string>
+    <string name="road_slippery">سرک لغزنده</string>
+    <string name="road_repair">کار ترمیم سرک</string>
+    <string name="road_speed_limit">محدودیت سرعت</string>
+
+    <!-- ۳. بخش‌های برنامه -->
+    <string name="app_map">نقشه</string>
+    <string name="app_routing">مسیریابی</string>
+    <string name="app_search">جستجو</string>
+    <string name="app_destination">مقصد</string>
+    <string name="app_origin">مبدأ</string>
+    <string name="app_current_route">مسیر فعلی</string>
+    <string name="app_alternate_route">مسیر بدیل</string>
+    <string name="app_faster_route">مسیر سریع‌تر</string>
+    <string name="app_distance">فاصله</string>
+    <string name="app_arrival_time">زمان رسیدن</string>
+    <string name="app_nearby_places">مکان‌های نزدیک</string>
+    <string name="app_saved_places">مکان‌های ذخیره‌شده</string>
+    <string name="app_home">خانه</string>
+    <string name="app_work">محل کار</string>
+    <string name="app_favorites">علاقه‌مندی‌ها</string>
+    <string name="app_search_history">تاریخچه جستجو</string>
+    <string name="app_recent_searches">جستجوهای اخیر</string>
+    <string name="app_download_map">دانلود نقشه</string>
+    <string name="app_offline_map">نقشه آفلاین</string>
+    <string name="app_map_package">بسته نقشه</string>
+    <string name="app_province_package">بسته ولایت</string>
+    <string name="app_manage_maps">مدیریت نقشه‌ها</string>
+    <string name="app_update_map">به‌روزرسانی نقشه</string>
+    <string name="app_delete_map">حذف نقشه</string>
+    <string name="app_settings">تنظیمات</string>
+    <string name="app_language">زبان</string>
+    <string name="app_voice_guide">راهنمای صوتی</string>
+    <string name="app_guide_voice">صدای راهنما</string>
+    <string name="app_volume">بلندی صدا</string>
+    <string name="app_distance_unit">واحد فاصله</string>
+    <string name="app_kilometer">کیلومتر</string>
+    <string name="app_meter">متر</string>
+    <string name="app_speed">سرعت</string>
+    <string name="app_route_info">معلومات مسیر</string>
+    <string name="app_about">درباره برنامه</string>
+
+    <!-- ۴. وضعیت و ارتباطات -->
+    <string name="st_gps_connection">ارتباط GPS</string>
+    <string name="st_current_position">موقعیت فعلی</string>
+    <string name="st_getting_position">دریافت موقعیت</string>
+    <string name="st_internet_connection">ارتباط اینترنت</string>
+    <string name="st_offline_mode">حالت آفلاین</string>
+    <string name="st_online_mode">حالت آنلاین</string>
+    <string name="st_download">دانلود</string>
+    <string name="st_download_paused">دانلود متوقف شد</string>
+    <string name="st_download_complete">دانلود تکمیل شد</string>
+    <string name="st_download_failed">دانلود ناموفق</string>
+    <string name="st_storage_space">فضای ذخیره‌سازی</string>
+    <string name="st_file_size">حجم فایل</string>
+    <string name="st_download_percent">درصد دانلود</string>
+    <string name="st_try_again">تلاش دوباره</string>
+    <string name="st_cancel">لغو</string>
+    <string name="st_confirm">تأیید</string>
+    <string name="st_back">بازگشت</string>
+    <string name="st_continue">ادامه</string>
+    <string name="st_close">بستن</string>
+    <string name="st_save">ذخیره</string>
+    <string name="st_delete">حذف</string>
+    <string name="st_select">انتخاب</string>
+    <string name="st_share">اشتراک‌گذاری</string>
+    <string name="st_location_permission">اجازه دسترسی به موقعیت مکانی</string>
+
+    <!-- ۵. انواع وسایط نقلیه -->
+    <string name="vh_car">موتر</string>
+    <string name="vh_motorcycle">موترسایکل</string>
+    <string name="vh_bus">بس</string>
+    <string name="vh_taxi">تکسی</string>
+    <string name="vh_truck">باری</string>
+    <string name="vh_bicycle">بایسکل</string>
+    <string name="vh_walking">پیاده</string>
+
+    <!-- ۶. مناطق جغرافیایی -->
+    <string name="geo_country">کشور</string>
+    <string name="geo_province">ولایت</string>
+    <string name="geo_district">ولسوالی</string>
+    <string name="geo_zone">ناحیه</string>
+    <string name="geo_village">قریه</string>
+    <string name="geo_city">شهر</string>
+    <string name="geo_area">منطقه</string>
+    <string name="geo_border">سرحد</string>
+    <string name="geo_province_center">مرکز ولایت</string>
+    <string name="geo_district_center">مرکز ولسوالی</string>
+</resources>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Navigation marker — English -->
+    <string name="veh_title">Navigation marker</string>
+    <string name="veh_arrow">Arrow</string>
+    <string name="veh_landcruiser">Land Cruiser</string>
+    <string name="veh_toyota_suv">Toyota SUV</string>
+    <string name="veh_lexus">Lexus</string>
+    <string name="veh_mercedes">Mercedes</string>
+    <string name="veh_bmw">BMW</string>
+    <string name="veh_camry">Toyota Camry</string>
+    <string name="veh_hyundai">Hyundai</string>
+    <string name="veh_kia">Kia</string>
+    <string name="veh_hiaze">HiAce Van</string>
+    <string name="veh_mercedes_van">Mercedes Van</string>
+    <string name="veh_bus">Bus</string>
+    <string name="veh_tuktuk">Tuk-tuk</string>
+    <string name="veh_moto">Motorcycle</string>
+    <string name="veh_cargo_trike">Cargo trike</string>
+    <string name="veh_bike">Bicycle</string>
+    <string name="veh_selected">Navigation marker changed</string>
+</resources>

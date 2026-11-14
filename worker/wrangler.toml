@@ -1,0 +1,16 @@
+name = "rahyab-worker"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# دیتابیس D1 — همین دیتابیس «rahyab-reports» که برای گزارش‌های زنده ساخته شده؛
+# جداول ضمیمهٔ ۱ با «wrangler d1 execute rahyab-reports --file=schema.sql» اضافه می‌شوند.
+[[d1_databases]]
+binding = "DB"
+database_name = "rahyab-reports"
+database_id = "REPLACE_WITH_YOUR_D1_ID"
+
+[vars]
+# سقف‌های امن برای کنترل مصرف Worker و D1 (بخش دوازدهم ضمیمهٔ ۱)
+MAX_LIMIT = "1000"
+NEARBY_LIMIT = "200"
+SEARCH_LIMIT = "60"

@@ -27,6 +27,26 @@ object ReportsModule {
     /** هشدارهای سبک نشان: سرعت‌گیر و کمره سرعت (فقط از گزارش کاربران، بدون داده جعلی) */
     const val TYPE_SPEED_BUMP = "speed_bump"
     const val TYPE_SPEED_CAMERA = "speed_camera"
+    /** هشدارهای واژه‌نامه دری (۰٫۹٫۷) — بخش ۵ راهنمای صوتی و متنی */
+    const val TYPE_POLICE = "police"
+    const val TYPE_RED_LIGHT_CAMERA = "red_light_camera"
+    const val TYPE_SLIPPERY = "slippery"
+    const val TYPE_NARROW = "narrow"
+    const val TYPE_SCHOOL_ZONE = "school_zone"
+    const val TYPE_CROSSWALK = "crosswalk"
+    const val TYPE_RAIL_CROSSING = "rail_crossing"
+    const val TYPE_ANIMALS = "animals"
+    const val TYPE_BROKEN_TRAFFIC_LIGHT = "broken_traffic_light"
+    const val TYPE_SPEED_LIMIT_CHANGE = "speed_limit_change"
+    const val TYPE_STEEP_DOWN = "steep_down"
+    const val TYPE_STEEP_UP = "steep_up"
+    /** هشدارهای مکان‌های ثابت ضمیمهٔ ۱ — عوارض، مرز، پل، تونل، چراغ */
+    const val TYPE_TOLL = "toll"
+    const val TYPE_BORDER = "border"
+    const val TYPE_BRIDGE = "bridge"
+    const val TYPE_TUNNEL = "tunnel"
+    const val TYPE_TRAFFIC_LIGHT = "traffic_light"
+    const val TYPE_SURVEILLANCE = "surveillance"
 
     /** عمر اعتبار گزارش: ۲۴ ساعت (انقضای خودکار) */
     const val EXPIRY_MS = 24 * 60 * 60 * 1000L
@@ -50,9 +70,27 @@ object ReportsModule {
                 TYPE_ACCIDENT -> "حادثه ترافیکی"
                 TYPE_ROAD_DAMAGE -> "خرابی جاده"
                 TYPE_ROAD_CLOSED -> "بسته‌بودن جاده"
-                TYPE_HEAVY_TRAFFIC -> "زحمت ترافیکی"
-                TYPE_SPEED_BUMP -> "سرعت‌گیر"
-                TYPE_SPEED_CAMERA -> "کمره سرعت"
+                TYPE_HEAVY_TRAFFIC -> "ترافیک سنگین"
+                TYPE_SPEED_BUMP -> "دست‌انداز"
+                TYPE_SPEED_CAMERA -> "کمره کنترول سرعت"
+                TYPE_POLICE -> "احتمال حضور پولیس"
+                TYPE_RED_LIGHT_CAMERA -> "کمره چراغ سرخ"
+                TYPE_SLIPPERY -> "سرک لغزنده"
+                TYPE_NARROW -> "باریک شدن سرک"
+                TYPE_SCHOOL_ZONE -> "منطقه مکتب"
+                TYPE_CROSSWALK -> "گذرگاه عابران پیاده"
+                TYPE_RAIL_CROSSING -> "گذرگاه ریل"
+                TYPE_ANIMALS -> "عبور حیوانات"
+                TYPE_BROKEN_TRAFFIC_LIGHT -> "چراغ ترافیکی خراب"
+                TYPE_SPEED_LIMIT_CHANGE -> "تغییر محدودیت سرعت"
+                TYPE_STEEP_DOWN -> "سرازیری تند"
+                TYPE_STEEP_UP -> "سربالایی تند"
+                TYPE_TOLL -> "ایستگاه عوارض"
+                TYPE_BORDER -> "گذرگاه مرزی"
+                TYPE_BRIDGE -> "پل در پیش رو"
+                TYPE_TUNNEL -> "تونل در پیش رو"
+                TYPE_TRAFFIC_LIGHT -> "چراغ ترافیکی"
+                TYPE_SURVEILLANCE -> "کمره نظارتی"
                 else -> "خطر جاده‌ای"
             }
 
@@ -61,9 +99,17 @@ object ReportsModule {
             TYPE_ACCIDENT -> "#E0342C"
             TYPE_ROAD_CLOSED -> "#E0342C"
             TYPE_SPEED_CAMERA -> "#E0342C"
+            TYPE_RED_LIGHT_CAMERA -> "#E0342C"
+            TYPE_POLICE -> "#2A6FB4"
             TYPE_HEAVY_TRAFFIC -> "#F5A623"
             TYPE_ROAD_DAMAGE -> "#F5A623"
             TYPE_SPEED_BUMP -> "#F5A623"
+            TYPE_TOLL -> "#C62828"
+            TYPE_BORDER -> "#AD1457"
+            TYPE_BRIDGE -> "#5C6BC0"
+            TYPE_TUNNEL -> "#455A64"
+            TYPE_TRAFFIC_LIGHT -> "#E0342C"
+            TYPE_SURVEILLANCE -> "#7E57C2"
             else -> "#F5A623"
         }
     }
@@ -86,7 +132,11 @@ object ReportsModule {
     /** اعتبارسنجی نوع گزارش */
     fun validType(t: String): Boolean = t in setOf(
         TYPE_ACCIDENT, TYPE_ROAD_DAMAGE, TYPE_ROAD_CLOSED, TYPE_HEAVY_TRAFFIC, TYPE_HAZARD,
-        TYPE_SPEED_BUMP, TYPE_SPEED_CAMERA
+        TYPE_SPEED_BUMP, TYPE_SPEED_CAMERA,
+        TYPE_POLICE, TYPE_RED_LIGHT_CAMERA, TYPE_SLIPPERY, TYPE_NARROW, TYPE_SCHOOL_ZONE,
+        TYPE_CROSSWALK, TYPE_RAIL_CROSSING, TYPE_ANIMALS, TYPE_BROKEN_TRAFFIC_LIGHT,
+        TYPE_SPEED_LIMIT_CHANGE, TYPE_STEEP_DOWN, TYPE_STEEP_UP,
+        TYPE_TOLL, TYPE_BORDER, TYPE_BRIDGE, TYPE_TUNNEL, TYPE_TRAFFIC_LIGHT, TYPE_SURVEILLANCE
     )
 
     /** آیا متن شامل اطلاعات حساس امنیتی است؟ (چنین گزارشی فقط محلی ذخیره می‌شود) */

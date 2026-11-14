@@ -63,7 +63,10 @@
     <string name="cat_hotel">Hotels</string>
     <string name="cat_park">Parks</string>
     <string name="cat_police">Police</string>
-    <string name="cat_transport">Stations &amp; terminals</string>
+    <string name="cat_transport">Stations &amp; airports</string>
+    <string name="cat_gov">Government offices</string>
+    <string name="cat_parking">Parking</string>
+    <string name="cat_culture">Library, museum &amp; stadium</string>
     <string name="tab_map">Map</string>
     <string name="tab_saved">Saved</string>
     <string name="tab_packs">Offline packs</string>

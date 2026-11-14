@@ -63,7 +63,10 @@
     <string name="cat_hotel">هتل‌ها</string>
     <string name="cat_park">پارک‌ها</string>
     <string name="cat_police">پلیس</string>
-    <string name="cat_transport">ایستگاه‌ها و ترمینال‌ها</string>
+    <string name="cat_transport">ایستگاه‌ها و فرودگاه</string>
+    <string name="cat_gov">اداره‌ها (شهرداری، دادگاه، گمرک)</string>
+    <string name="cat_parking">پارکینگ‌ها</string>
+    <string name="cat_culture">کتابخانه، موزه و ورزشگاه</string>
     <string name="tab_map">نقشه</string>
     <string name="tab_saved">ذخیره‌شده‌ها</string>
     <string name="tab_packs">بسته‌های آفلاین</string>

@@ -50,6 +50,30 @@ interface RoutingService {
 
 // ---------- HTTP ----------
 object Http {
+    /** POST با بدنهٔ JSON — برای ثبت مکان/رأی/گزارش به سرور Worker */
+    fun postJson(url: String, jsonBody: String, readTimeoutMs: Int = Config.HTTP_READ_TIMEOUT_MS): String {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.connectTimeout = Config.HTTP_CONNECT_TIMEOUT_MS
+        c.readTimeout = readTimeoutMs
+        c.requestMethod = "POST"
+        c.doOutput = true
+        c.setRequestProperty("User-Agent", Config.USER_AGENT)
+        c.setRequestProperty("Content-Type", "application/json; charset=utf-8")
+        try {
+            c.outputStream.use { it.write(jsonBody.toByteArray(Charsets.UTF_8)) }
+            when (c.responseCode) {
+                429 -> throw RateLimitedException()
+                403 -> throw ForbiddenException()
+                !in 200..299 -> throw BadResponseException("HTTP ${c.responseCode}")
+            }
+            return c.inputStream.bufferedReader().use { it.readText() }
+        } catch (e: java.io.IOException) {
+            throw NetworkException(e)
+        } finally {
+            c.disconnect()
+        }
+    }
+
     fun get(url: String, readTimeoutMs: Int = Config.HTTP_READ_TIMEOUT_MS): String {
         val c = URL(url).openConnection() as HttpURLConnection
         c.connectTimeout = Config.HTTP_CONNECT_TIMEOUT_MS

@@ -13,7 +13,10 @@ import android.os.PowerManager
 import android.util.Log
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
+import kotlin.math.atan2
+import kotlin.math.cos
 import kotlin.math.roundToInt
+import kotlin.math.sin
 
 /**
  * کنترلر ناوبری در سطح برنامه (نه اکتیویتی).
@@ -31,6 +34,8 @@ object NavigationController {
     private const val OFF_ROUTE_TICKS = 3     // سه قرائت پیاپی بیرون مسیر
     private const val REROUTE_COOLDOWN_MS = 8000L
     private const val ARRIVE_M = 18.0
+    /** زیر این سرعت (تقریباً ۵٫۴ km/h) خودرو ایستاده است و لرزش GPS نباید «خروج از مسیر» بسازد */
+    private const val MOVING_SPEED_MS = 1.5f
 
     data class UiState(
         val navigating: Boolean,
@@ -190,8 +195,13 @@ object NavigationController {
             when (key) {
                 "depart" -> R.string.nav_depart
                 "arrive" -> R.string.nav_arrive
+                "arrive_farewell" -> R.string.nav_arrive_farewell
+                "trip_end" -> R.string.nav_trip_end
                 "roundabout" -> R.string.nav_roundabout
                 "exit_roundabout" -> R.string.nav_exit_roundabout
+                "exit_1" -> R.string.nav_exit_1
+                "exit_2" -> R.string.nav_exit_2
+                "exit_3" -> R.string.nav_exit_3
                 "right" -> R.string.nav_right
                 "left" -> R.string.nav_left
                 "slight_right" -> R.string.nav_slight_right
@@ -199,6 +209,31 @@ object NavigationController {
                 "sharp_right" -> R.string.nav_sharp_right
                 "sharp_left" -> R.string.nav_sharp_left
                 "uturn" -> R.string.nav_uturn
+                "go_right_side" -> R.string.nav_go_right_side
+                "go_left_side" -> R.string.nav_go_left_side
+                "stay_right" -> R.string.nav_stay_right
+                "stay_left" -> R.string.nav_stay_left
+                "fork_right" -> R.string.nav_fork_right
+                "fork_left" -> R.string.nav_fork_left
+                "enter_road" -> R.string.nav_enter_road
+                "exit_road" -> R.string.nav_exit_road
+                "enter_main" -> R.string.nav_enter_main
+                "exit_main" -> R.string.nav_exit_main
+                "enter_alt" -> R.string.nav_enter_alt
+                "lane_change" -> R.string.nav_lane_change
+                "keep_right" -> R.string.nav_keep_right
+                "keep_left" -> R.string.nav_keep_left
+                "keep_road" -> R.string.nav_keep_road
+                "route_started" -> R.string.nav_route_started
+                "route_changed" -> R.string.nav_route_changed
+                "faster_found" -> R.string.nav_faster_found
+                "gps_lost" -> R.string.nav_gps_lost
+                "gps_restored" -> R.string.nav_gps_restored
+                "approaching" -> R.string.nav_approaching
+                "dest_right" -> R.string.nav_dest_right
+                "dest_left" -> R.string.nav_dest_left
+                "dest_500" -> R.string.nav_dest_500
+                "dest_200" -> R.string.nav_dest_200
                 "offroute" -> R.string.nav_offroute
                 "rerouted" -> R.string.nav_rerouted
                 "continue" -> R.string.nav_continue
@@ -242,12 +277,24 @@ object NavigationController {
         engine = NavEngine(r)
         navigating = true
         announced.clear()
+        approach500 = false
+        approach200 = false
         offCount = 0
         rerouting = false
         arrivedAnnounced = false
         _lastKey = "depart"; _lastName = r.steps.firstOrNull()?.name ?: ""
         _lastRemainingM = r.distanceM
         _lastRemainingS = r.durationS
+
+        // وضعیت اولیهٔ تیرک/دوربین: چسبیده به مبدأ مسیر با جهت نخستین قطعه — تا دوربین
+        // بی‌درنگ روی مبدأ زوم کند و نشانگر وسیله رو به مسیر باشد، حتی پیش از رسیدن
+        // نخستین قرائت GPS (درخواست کاربر)
+        if (r.points.size >= 2) {
+            _hasSnap = true
+            _snapLat = r.points[0].second
+            _snapLon = r.points[0].first
+            _snapBearing = bearingBetween(r.points[0].second, r.points[0].first, r.points[1].second, r.points[1].first)
+        }
 
         acquireWakeLock(ctx)
         startLocationUpdates(ctx)
@@ -259,7 +306,9 @@ object NavigationController {
         return true
     }
 
-    fun stop() {
+    /** توقف ناوبری؛ userInitiated = توقف دستی (پیام «سفر شما به پایان رسید…») */
+    fun stop(userInitiated: Boolean = false) {
+        val wasNavigating = navigating && !arrivedAnnounced
         navigating = false
         engine = null
         route = null
@@ -267,6 +316,11 @@ object NavigationController {
         _hasSnap = false
         stopLocationUpdates()
         releaseWakeLock()
+        if (userInitiated && wasNavigating) {
+            // «سفر شما به پایان رسید. از همراهی شما سپاسگزاریم.»
+            val app = try { locCtx() } catch (e: Exception) { appCtx }
+            voice?.speak(app?.getString(R.string.nav_trip_end) ?: "", listOf("trip_end"))
+        }
         voice?.stop()
         NavigationService.stop(appCtx ?: return)
         emit()
@@ -299,8 +353,18 @@ object NavigationController {
         override fun onLocationChanged(location: Location) { onFix(location) }
         @Deprecated("Deprecated in Java")
         override fun onStatusChanged(provider: String?, status: Int, extras: Bundle?) {}
-        override fun onProviderEnabled(provider: String) {}
-        override fun onProviderDisabled(provider: String) {}
+        override fun onProviderEnabled(provider: String) {
+            // «ارتباط GPS دوباره برقرار شد.» (واژه‌نامه بخش ۷)
+            if (provider == LocationManager.GPS_PROVIDER && (navigating || freeMode)) {
+                voice?.speak(locCtx().getString(R.string.nav_gps_restored), listOf("gps_restored"))
+            }
+        }
+        override fun onProviderDisabled(provider: String) {
+            // «ارتباط GPS قطع شده است.»
+            if (provider == LocationManager.GPS_PROVIDER && (navigating || freeMode)) {
+                voice?.speak(locCtx().getString(R.string.nav_gps_lost), listOf("gps_lost"))
+            }
+        }
     }
 
     @SuppressLint("MissingPermission")
@@ -310,6 +374,14 @@ object NavigationController {
             if (lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
                 lm.requestLocationUpdates(LocationManager.GPS_PROVIDER, 1000L, 1.5f, locListener, Looper.getMainLooper())
             }
+            // فراهم‌کنندهٔ شبکه نیز گوش‌دهی می‌شود — روی برخی گوشی‌ها تنها GPS_PROVIDER
+            // دیر پاسخ می‌دهد یا در ساختمان‌ها هیچ قرائتی نمی‌آید؛ با شبکه نخستین
+            // قرائت سریع‌تر می‌رسد و دوربین بی‌درنگ روی مبدأ می‌نشیند
+            try {
+                if (lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+                    lm.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 2000L, 3f, locListener, Looper.getMainLooper())
+                }
+            } catch (e: SecurityException) { }
         } catch (e: Exception) { Log.e(TAG, "شروع به‌روزرسانی موقعیت ناموفق", e) }
     }
 
@@ -358,14 +430,26 @@ object NavigationController {
             _snapLon = st.snapLon
             _snapBearing = st.snapBearing
 
-            // خروج از مسیر: با شمارنده پایداری تا از پرش GPS محاسبه مجدد مکرر نشود
-            if (st.offRouteM > OFF_ROUTE_M) {
-                offCount++
-                if (offCount >= OFF_ROUTE_TICKS && !rerouting) reroute(loc)
-                postState(st, "offroute", "")
+            // خروج از مسیر — دو محافظ ضد خطای کاذب:
+            //  ۱) آستانهٔ پویا: با دقت GPS مقیاس می‌شود (دقت ۴۰m → آستانهٔ ۶۰m) تا لرزش
+            //     موقعیت که در پارک‌شدن/مکان‌های سرپوشیده رایج است، هشدار کاذب نسازد.
+            //  ۲) گیت حرکت: خودروی ایستاده هرگز «خارج از مسیر» شمرده نمی‌شود —
+            //     برای بیرون‌رفتن از مسیر باید حرکت کرد؛ ایستاده فقط پرش GPS داریم.
+            val threshold = offRouteThreshold(loc)
+            if (st.offRouteM > threshold) {
+                if (isMoving(loc)) {
+                    offCount++
+                    if (offCount >= OFF_ROUTE_TICKS && !rerouting) reroute(loc)
+                }
+                // بنر «از مسیر خارج شدید» فقط وقتی پایدار است (سه قرائت پیاپی یا در حال
+                // محاسبهٔ مجدد) — نه با یک پرش لحظه‌ای GPS؛ وگرنه بنر چشمک می‌زد.
+                if (offCount >= OFF_ROUTE_TICKS || rerouting) postState(st, "offroute", "")
                 return@execute
             }
             offCount = 0
+
+            // اعلام نزدیک شدن به مقصد — «تا مقصد ۵۰۰/۲۰۰ متر باقی مانده است.» + طرف مقصد
+            announceApproach(st.remaining)
 
             if (st.remaining < ARRIVE_M) { arrive(); return@execute }
 
@@ -396,6 +480,16 @@ object NavigationController {
         offCount > 0, rerouting, arrivedAnnounced
     )
 
+    /** آستانهٔ پویا برای تشخیص خروج از مسیر — حداقل ۴۵ متر و با دقت ضعیف GPS بزرگ‌تر */
+    private fun offRouteThreshold(loc: Location): Double {
+        val acc = if (loc.hasAccuracy()) loc.accuracy.toDouble() else 0.0
+        return maxOf(OFF_ROUTE_M, acc * 1.5)
+    }
+
+    /** آیا خودرو واقعاً در حرکت است؟ بدون سنسور سرعت، محتاطانه «در حرکت» فرض می‌شود */
+    private fun isMoving(loc: Location): Boolean =
+        !loc.hasSpeed() || loc.speed >= MOVING_SPEED_MS
+
     private fun postState(st: NavEngine.State, key: String, name: String) {
         val s = makeState(st, key, name)
         uiListeners.forEach { l -> ui.post { try { l(s) } catch (e: Exception) { } } }
@@ -422,8 +516,10 @@ object NavigationController {
         for (t in listOf(40, 200, 500)) if (t >= th) announced.add("${st.stepIndex}:$t")
         val instr = instrTitle(key, name, app)
         if (th == 40) {
-            voice?.speak(instr, listOf(key))
+            // «اکنون به راست بچرخید.» — کلیپ «اکنون» + دستور (واژه‌نامه بخش ۲)
+            voice?.speak(instr, listOf("d40", key))
         } else {
+            // «پس از ۲۰۰ متر به راست بچرخید.» — کلیپ فاصله + دستور
             val dist = formatDistance(app, th.toDouble())
             voice?.speak(app.getString(R.string.nav_in, dist, instr), listOf("d$th", key))
         }
@@ -443,6 +539,23 @@ object NavigationController {
             closed = p.getBoolean("a_closed", true),
             hazard = p.getBoolean("a_hazard", true),
             cam = p.getBoolean("a_cam", true),
+            police = p.getBoolean("a_police", true),
+            redlight = p.getBoolean("a_redlight", true),
+            slippery = p.getBoolean("a_slippery", true),
+            narrow = p.getBoolean("a_narrow", true),
+            school = p.getBoolean("a_school", true),
+            crosswalk = p.getBoolean("a_crosswalk", true),
+            rail = p.getBoolean("a_rail", true),
+            animal = p.getBoolean("a_animal", true),
+            trafficlight = p.getBoolean("a_trafficlight", true),
+            limit = p.getBoolean("a_limit_change", true),
+            steepDown = p.getBoolean("a_steep_down", true),
+            steepUp = p.getBoolean("a_steep_up", true),
+            toll = p.getBoolean("a_toll", true),
+            border = p.getBoolean("a_border", true),
+            bridge = p.getBoolean("a_bridge", true),
+            tunnel = p.getBoolean("a_tunnel", true),
+            trafficLight = p.getBoolean("a_traffic_light", true),
             overspeed = p.getBoolean("a_speed", true),
             speedLimitKmh = p.getInt("a_limit", 80)
         )
@@ -459,6 +572,23 @@ object NavigationController {
                 "alert_closed" -> R.string.alert_closed_text
                 "alert_cam" -> R.string.alert_cam_text
                 "alert_speed" -> R.string.alert_speed_text
+                "alert_police" -> R.string.alert_police_text
+                "alert_redlight" -> R.string.alert_redlight_text
+                "alert_slippery" -> R.string.alert_slippery_text
+                "alert_narrow" -> R.string.alert_narrow_text
+                "alert_school" -> R.string.alert_school_text
+                "alert_crosswalk" -> R.string.alert_crosswalk_text
+                "alert_rail" -> R.string.alert_rail_text
+                "alert_animal" -> R.string.alert_animal_text
+                "alert_trafficlight" -> R.string.alert_trafficlight_text
+                "alert_limit" -> R.string.alert_limit_text
+                "alert_steep_down" -> R.string.alert_steep_down_text
+                "alert_steep_up" -> R.string.alert_steep_up_text
+                "alert_toll" -> R.string.alert_toll_text
+                "alert_border" -> R.string.alert_border_text
+                "alert_bridge" -> R.string.alert_bridge_text
+                "alert_tunnel" -> R.string.alert_tunnel_text
+                "slow_down" -> R.string.alert_slow_down_text
                 else -> R.string.alert_hazard_text
             }
         )
@@ -475,10 +605,14 @@ object NavigationController {
             lastAlertScan = now
             io.execute {
                 // اسکن گزارش‌های فعال هر ۵ ثانیه (کم‌هزینه برای دیتابیس)
-                val list = try {
+                val reports = try {
                     ReportsModule.active(ctx).map { AlertEngine.ReportPt(it.id, it.type, it.lat, it.lon) }
                 } catch (e: Exception) { emptyList() }
-                cachedReports = list
+                // مکان‌های ثابت ضمیمهٔ ۱ (کمره، دست‌انداز، عوارض، مرز، پل، تونل…) از کش محلی
+                val poiPts = try {
+                    RoadPois.alertPoints(ctx, loc.latitude, loc.longitude, 1200.0)
+                } catch (e: Exception) { emptyList() }
+                cachedReports = reports + poiPts
             }
         }
         val speedKmh = if (loc.hasSpeed()) loc.speed * 3.6 else 0.0
@@ -538,14 +672,53 @@ object NavigationController {
         engine = NavEngine(r)
         announced.clear()
         offCount = 0
+        approach500 = false
+        approach200 = false
         _lastRemainingM = r.distanceM
         _lastRemainingS = r.durationS
+    }
+
+    // ---------- نزدیک شدن به مقصد و پایان سفر (واژه‌نامه بخش ۸ و ۹) ----------
+    private var approach500 = false
+    private var approach200 = false
+
+    /** طرف مقصد نسبت به انتهای مسیر: «dest_right» یا «dest_left» */
+    private fun destSideClip(): String {
+        val r = route ?: return ""
+        val d = destination ?: return ""
+        if (r.points.size < 2) return ""
+        val a = r.points[r.points.size - 2]
+        val b = r.points[r.points.size - 1]
+        // بردار مسیر در انتها (v) و بردار از انتهای مسیر به مقصد (w)
+        val vx = b.first - a.first; val vy = b.second - a.second
+        val wx = d.lon - b.first; val wy = d.lat - b.second
+        val cross = vx * wy - vy * wx
+        return if (cross > 0) "dest_left" else "dest_right"
+    }
+
+    /** اعلام «تا مقصد … باقی مانده است» در ۵۰۰ و ۲۰۰ متر + طرف مقصد در ۲۰۰ متر */
+    private fun announceApproach(remaining: Double) {
+        val app = try { locCtx() } catch (e: Exception) { appCtx } ?: return
+        if (remaining <= 500.0 && !approach500) {
+            approach500 = true
+            voice?.speak(app.getString(R.string.nav_dest_500), listOf("dest_500"))
+        }
+        if (remaining <= 200.0 && !approach200) {
+            approach200 = true
+            val side = destSideClip()
+            val text = if (side.isEmpty()) app.getString(R.string.nav_dest_200)
+            else app.getString(R.string.nav_dest_200) + " " + instrTitle(side, "", app)
+            voice?.speak(text, if (side.isEmpty()) listOf("dest_200") else listOf("dest_200", side))
+        }
     }
 
     private fun arrive() {
         if (!arrivedAnnounced) {
             arrivedAnnounced = true
-            speakKey("arrive", "")
+            // «به مقصد رسیدید. سفر خوشی داشته باشید.» (واژه‌نامه بخش ۹)
+            val app = try { locCtx() } catch (e: Exception) { appCtx }
+            val text = app?.getString(R.string.nav_arrive_farewell) ?: ""
+            voice?.speak(text, listOf("arrive_farewell"))
             emit()
             // پس از اعلام رسیدن، چند ثانیه صبر و سپس توقف
             ui.postDelayed({ if (navigating && arrivedAnnounced) stop() }, 4000)
@@ -558,6 +731,18 @@ object NavigationController {
         val c = java.util.Calendar.getInstance()
         c.timeInMillis = ms
         return String.format(java.util.Locale.US, "%02d:%02d", c.get(java.util.Calendar.HOUR_OF_DAY), c.get(java.util.Calendar.MINUTE))
+    }
+
+    /**
+     * محور (زاویهٔ قطب‌نما) از نقطهٔ اول به نقطهٔ دوم بر حسب درجه (۰ = شمال).
+     * برای جهت‌دادن نشانگر وسیله و دوربین به سمت مسیر و مقصد.
+     */
+    fun bearingBetween(lat1: Double, lon1: Double, lat2: Double, lon2: Double): Double {
+        val p1 = Math.toRadians(lat1); val p2 = Math.toRadians(lat2)
+        val dl = Math.toRadians(lon2 - lon1)
+        val y = sin(dl) * cos(p2)
+        val x = cos(p1) * sin(p2) - sin(p1) * cos(p2) * cos(dl)
+        return (Math.toDegrees(atan2(y, x)) + 360.0) % 360.0
     }
 
     fun formatDistance(app: Context, m: Double): String =

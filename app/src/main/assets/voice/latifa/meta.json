@@ -3,7 +3,8 @@
  "name": "لطیفه",
  "gender": "female",
  "lang": "ps-AF",
- "engine": "recorded-neural",
- "clips": 29,
- "note": "ضبط‌شده عصبی — کاملاً آفلاین"
+ "engine": "recorded-azure-neural",
+ "clips": 92,
+ "phrases": 92,
+ "note": "صدای عصبی واقعی — کاملاً آفلاین در برنامه"
 }

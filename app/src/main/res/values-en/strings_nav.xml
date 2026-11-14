@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- Voice and text guidance — English -->
     <string name="start_nav">Start navigation</string>
     <string name="save_place">Save</string>
     <string name="share">Share</string>
-    <string name="stop_nav">Stop</string>
-    <string name="places">My places</string>
+    <string name="stop_nav">End trip</string>
+    <string name="places">Saved places</string>
     <string name="home">Home</string>
     <string name="work">Work</string>
     <string name="set_home">Save as Home</string>
@@ -14,28 +15,76 @@
     <string name="no_saved">No saved places yet</string>
     <string name="voice_on">Voice guidance on</string>
     <string name="voice_off">Voice guidance off</string>
-    <string name="night_auto">Map mode: automatic</string>
+    <string name="night_auto">Map mode: auto</string>
     <string name="night_day">Map mode: day</string>
     <string name="night_night">Map mode: night</string>
-    <string name="no_tts">No voice is installed on your phone for this language. Install one in phone Settings (text-to-speech). Until then, instructions show on screen only.</string>
-    <string name="offline_search_notice">No internet; searched saved places only.</string>
-    <string name="nav_depart">Start driving</string>
-    <string name="nav_continue">Continue onto</string>
-    <string name="nav_straight">Continue straight</string>
-    <string name="nav_right">Turn right</string>
-    <string name="nav_left">Turn left</string>
-    <string name="nav_slight_right">Bear right</string>
-    <string name="nav_slight_left">Bear left</string>
-    <string name="nav_sharp_right">Sharp right</string>
-    <string name="nav_sharp_left">Sharp left</string>
-    <string name="nav_uturn">Make a U-turn</string>
-    <string name="nav_roundabout">Enter the roundabout</string>
-    <string name="nav_exit_roundabout">Exit the roundabout</string>
-    <string name="nav_arrive">You have arrived</string>
-    <string name="nav_offroute">You left the route</string>
-    <string name="nav_rerouted">New route calculated</string>
+    <string name="no_tts">No speech voice installed on your phone. Install a voice in system Text-to-Speech settings. Until then instructions are shown on screen only.</string>
+    <string name="offline_search_notice">No internet connection; searched saved places only.</string>
+
+    <string name="nav_welcome">Welcome. Rahyab voice guidance is ready.</string>
+    <string name="nav_depart">Get ready to start.</string>
+    <string name="nav_continue">Continue straight.</string>
+    <string name="nav_straight">Continue on your route.</string>
+    <string name="nav_keep_road">Keep on the road.</string>
+    <string name="nav_route_started">Your route has started.</string>
+    <string name="nav_new_route_set">New route set.</string>
+    <string name="nav_alt_found">Alternative route found.</string>
+
+    <string name="nav_right">Turn right.</string>
+    <string name="nav_left">Turn left.</string>
+    <string name="nav_slight_right">Slightly to the right.</string>
+    <string name="nav_slight_left">Slightly to the left.</string>
+    <string name="nav_sharp_right">Turn sharply right.</string>
+    <string name="nav_sharp_left">Turn sharply left.</string>
+    <string name="nav_uturn">Make a U-turn.</string>
+    <string name="nav_go_right_side">Go to the right.</string>
+    <string name="nav_go_left_side">Go to the left.</string>
+    <string name="nav_stay_right">Stay on the right.</string>
+    <string name="nav_stay_left">Stay on the left.</string>
+
+    <string name="nav_cross1_right">At the first crossroads, turn right.</string>
+    <string name="nav_cross1_left">At the first crossroads, turn left.</string>
+    <string name="nav_fork_right">At the fork, take the right path.</string>
+    <string name="nav_fork_left">At the fork, take the left path.</string>
+    <string name="nav_exit_1">Take the first exit.</string>
+    <string name="nav_exit_2">Take the second exit.</string>
+    <string name="nav_exit_3">Take the third exit.</string>
+    <string name="nav_roundabout">Enter the roundabout.</string>
+    <string name="nav_exit_roundabout">Exit the roundabout.</string>
+
+    <string name="nav_enter_road">Enter the public road.</string>
+    <string name="nav_exit_road">Leave the public road.</string>
+    <string name="nav_enter_main">Enter the main road.</string>
+    <string name="nav_exit_main">Leave the main road.</string>
+    <string name="nav_enter_alt">Enter the alternative route.</string>
+    <string name="nav_lane_change">Change your lane.</string>
+    <string name="nav_keep_right">Keep to the right lane.</string>
+    <string name="nav_keep_left">Keep to the left lane.</string>
+
     <string name="nav_in">In %1$s, %2$s</string>
+    <string name="nav_now">Now, %1$s</string>
+    <string name="nav_arrive">You have arrived.</string>
+    <string name="nav_offroute">You are off the route.</string>
+    <string name="nav_rerouted">New route set.</string>
     <string name="nav_remaining">Remaining: %1$s • %2$s</string>
+
+    <string name="nav_locating">Checking your position.</string>
+    <string name="nav_gps_lost">GPS signal lost.</string>
+    <string name="nav_gps_restored">GPS signal restored.</string>
+    <string name="nav_route_changed">Your route changed.</string>
+    <string name="nav_faster_found">A faster route was found.</string>
+
+    <string name="nav_approaching">You are approaching your destination.</string>
+    <string name="nav_dest_right">Destination is on your right.</string>
+    <string name="nav_dest_left">Destination is on your left.</string>
+    <string name="nav_dest_500">500 meters to destination.</string>
+    <string name="nav_dest_200">200 meters to destination.</string>
+
+    <string name="nav_arrive_farewell">You have arrived. Have a pleasant trip.</string>
+    <string name="nav_trip_end">Your trip has ended. Thank you for traveling with us.</string>
+    <string name="nav_thanks_bye">Thanks for using our guide. Have a nice day.</string>
+    <string name="nav_be_safe">Stay safe. We hope you have a good trip.</string>
+
     <string name="route_tag_fastest">Fastest</string>
     <string name="route_tag_shortest">Shortest</string>
     <string name="route_tag_alt">Alternative %1$d</string>
