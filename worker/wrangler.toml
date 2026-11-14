@@ -1,4 +1,4 @@
-name = "rahyab-worker"
+name = "rahyab-api"
 main = "src/index.js"
 compatibility_date = "2024-11-01"
 
@@ -7,7 +7,7 @@ compatibility_date = "2024-11-01"
 [[d1_databases]]
 binding = "DB"
 database_name = "rahyab-reports"
-database_id = "REPLACE_WITH_YOUR_D1_ID"
+database_id = "f38f20f2-b46c-4c83-923f-87c3aa7fef14"
 
 [vars]
 # سقف‌های امن برای کنترل مصرف Worker و D1 (بخش دوازدهم ضمیمهٔ ۱)

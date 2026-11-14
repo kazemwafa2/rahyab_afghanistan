@@ -312,7 +312,7 @@ async function createPoi(env, request, url) {
   const props = body.properties && typeof body.properties === 'object'
     ? JSON.stringify(body.properties).slice(0, 2000) : null;
   // speed_limit فقط در properties و همیشه unverified ذخیره می‌شود تا منبع رسمی تأییدش نکند
-  const status = body.source === 'official' ? 'official' : 'unverified';
+  const status = 'unverified';
 
   const r = await env.DB.prepare(
     `INSERT INTO road_pois
@@ -324,7 +324,7 @@ async function createPoi(env, request, url) {
     name, category, cleanStr(body.subcategory, 60), lat, lon,
     cleanStr(body.province, 60), cleanStr(body.district, 60), cleanStr(body.road_name, 120),
     cleanStr(body.direction, 16), desc, props, status,
-    cleanStr(body.source, 20) || 'user', now
+    'user', now
   ).run();
 
   const id = r.meta?.last_row_id;
