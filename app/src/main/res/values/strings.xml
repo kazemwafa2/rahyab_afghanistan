@@ -165,4 +165,7 @@
     <string name="report_type_flood">سیلاب و آب‌گرفتگی</string>
     <string name="report_type_roadworks">عملیات ساختمانی و تعمیرات</string>
     <string name="reports_pending_count">%1$d گزارش در انتظار ارسال به سرور</string>
+
+    <string name="th_building_3d">نمایش ساختمان‌های سه‌بعدی</string>
+    <string name="pkg_update_available">داده جدید موجود است (%1$s)</string>
 </resources>

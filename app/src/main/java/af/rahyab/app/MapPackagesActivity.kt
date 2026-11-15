@@ -51,8 +51,6 @@ class MapPackagesActivity : AppCompatActivity() {
 
     private val rows = ArrayList<RowViews>()
     private val lastError = HashMap<String, String>()
-    /** نسخهٔ سبک داخل APK برای هر شناسه؛ اگر دانلود نسخهٔ کامل ناموفق شد جایگزین می‌شود */
-    private var localById: Map<String, PackageDownloader.RemotePkg> = emptyMap()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -147,64 +145,11 @@ class MapPackagesActivity : AppCompatActivity() {
     private fun loadManifest() {
         tvStatus.text = getString(R.string.pkg_loading)
         io.execute {
-            // فهرست محلی: بسته‌هایی که فایل‌شان واقعاً داخل همین APK است
-            val local: List<PackageDownloader.RemotePkg> = try {
-                val json = assets.open("packages/manifest.json").bufferedReader().use { it.readText() }
-                PackageDownloader.fetchManifestFromJson(json, applicationContext)
-            } catch (e: Exception) { emptyList() }
-
-            val online: List<PackageDownloader.RemotePkg>? = try {
-                PackageDownloader.fetchManifest(manifestUrl())
+            try {
+                val online = PackageDownloader.fetchManifest(manifestUrl())
+                ui.post { showPackages(online) }
             } catch (e: Exception) {
-                if (local.isEmpty()) {
-                    ui.post { onManifestError(e) }
-                    return@execute
-                }
-                localById = local.associateBy { it.id }
-                ui.post { onLocalManifest(local, e is BadResponseException) }
-                return@execute
-            }
-            // نسخهٔ کامل (آنلاین) اولویت دارد؛ نسخهٔ سبک داخل APK فقط پشتیبان است
-            localById = local.associateBy { it.id }
-            val merged = mergePreferOnline(local, online ?: emptyList())
-            ui.post { showPackages(merged) }
-        }
-    }
-
-    /**
-     * ادغام بر اساس شناسه: نسخهٔ کامل آنلاین (کاشی تا زوم ۱۴ + اندیس کامل جست‌وجو) اولویت دارد.
-     * بسته‌هایی که فقط داخل APK هستند (یا وقتی فهرست آنلاین نیامد) نسخهٔ سبک نمایش داده می‌شوند.
-     */
-    private fun mergePreferOnline(
-        local: List<PackageDownloader.RemotePkg>,
-        online: List<PackageDownloader.RemotePkg>
-    ): List<PackageDownloader.RemotePkg> {
-        val out = ArrayList<PackageDownloader.RemotePkg>()
-        val seen = HashSet<String>()
-        for (o in online) if (seen.add(o.id)) out.add(o)
-        for (l in local) if (seen.add(l.id)) out.add(l)
-        return out
-    }
-
-    /** فهرست محلی (بسته‌های همراه برنامه) — هیچ خطایی نشان نمی‌دهد */
-    private fun onLocalManifest(pkgs: List<PackageDownloader.RemotePkg>, onlineMissing: Boolean = false) {
-        remote = pkgs
-        cleanupStaleParts()
-        tvManifest.text = getString(R.string.manifest_source, getString(R.string.manifest_local))
-        tvStatus.text = getString(R.string.pkg_free_space, humanBytes(OfflineData.freeBytes(this)))
-        rebuildRows()
-        Toast.makeText(
-            this,
-            if (onlineMissing) R.string.pkg_manifest_not_published else R.string.pkg_local_note,
-            Toast.LENGTH_LONG
-        ).show()
-    }
-
-    /** فایل‌های نیمه‌کارهٔ بسته‌های asset:// معنی ندارند (کپی همیشه از نو) — پاک می‌شوند */
-    private fun cleanupStaleParts() {
-        io.execute {
-            for (p in remote) if (p.url.startsWith("asset://")) {
-                PackageDownloader.clearPartial(applicationContext, p.id)
+                ui.post { onManifestError(e) }
             }
         }
     }
@@ -218,7 +163,6 @@ class MapPackagesActivity : AppCompatActivity() {
 
     private fun showPackages(pkgs: List<PackageDownloader.RemotePkg>) {
         remote = pkgs
-        cleanupStaleParts()
         tvStatus.text = getString(R.string.pkg_free_space, humanBytes(OfflineData.freeBytes(this)))
         rebuildRows()
     }
@@ -237,7 +181,7 @@ class MapPackagesActivity : AppCompatActivity() {
             }
         } else {
             listBox.addView(hintText(getString(R.string.pkg_available)))
-            // حذف تکراری‌ها (مثلاً وقتی manifest سرور و منبع محلی هردو یک بسته را دارند)
+            // حذف شناسه‌های تکراری در فهرست Manifest
             val seen = HashSet<String>()
             for (p in remote) {
                 if (!seen.add(p.id)) continue
@@ -308,7 +252,7 @@ class MapPackagesActivity : AppCompatActivity() {
     private fun bindRow(rv: RowViews, p: PackageDownloader.RemotePkg, inst: OfflineData.Installed?) {
         rv.pkgId = p.id
         val size = humanBytes(if (p.sizeBytes > 0) p.sizeBytes else 0)
-        val kind = if (p.id == Config.BASE_PACKAGE_ID) "" else if (p.url.startsWith("asset://")) getString(R.string.pkg_kind_lite) else getString(R.string.pkg_kind_full)
+        val kind = if (OfflineData.isBaseId(p.id)) "" else getString(R.string.pkg_kind_full)
         rv.tvMeta.text = listOf(p.region, p.dataDate, size, kind).filter { it.isNotEmpty() }.joinToString(" • ")
 
         when {
@@ -327,10 +271,15 @@ class MapPackagesActivity : AppCompatActivity() {
                     inst.dataDate.ifEmpty { "?" }, humanBytes(inst.sizeBytes)
                 )
                 rv.bar.visibility = View.GONE
-                if (p.id == Config.BASE_PACKAGE_ID) {
-                    // بسته پایه کشوری همراه برنامه است؛ نه حذف دارد نه دوباره‌کاری
-                    rv.action.visibility = View.GONE
-                } else if (!p.url.startsWith("asset://") && p.sizeBytes > 0 && inst.sizeBytes < p.sizeBytes * 0.6) {
+                if (p.dataDate.isNotEmpty() &&
+                    inst.dataDate.isNotEmpty() && p.dataDate > inst.dataDate
+                ) {
+                    // نسخهٔ جدید داده در سرور منتشر شده (تاریخ دادهٔ تازه‌تر) → به‌روزرسانی درجا
+                    rv.action.visibility = View.VISIBLE
+                    rv.action.text = getString(R.string.pkg_update_available, p.dataDate)
+                    rv.action.setOnClickListener { startDownload(p) }
+                    rv.action.setOnLongClickListener { confirmDelete(inst); true }
+                } else if (p.sizeBytes > 0 && inst.sizeBytes < p.sizeBytes * 0.6) {
                     // نسخهٔ نصب‌شده سبک است و نسخهٔ کامل آنلاین موجود است → ارتقا (نگه‌داشتن = حذف)
                     rv.action.visibility = View.VISIBLE
                     rv.action.text = getString(R.string.pkg_upgrade_full, humanBytes(p.sizeBytes))
@@ -352,8 +301,7 @@ class MapPackagesActivity : AppCompatActivity() {
                 } else rv.tvState.visibility = View.GONE
                 rv.bar.visibility = View.GONE
                 rv.action.visibility = View.VISIBLE
-                // بسته‌های asset:// همیشه از نو کپی می‌شوند؛ «ادامه دانلود» فقط برای منابع انترنت
-                val resume = !p.url.startsWith("asset://") && PackageDownloader.hasPartial(applicationContext, p.id)
+                val resume = PackageDownloader.hasPartial(applicationContext, p.id)
                 rv.action.text = getString(if (resume) R.string.pkg_resume else R.string.pkg_download)
                 rv.action.setOnClickListener { startDownload(p) }
             }
@@ -380,17 +328,8 @@ class MapPackagesActivity : AppCompatActivity() {
             textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         }, LinearLayout.LayoutParams(-1, -2).apply { topMargin = dp(2) })
         val del = Button(this).apply { text = getString(R.string.pkg_delete) }
-        if (inst.id == Config.BASE_PACKAGE_ID) {
-            // بسته پایه کشوری: همراه برنامه — قابل حذف نیست
-            col.addView(TextView(this).apply {
-                text = getString(R.string.pkg_system)
-                textSize = 12f; setTextColor(0xFF1B5E20.toInt())
-                textAlignment = View.TEXT_ALIGNMENT_VIEW_START
-            }, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })
-        } else {
-            col.addView(del, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })
-            del.setOnClickListener { confirmDelete(inst) }
-        }
+        col.addView(del, LinearLayout.LayoutParams(-2, -2).apply { topMargin = dp(6) })
+        del.setOnClickListener { confirmDelete(inst) }
         return card
     }
 
@@ -435,24 +374,8 @@ class MapPackagesActivity : AppCompatActivity() {
                 }
                 null
             }
-            // اگر دانلود نسخهٔ کامل از اینترنت ناموفق بود (نه لغو)، نسخهٔ سبک داخل APK نصب می‌شود
-            var finalResult = result
-            val lite = localById[p.id]
-            var usedLite = false
-            if (result == null && !d.cancelled && lite != null && !p.url.startsWith("asset://")) {
-                finalResult = try {
-                    PackageDownloader.downloadAndInstall(applicationContext, lite,
-                        object : PackageDownloader.Listener {
-                            override fun onProgress(pr: PackageDownloader.Progress) { ui.post { onProgress(pr) } }
-                        }, { d.cancelled })
-                } catch (t: Throwable) { null }
-                usedLite = finalResult != null
-                if (usedLite) ui.post { lastError.remove(p.id) }
-            }
             ui.post {
-                if (usedLite) {
-                    Toast.makeText(this, R.string.pkg_lite_fallback_toast, Toast.LENGTH_LONG).show()
-                } else if (finalResult != null) {
+                if (result != null) {
                     Toast.makeText(this, R.string.pkg_done, Toast.LENGTH_LONG).show()
                 }
                 current = null; currentId = null
@@ -521,10 +444,6 @@ class MapPackagesActivity : AppCompatActivity() {
     }
 
     private fun confirmDelete(inst: OfflineData.Installed) {
-        if (inst.id == Config.BASE_PACKAGE_ID) {
-            Toast.makeText(this, R.string.pkg_system, Toast.LENGTH_SHORT).show()
-            return
-        }
         AlertDialog.Builder(this)
             .setTitle(R.string.pkg_delete)
             .setMessage(getString(R.string.pkg_delete_confirm, inst.name))

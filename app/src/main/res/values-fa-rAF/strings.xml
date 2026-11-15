@@ -91,4 +91,7 @@
     <string name="distance_from_here">فاصله</string>
     <string name="deep_link_dest_default">مقصد دریافتی</string>
     <string name="deep_link_invalid">درخواست دریافتی نامعتبر است</string>
+
+    <string name="th_building_3d">نمایش ساختمان‌های سه‌بعدی</string>
+    <string name="pkg_update_available">داده جدید موجود است (%1$s)</string>
 </resources>

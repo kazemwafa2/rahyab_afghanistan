@@ -56,26 +56,20 @@ object PackageDownloader {
         return f.isFile && f.length() > 0
     }
 
-    /** پاک‌کردن فایل نیمه‌کاره — برای بسته‌های asset:// ادامه‌دادن معنی ندارد، کپی همیشه از نو است */
+    /** پاک‌کردن فایل نیمه‌کاره دانلود. */
     fun clearPartial(ctx: Context, id: String) {
         try {
             File(File(File(ctx.filesDir, "offline"), "downloads"), "$id.part").delete()
         } catch (_: Exception) { }
     }
 
-    /** آیا این فایل داخل دارایی‌های خود APK موجود است؟ (فهرست فقط بسته‌های واقعاً قابل دانلود را نشان می‌دهد) */
-    fun assetExists(ctx: Context, assetPath: String): Boolean = try {
-        ctx.assets.open(assetPath).use { true }
-    } catch (_: Exception) { false }
-
+    /** دریافت فهرست بسته‌ها از Manifest آنلاین GitHub. */
     fun fetchManifest(manifestUrl: String): List<RemotePkg> {
         val body = Http.get(manifestUrl)
         return fetchManifestFromJson(body)
     }
 
-    /** تجزیه فهرست بسته‌ها از متن JSON — از منبع انترنت یا منبع محلی داخل برنامه.
-     *  اگر ctx داده شود، بسته‌های asset:// که فایل‌شان در این APK نیست حذف می‌شوند
-     *  تا دکمه‌ای که کار نمی‌کند هرگز نمایش داده نشود. */
+    /** تجزیه فهرست بسته‌ها؛ فقط نشانی‌های HTTP و HTTPS پذیرفته می‌شوند. */
     fun fetchManifestFromJson(body: String, ctx: Context? = null): List<RemotePkg> {
         val o = JSONObject(body)
         val out = ArrayList<RemotePkg>()
@@ -85,13 +79,9 @@ object PackageDownloader {
             var url = p.optString("url", "")
             if (url.isEmpty()) {
                 val file = p.optString("file", "")
-                if (file.isNotEmpty()) url = file // مسیر نسبی یا asset://
+                if (file.startsWith("https://") || file.startsWith("http://")) url = file
             }
-            if (url.isEmpty()) continue
-            if (ctx != null && url.startsWith("asset://") && !assetExists(ctx, url.removePrefix("asset://"))) {
-                Log.w(TAG, "بسته ${p.optString("id")} در دارایی‌های این APK نیست — از فهرست حذف شد")
-                continue
-            }
+            if (!url.startsWith("https://") && !url.startsWith("http://")) continue
             out.add(
                 RemotePkg(
                     p.getString("id"), p.optString("name", p.getString("id")),
@@ -123,51 +113,15 @@ object PackageDownloader {
         }
 
         try {
-            val ok: Long = if (pkg.url.startsWith("asset://")) {
-                // بسته داخل خود برنامه (asset://) — بدون انترنت، مستقیم از دارایی‌های APK کپی می‌شود
-                val assetPath = pkg.url.removePrefix("asset://")
-                val ins = try {
-                    ctx.assets.open(assetPath)
-                } catch (e: Exception) {
-                    // فایل بسته در این نسخه APK نیست — پیام دقیق به کاربر
-                    listener.onProgress(Progress(pkg.id, State.FAILED, 0, pkg.sizeBytes, "asset_missing"))
-                    return null
-                }
-                ins.use { s ->
-                    partFile.outputStream().use { out ->
-                        val buf = ByteArray(CHUNK)
-                        var done = 0L
-                        // حجم واقعی از manifest؛ available() روی دارایی فشرده‌شده نادرست است
-                        val total = if (pkg.sizeBytes > 0) pkg.sizeBytes else s.available().toLong()
-                        listener.onProgress(Progress(pkg.id, State.DOWNLOADING, 0, total))
-                        var lastReport = 0L
-                        while (true) {
-                            if (isCancelled()) {
-                                partFile.delete()
-                                listener.onProgress(Progress(pkg.id, State.CANCELLED, 0, 0))
-                                return null
-                            }
-                            val n = s.read(buf)
-                            if (n < 0) break
-                            out.write(buf, 0, n)
-                            done += n
-                            // ⚠️ رفع اشکال: قبلاً «done % (CHUNK*40) == 0» بود که تقریباً هرگز برقرار
-                            // نمی‌شد و نوار پیشرفت خالی می‌ماند
-                            if (done - lastReport >= 262_144) {
-                                lastReport = done
-                                listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
-                            }
-                        }
-                        listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, done))
-                        done
-                    }
-                }
-            } else {
-                listener.onProgress(Progress(pkg.id, State.DOWNLOADING, 0, pkg.sizeBytes, "connecting"))
-                downloadWithResume(pkg.url, partFile, pkg.sizeBytes, isCancelled) { done, total ->
-                    listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
-                } ?: return null // لغو شد
+            if (!pkg.url.startsWith("https://") && !pkg.url.startsWith("http://")) {
+                listener.onProgress(Progress(pkg.id, State.FAILED, 0, pkg.sizeBytes, "invalid_url"))
+                return null
             }
+            listener.onProgress(Progress(pkg.id, State.DOWNLOADING, 0, pkg.sizeBytes, "connecting"))
+            val ok = downloadWithResume(pkg.url, partFile, pkg.sizeBytes, isCancelled) { done, total ->
+                listener.onProgress(Progress(pkg.id, State.DOWNLOADING, done, total))
+            } ?: return null
+
             if (isCancelled()) { listener.onProgress(Progress(pkg.id, State.CANCELLED, 0, 0)); return null }
 
             // کنترل checksum
@@ -257,7 +211,7 @@ object PackageDownloader {
                 }
                 return downloaded
             } catch (e: IOException) {
-                // اگر هیچ بایتی نرسیده (اینترنت/گیت‌هاب بسته است) زود تسلیم می‌شویم تا نسخهٔ سبک داخل برنامه جایگزین شود
+                // در صورت خطای اتصال، چند بار تلاش می‌کنیم و سپس خطا را گزارش می‌دهیم
                 if (e is HttpFatal || attempt >= 8 || (!target.isFile || target.length() == 0L) && attempt >= 3) throw e
                 Log.w(TAG, "قطع اتصال در دانلود؛ پس از مکث ادامه می‌دهیم (تلاش $attempt)", e)
                 Thread.sleep(2000L * attempt)

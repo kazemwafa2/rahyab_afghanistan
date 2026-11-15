@@ -16,7 +16,11 @@ object Config {
         get() = "RahyabAfghanistan/${BuildConfig.VERSION_NAME} (+$REPO_URL)"
 
     // ---------- نقشه آنلاین ----------
-    // OpenFreeMap: بدون کلید و ثبت‌نام؛ بدون تضمین دائمی بودن سرویس (docs/SERVER.md)
+    // سبک آنلاین و آفلاین از یک سیستم طراحی مشترک استفاده می‌کنند (rahyab_light/dark.json)
+    // تنها منبع کاشی بین دو حالت فرق می‌کند: آنلاین = کاشی برداری OpenFreeMap (بدون کلید؛
+    // بدون تضمین دائمی بودن سرویس — docs/SERVER.md)، آفلاین = فایل pmtiles بستهٔ نصب‌شده.
+    const val TILES_URL = "https://tiles.openfreemap.org/planet"
+    /** سبک‌های قدیمی — فقط برای عقب‌نشینی و اشکال‌زدایی؛ مسیر اصلی سبک از دارایی برنامه ساخته می‌شود */
     const val STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
     const val STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"
 
@@ -41,12 +45,10 @@ object Config {
     /** نشانی manifest بسته‌ها: ریلیز ثابت map-data در مخزن پروژه */
     val MANIFEST_URL: String get() = "$REPO_URL/releases/download/map-data/manifest.json"
 
-    /** شناسه بسته پایه کشوری — همراه خود برنامه نصب می‌شود (APK) */
+    /** شناسه قدیمی بسته ملی؛ برای شناسایی داده‌های نصب‌شده نسخه‌های قبلی */
     const val BASE_PACKAGE_ID = "afghanistan"
     /** شناسه بسته پایه کامل (راه‌های اصلی شهرها هم) — دانلودی اختیاری، سنگین‌تر */
     const val BASE_FULL_PACKAGE_ID = "afghanistan_full"
-    /** مسیر دارایی بسته پایه داخل APK */
-    const val BASE_PACKAGE_ASSET = "initial/afghanistan.rahpkg.zip"
 
     // ---------- سرور اطلاعات جاده‌ای (ضمیمهٔ ۱ — Cloudflare Worker + D1) ----------
     // ورکر مستقر و زندهٔ پروژه (نام: rahyab-api) — بدون هیچ توکن یا کلید مخفی.

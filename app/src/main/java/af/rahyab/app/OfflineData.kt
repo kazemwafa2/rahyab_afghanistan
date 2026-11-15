@@ -115,6 +115,14 @@ object OfflineData {
     fun effectiveFontsDir(ctx: Context, pkg: Installed): File {
         val inPkg = fontsDir(pkg)
         if (File(inPkg, "Noto Sans Regular").isDirectory) return inPkg
+        return appFontsDir(ctx)
+    }
+
+    /**
+     * پوشه فونت‌های همراه برنامه — استخراج یک‌باره از assets برای استفاده با file://
+     * در هر دو سبک آنلاین و آفلاین (همیشه در دسترس، حتی بدون هیچ بسته نصب‌شده).
+     */
+    fun appFontsDir(ctx: Context): File {
         val appFonts = File(baseDir, "fonts")
         if (!File(appFonts, "Noto Sans Regular").isDirectory) {
             try {
@@ -135,6 +143,30 @@ object OfflineData {
             }
         }
         return appFonts
+    }
+
+    /**
+     * پوشه sprite آیکن‌های مکان‌های عمومی — از دارایی‌های برنامه استخراج می‌شود
+     * (فایل محلی برای استفاده با file:// در هر دو سبک آنلاین و آفلاین).
+     */
+    fun effectiveSpriteDir(ctx: Context): File {
+        val dir = File(baseDir, "sprites")
+        val png = File(dir, "sprite.png")
+        val js = File(dir, "sprite.json")
+        if (!png.isFile || !js.isFile) {
+            try {
+                dir.mkdirs()
+                if (!png.isFile) ctx.assets.open("sprites/sprite.png").use { ins ->
+                    java.io.FileOutputStream(png).use { ins.copyTo(it) }
+                }
+                if (!js.isFile) ctx.assets.open("sprites/sprite.json").use { ins ->
+                    java.io.FileOutputStream(js).use { ins.copyTo(it) }
+                }
+            } catch (e: Exception) {
+                Log.e(TAG, "استخراج sprite ناموفق", e)
+            }
+        }
+        return dir
     }
 
     // ---------- گراف و اندیس (بارگذاری تنبل) ----------
@@ -221,7 +253,7 @@ object OfflineData {
         return try {
             val g = OfflineRouter.Graph.load(graphFile(pkg))
             g.buildGrid()
-            g.nationwide = (pkg.id == Config.BASE_PACKAGE_ID)
+            g.nationwide = isBaseId(pkg.id)
             graph = g
             graphPackageId = pkg.id
             index = null
@@ -377,8 +409,6 @@ object OfflineData {
 
     fun delete(id: String): Boolean {
         ensureLoaded()
-        // بسته پایه کشوری همراه APK حذف نمی‌شود؛ نسخه کامل دانلودی قابل حذف است
-        if (id == Config.BASE_PACKAGE_ID) return false
         val pkg = registry.firstOrNull { it.id == id } ?: return false
         val ok = dirOf(pkg).deleteRecursively()
         registry.removeAll { it.id == id }
@@ -387,47 +417,6 @@ object OfflineData {
         return ok
     }
 
-    /**
-     * نصب بسته پایه از دارایی‌های خود APK (بدون انترنت، در نخستین اجرا).
-     * همان مسیر نصب اتمیک دانلود: استخراج در staging، اعتبارسنجی، ثبت.
-     */
-    fun installFromAsset(ctx: Context, assetPath: String): Installed? {
-        val staging = File(File(baseDir, "staging"), "asset-${Config.BASE_PACKAGE_ID}")
-        staging.deleteRecursively()
-        staging.mkdirs()
-        try {
-            ctx.assets.open(assetPath).use { ins ->
-                java.util.zip.ZipInputStream(ins.buffered()).use { z ->
-                    val outCanonical = staging.canonicalFile
-                    var e: java.util.zip.ZipEntry? = z.nextEntry
-                    while (e != null) {
-                        val f = File(staging, e.name)
-                        if (!f.canonicalPath.startsWith(outCanonical.canonicalPath + File.separator) &&
-                            f.canonicalPath != outCanonical.canonicalPath
-                        ) throw SecurityException("مسیر مشکوک در زیپ: ${e.name}")
-                        if (e.isDirectory) f.mkdirs()
-                        else {
-                            f.parentFile?.mkdirs()
-                            FileOutputStream(f).use { z.copyTo(it) }
-                        }
-                        z.closeEntry()
-                        e = z.nextEntry
-                    }
-                }
-            }
-            return installFromStaging(staging)
-        } catch (e: Exception) {
-            Log.e(TAG, "نصب بسته پایه از دارایی‌های برنامه ناموفق", e)
-            staging.deleteRecursively()
-            return null
-        }
-    }
-
-    /** آیا بسته پایه (نسخه‌ای از آن) هنوز نصب نشده؟ (برای نصب خودکار در نخستین اجرا) */
-    fun needsBaseInstall(): Boolean {
-        ensureLoaded()
-        return installedById(Config.BASE_PACKAGE_ID) == null
-    }
 
     /** فضای خالی قابل استفاده در حافظه داخلی به بایت */
     fun freeBytes(ctx: Context): Long = try {

@@ -1608,6 +1608,24 @@ class MainActivity : AppCompatActivity() {
         }
         c.addView(presetsRow)
 
+        // ساختمان‌های سه‌بعدی — با ارتفاع واقعی داده؛ برای گوشی‌های ضعیف قابل خاموش‌کردن
+        val bld3dRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, dp(10), 0, dp(2))
+            gravity = android.view.Gravity.CENTER_VERTICAL
+        }
+        val bld3d = androidx.appcompat.widget.SwitchCompat(this).apply {
+            text = getString(R.string.th_building_3d)
+            textSize = 15f
+            isChecked = prefs.getBoolean("bld3d", true)
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("bld3d", checked).apply()
+                loadStyle()
+            }
+        }
+        bld3dRow.addView(bld3d, LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f))
+        c.addView(bld3dRow)
+
         // ردیف هر عنصر با نمونهٔ رنگ
         for (el in MapTheme.ELEMENTS) {
             val row = LinearLayout(this).apply {
@@ -2016,20 +2034,71 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** سبک آنلاین OpenFreeMap (روز یا شب) — همان نمایش کامل همیشگی */
+    /**
+     * سبک آنلاین راهیاب — همان سبک آفلاین با کاشی برداری آنلاین.
+     * نتیجه: رنگ جاده‌ها، پارک‌ها، ساختمان‌ها، آب و آیکن‌ها در حالت آنلاین و آفلاین
+     * کاملاً یکسان است (چک‌لیست ۲.۳) و با قطع انترنت نقشه «ناگهان متفاوت» نمی‌شود.
+     */
     private fun applyOnlineStyle() {
         val m = map ?: return
-        val url = if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT
-        if (url == styleUrl && style != null) return
-        styleUrl = url
+        val key = "online:${if (wantDark()) "D" else "L"}"
+        if (key == styleUrl && style != null) return
+        styleUrl = key
         offlineStyleActive = false
         findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
         locationEnabled = false
-        m.setStyle(Style.Builder().fromUri(url)) { s ->
+        val localJson = buildOnlineStyleJson()
+        if (localJson == null) {
+            // عقب‌نشینی سبک قدیمی (فقط اگر ساخت JSON ناموفق شد — عملاً هرگز)
+            val url = if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT
+            m.setStyle(Style.Builder().fromUri(url)) { s ->
+                style = s
+                addRouteLayers(s)
+                MapTheme.applyToStyle(s, prefs, wantDark())
+            }
+            return
+        }
+        m.setStyle(Style.Builder().fromJson(localJson)) { s ->
             style = s
             addRouteLayers(s)
             // رنگ‌های سفارشی کاربر (تم نقشه) روی سبک آنلاین
             MapTheme.applyToStyle(s, prefs, wantDark())
+        }
+    }
+
+    /**
+     * ساختمان سه‌بعدی با ارتفاع واقعی داده (render_height) — از تنظیمات ظاهر نقشه
+     * قابل خاموش‌کردن است (گوشی‌های ضعیف). هیچ ارتفاع ساختگی ساخته نمی‌شود:
+     * ساختمان بدون تگ height/levels در داده OSM، ارتفاع کم پیش‌فرض داده می‌شود.
+     */
+    private fun applyBuilding3dPref(json: String): String {
+        if (prefs.getBoolean("bld3d", true)) return json
+        return try {
+            val o = org.json.JSONObject(json)
+            val layers = o.getJSONArray("layers")
+            val out = org.json.JSONArray()
+            for (i in 0 until layers.length()) {
+                val l = layers.getJSONObject(i)
+                if (l.optString("id") != "building-3d") out.put(l)
+            }
+            o.put("layers", out).toString()
+        } catch (_: Exception) { json }
+    }
+
+    /** ساخت سبک آنلاین از همان دارایی سبک برنامه + کاشی برداری آنلاین */
+    private fun buildOnlineStyleJson(): String? {
+        return try {
+            val assetStyle = assets.open(if (wantDark()) "style/rahyab_dark.json" else "style/rahyab_light.json")
+                .bufferedReader().use { it.readText() }
+            var json = MapTheme.applyJson(assetStyle, prefs, wantDark())
+            json = applyBuilding3dPref(json)
+            json = json.replace("__SRC_URL__", Config.TILES_URL)
+            json = json.replace("__FONTS__", "file://" + OfflineData.appFontsDir(this).absolutePath)
+            json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
+            json
+        } catch (e: Exception) {
+            android.util.Log.w("RahyabMap", "ساخت سبک آنلاین ناموفق: ${e.message}")
+            null
         }
     }
 
@@ -2056,7 +2125,7 @@ class MainActivity : AppCompatActivity() {
         lastProbeMs = System.currentTimeMillis()
         io.execute {
             val ok = try {
-                val u = java.net.URL(if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT)
+                val u = java.net.URL(Config.TILES_URL)
                 val c = u.openConnection() as java.net.HttpURLConnection
                 c.connectTimeout = 3000; c.readTimeout = 3000; c.requestMethod = "GET"
                 try { c.responseCode; true } finally { c.disconnect() }
@@ -2322,12 +2391,16 @@ class MainActivity : AppCompatActivity() {
             var json: String = assetStyle ?: (OfflineData.styleFile(pkg).takeIf { it.isFile }?.readText() ?: return null)
             // رنگ‌های سفارشی کاربر (تم نقشه) — روی سبک آفلاین اعمال می‌شود
             json = MapTheme.applyJson(json, prefs, wantDark())
+            json = applyBuilding3dPref(json)
             val tiles = OfflineData.tilesFile(pkg)
             if (!tiles.isFile) return null
-            // قالب استایل خودش «pmtiles://__PMTILES__» است؛ پس اینجا فقط «file://» + مسیر می‌آید (نتیجه pmtiles://file:///…).
-            // ⚠️ این خط را به «pmtiles://file://» برنگردانید: می‌شود pmtiles://pmtiles://file://… و نقشه خالی می‌ماند.
-            json = json.replace("__PMTILES__", "file://" + tiles.absolutePath)
+            // قالب استایل نسخهٔ ۲ منبع را با __SRC_URL__ می‌گیرد؛ بسته‌های قدیمی از __PMTILES__
+            // استفاده می‌کردند (قالب «pmtiles://__PMTILES__») — هر دو پشتیبانی می‌شوند.
+            // ⚠️ جای‌گذاری pmtiles://file:// فقط یک‌بار انجام می‌شود تا پیشوند تکراری نشود.
+            json = json.replace("__SRC_URL__", "pmtiles://file://" + tiles.absolutePath)
+            json = json.replace("pmtiles://__PMTILES__", "pmtiles://file://" + tiles.absolutePath)
             json = json.replace("__FONTS__", "file://" + OfflineData.effectiveFontsDir(this, pkg).absolutePath)
+            json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
 
             if (base != null) {
                 val baseTiles = OfflineData.tilesFile(base)

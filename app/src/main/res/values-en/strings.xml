@@ -165,4 +165,7 @@
     <string name="report_type_flood">Flooding</string>
     <string name="report_type_roadworks">Road works</string>
     <string name="reports_pending_count">%1$d report(s) waiting to sync</string>
+
+    <string name="th_building_3d">3D buildings</string>
+    <string name="pkg_update_available">New data available (%1$s)</string>
 </resources>

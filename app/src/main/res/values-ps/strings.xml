@@ -165,4 +165,7 @@
     <string name="report_type_flood">سیلاب او اوبه</string>
     <string name="report_type_roadworks">د سړک د کارونه او ترمیم</string>
     <string name="reports_pending_count">%1$d راپور د لیږلو په تمه</string>
+
+    <string name="th_building_3d">د درې‌بعدي ودانیو ښودل</string>
+    <string name="pkg_update_available">نوې نقشه‌ییزې ډاټا شته (%1$s)</string>
 </resources>
