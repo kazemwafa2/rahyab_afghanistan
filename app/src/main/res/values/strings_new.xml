@@ -146,4 +146,11 @@
     <string name="gps_state_medium">GPS: متوسط</string>
     <string name="gps_state_weak">GPS: ضعیف</string>
     <string name="gps_state_lost">GPS: بدون اتصال</string>
+    <string name="auto_update_settings">به‌روزرسانی خودکار</string>
+    <string name="auto_update_on">روشن</string>
+    <string name="auto_update_off">خاموش</string>
+    <string name="auto_update_description">برنامه هر هفته، هنگام اتصال به اینترنت، نسخه جدید را بررسی می‌کند و در صورت وجود، اعلان می‌فرستد. دانلود و نصب نسخه جدید با تأیید شما انجام می‌شود.</string>
+    <string name="auto_update_channel">به‌روزرسانی‌های راه‌یاب</string>
+    <string name="auto_update_notification_title">نسخه جدید راه‌یاب آماده است</string>
+    <string name="auto_update_notification_text">نسخه %1$s منتشر شده است. برای بررسی و دریافت آن لمس کنید.</string>
 </resources>

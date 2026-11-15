@@ -4,8 +4,8 @@ name: Build APK
 #  - هر push به main و هر PR: ساخت آزمایشی (debug) و بارگذاری در Artifacts
 #  - تگ v*: ساخت نسخه و انتشار در Releases
 #  - اگر رازهای امضا (KEYSTORE_BASE64 و…) تنظیم شده باشد، نسخه release امضاشده ساخته می‌شود؛
-#    در غیر این صورت APK آزمایشی با پسوند «debug-signed» منتشر می‌شود و هرگز به‌عنوان
-#    نسخه رسمی معرفی نمی‌شود (مطابق چک‌لیست مرحله ۱۰).
+#    ساخت آزمایشی نیز با نام ثابت Rahyab-Afghanistan.apk ارائه می‌شود؛
+#    انتشار رسمی فقط با کلید دائمی امضای Release انجام می‌شود.
 
 on:
   push:
@@ -47,10 +47,22 @@ jobs:
           distribution: temurin
           java-version: '17'
 
-      - name: Decode signing key (if provided)
+      - name: Decode signing key for release builds
         run: |
-          if [ -n "$KEYSTORE_BASE64" ]; then
+          WANT_RELEASE=false
+          if [[ "$GITHUB_REF" == refs/tags/v* ]] || [[ "${{ github.event.inputs.build_type }}" == "release" ]]; then
+            WANT_RELEASE=true
+          fi
+
+          if [ "$WANT_RELEASE" = true ]; then
+            for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
+              if [ -z "${!name}" ]; then
+                echo "::error::Missing GitHub Actions secret: $name"
+                exit 1
+              fi
+            done
             echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            keytool -list -keystore "$RUNNER_TEMP/release.jks" -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null
             echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
             echo "TASK=assembleRelease" >> "$GITHUB_ENV"
             echo "KIND=release" >> "$GITHUB_ENV"
@@ -92,20 +104,39 @@ jobs:
             exit 1
           fi
 
+          # Publish one consistently named APK for both debug and release.
+          SELECTED_APK=""
           for apk in "${APK_FILES[@]}"; do
-            cp "$apk" "$DIST_DIR/"
+            if [[ "$apk" == *universal*.apk ]]; then
+              SELECTED_APK="$apk"
+              break
+            fi
           done
+          if [ -z "$SELECTED_APK" ]; then
+            SELECTED_APK="${APK_FILES[0]}"
+          fi
+
+          cp "$SELECTED_APK" "$DIST_DIR/Rahyab-Afghanistan.apk"
+          find "$DIST_DIR" -maxdepth 1 -type f -name '*.apk' ! -name 'Rahyab-Afghanistan.apk' -delete
 
           cd "$DIST_DIR"
 
-          if [ "$KIND" = "debug" ]; then
-            for f in *.apk; do
-              mv "$f" "${f%.apk}-debug-signed.apk"
-            done
-          fi
-
           sha256sum *.apk > SHA256SUMS.txt
           cat SHA256SUMS.txt
+
+          VERSION_CODE=$(sed -nE 's/^[[:space:]]*versionCode[[:space:]]*=[[:space:]]*([0-9]+).*/\1/p' "$GITHUB_WORKSPACE/app/build.gradle.kts" | head -n1)
+          test -n "$VERSION_CODE" || { echo "::error::Could not read versionCode"; exit 1; }
+          UNIVERSAL_APK=$(find . -maxdepth 1 -type f -name '*universal*.apk' | head -n1)
+          if [ -z "$UNIVERSAL_APK" ]; then UNIVERSAL_APK=$(find . -maxdepth 1 -type f -name '*.apk' | head -n1); fi
+          APK_SHA256=$(sha256sum "$UNIVERSAL_APK" | awk '{print $1}')
+          {
+            echo "Rahyab Afghanistan release"
+            echo "versionCode: $VERSION_CODE"
+            echo "sha256: $APK_SHA256"
+            echo ""
+            echo "The APK is signed with the project's permanent release key."
+            echo "See SHA256SUMS.txt for checksums of all APK variants."
+          } > "$GITHUB_WORKSPACE/release-notes.md"
 
       - name: Upload unit test reports (on failure)
         if: failure()
@@ -117,7 +148,7 @@ jobs:
 
       - uses: actions/upload-artifact@v4
         with:
-          name: rahyab-apk-${{ env.KIND }}
+          name: Rahyab-Afghanistan-APK
           path: dist/*
 
       - name: Publish release (on tag)
@@ -125,15 +156,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          generate_release_notes: true
-
-      - name: Publish debug-signed test release (on tag without signing key)
-        if: startsWith(github.ref, 'refs/tags/v') && env.KIND == 'debug'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          prerelease: true
-          body: |
-            ⚠️ این انتشار با کلید امضای آزمایشی (debug) ساخته شده است و «نسخه رسمی» نیست.
-            برای انتشار رسمی، رازهای KEYSTORE_BASE64 و KEYSTORE_PASSWORD و KEY_ALIAS و KEY_PASSWORD
-            را مطابق docs/SIGNING.md تنظیم کنید و دوباره تگ بزنید.
+          body_path: release-notes.md\n

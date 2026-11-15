@@ -136,4 +136,11 @@
     <string name="gps_state_medium">GPS: medium</string>
     <string name="gps_state_weak">GPS: weak</string>
     <string name="gps_state_lost">GPS: no signal</string>
+    <string name="auto_update_settings">Automatic updates</string>
+    <string name="auto_update_on">On</string>
+    <string name="auto_update_off">Off</string>
+    <string name="auto_update_description">The app checks for a new version once a week when connected to the internet and notifies you if one is available. Downloading and installing always requires your confirmation.</string>
+    <string name="auto_update_channel">Rahyab updates</string>
+    <string name="auto_update_notification_title">A new Rahyab version is available</string>
+    <string name="auto_update_notification_text">Version %1$s is available. Tap to review and download it.</string>
 </resources>

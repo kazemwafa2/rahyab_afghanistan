@@ -1793,6 +1793,9 @@ class MainActivity : AppCompatActivity() {
             getString(R.string.traffic_item),
             getString(R.string.poi_title),
             getString(R.string.check_update),
+            getString(R.string.auto_update_settings) + " — " + getString(
+                if (prefs.getBoolean(UpdateCheckWorker.PREF_ENABLED, true)) R.string.auto_update_on else R.string.auto_update_off
+            ),
             getString(R.string.about)
         )
         AlertDialog.Builder(this)
@@ -1811,6 +1814,7 @@ class MainActivity : AppCompatActivity() {
                     9 -> showTrafficSettingsDialog()
                     10 -> showPoiFilterDialog()
                     11 -> checkUpdates()
+                    12 -> showAutoUpdateDialog()
                     else -> showAbout()
                 }
             }
@@ -3620,6 +3624,34 @@ class MainActivity : AppCompatActivity() {
         setMode(Mode.HOME) // برگه جست‌وجو دوباره نمایش داده شود
     }
 
+    // ---------- تنظیم بررسی خودکار به‌روزرسانی ----------
+    private fun showAutoUpdateDialog() {
+        val enabled = prefs.getBoolean(UpdateCheckWorker.PREF_ENABLED, true)
+        val choices = arrayOf(getString(R.string.auto_update_on), getString(R.string.auto_update_off))
+        AlertDialog.Builder(this)
+            .setTitle(R.string.auto_update_settings)
+            .setMessage(R.string.auto_update_description)
+            .setSingleChoiceItems(choices, if (enabled) 0 else 1) { dialog, which ->
+                val turnOn = which == 0
+                val editor = prefs.edit().putBoolean(UpdateCheckWorker.PREF_ENABLED, turnOn)
+                if (turnOn) editor.putLong(UpdateCheckWorker.PREF_LAST_CHECK, 0L)
+                editor.apply()
+                if (turnOn) {
+                    UpdateCheckWorker.schedule(this)
+                    if (Build.VERSION.SDK_INT >= 33 &&
+                        checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                        requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 2303)
+                    }
+                } else {
+                    UpdateCheckWorker.cancel(this)
+                }
+                dialog.dismiss()
+                toast(if (turnOn) R.string.auto_update_on else R.string.auto_update_off)
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
     // ---------- به‌روزرسانی مستقیم (بخش دوازدهم چک‌لیست) ----------
     private fun checkUpdates() {
         toast(R.string.update_checking)
@@ -3764,6 +3796,10 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        if (intent?.getBooleanExtra(UpdateCheckWorker.EXTRA_OPEN_UPDATES, false) == true) {
+            intent?.removeExtra(UpdateCheckWorker.EXTRA_OPEN_UPDATES)
+            window.decorView.post { checkUpdates() }
+        }
         // بند ۲۱ سند جامع: پس از بازگشت از تنظیمات اندروید، اگر کاربر موقعیت‌یاب را
         // روشن کرده بود، مسیریابی در انتظار خودکار ادامه می‌یابد
         if (pendingNavStart) {

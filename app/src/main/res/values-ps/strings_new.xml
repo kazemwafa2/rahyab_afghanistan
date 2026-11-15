@@ -136,4 +136,11 @@
     <string name="gps_state_medium">GPS: منځنی</string>
     <string name="gps_state_weak">GPS: کمزوری</string>
     <string name="gps_state_lost">GPS: بې اړیکه</string>
+    <string name="auto_update_settings">اتومات تازه کول</string>
+    <string name="auto_update_on">چالان</string>
+    <string name="auto_update_off">بند</string>
+    <string name="auto_update_description">اپلېکېشن هره اوونۍ د انټرنېټ پر مهال نوې نسخه ګوري او که موجوده وي خبرتیا درلېږي. ډاونلوډ او نصب ستاسو تایید ته اړتیا لري.</string>
+    <string name="auto_update_channel">د راه‌یاب تازه کول</string>
+    <string name="auto_update_notification_title">د راه‌یاب نوې نسخه چمتو ده</string>
+    <string name="auto_update_notification_text">نسخه %1$s خپره شوې ده. د کتلو او ډاونلوډ لپاره یې کېکاږئ.</string>
 </resources>

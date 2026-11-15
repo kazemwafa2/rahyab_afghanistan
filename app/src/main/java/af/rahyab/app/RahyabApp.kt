@@ -27,6 +27,8 @@ class RahyabApp : Application() {
         // فقط با اینترنت؛ هیچ موقعیت‌گیری پس‌زمینه‌ای انجام نمی‌شود (بخش ۲۲ و ۲۴)
         TrafficSync.flushSamplesAsync(this)
         TrafficSyncWorker.schedule(this)
+        // بررسی خودکار هفتگی نسخهٔ جدید؛ اعلان فقط با اینترنت و نصب با تأیید کاربر
+        UpdateCheckWorker.schedule(this)
     }
 
     /**
