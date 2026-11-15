@@ -34,9 +34,10 @@ object TrafficModule {
 
     data class TrafficPoint(
         val lat: Double, val lon: Double,
-        val kind: String,     // report نوع گزارش یا feed
+        val kind: String,     // report / engine / feed
         val color: String,    // رنگ نمایش: سبز/نارنجی/قرمز
-        val title: String
+        val title: String,
+        val rid: Long = 0     // شناسهٔ سروری گزارش (برای تأیید/رد با لمس نقشه — بند ۹)
     )
 
     private val prefsLock = Any()
@@ -156,14 +157,29 @@ object TrafficModule {
     }
 
     /**
-     * همه نقاط نمایش‌پذیر ترافیک: گزارش‌های کاربران + فید.
-     * رنگ‌ها فقط بر اساس داده واقعی؛ مناطق بی‌داده هیچ رنگی نمی‌گیرند.
+     * همه نقاط نمایش‌پذیر ترافیک: گزارش‌های کاربران + وضعیت‌های زندهٔ موتور ترافیک + فید.
+     * رنگ‌ها فقط بر اساس داده واقعی؛ مناطق بی‌داده یا «عادی» هیچ رنگی نمی‌گیرند
+     * (قانون: هرگز دادهٔ جعلی یا «ناکافی» به‌عنوان ترافیک نمایش داده نمی‌شود).
      */
     fun allPoints(ctx: Context): List<TrafficPoint> {
         if (!isEnabled(ctx)) return emptyList()
         val out = ArrayList<TrafficPoint>()
         for (r in ReportsModule.active(ctx)) {
-            out.add(TrafficPoint(r.lat, r.lon, r.type, r.mapColor(), r.typeLabel(ctx)))
+            out.add(TrafficPoint(r.lat, r.lon, r.type, r.mapColor(), r.typeLabel(ctx), rid = r.sid))
+        }
+        // وضعیت‌های زندهٔ موتور ترافیک (بند ۱۴) — فقط وضعیت‌های واقعیِ فعال؛
+        // عادی/ناکافی/منقضی نمایش داده نمی‌شوند
+        for (s in TrafficStore.cachedStates(ctx)) {
+            if (s.state != TrafficRules.ST_SUSPECTED && s.state != TrafficRules.ST_MODERATE &&
+                s.state != TrafficRules.ST_SEVERE && s.state != TrafficRules.ST_EXTREME) continue
+            val c = s.center() ?: continue
+            val label = ctx.getString(NavigationController.trafficStateRes(s.state))
+            val road = s.roadName?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""
+            val conf = ctx.getString(
+                if (s.confidence == "higher") R.string.traffic_conf_higher
+                else R.string.traffic_conf_preliminary
+            )
+            out.add(TrafficPoint(c.first, c.second, "engine", TrafficRules.colorFor(s.state), "$label$road • $conf"))
         }
         out.addAll(feedPoints)
         return out
@@ -175,6 +191,24 @@ object TrafficModule {
         val rep = ReportsModule.active(ctx).size
         val parts = ArrayList<String>()
         parts.add(ctx.getString(R.string.traffic_src_reports, rep))
+        // موتور ترافیک خودکار (بخش ۱۰ تا ۱۴) — وضعیت صادقانه و مُهر زمانی (بخش ۲۰)
+        val live = TrafficStore.cachedStates(ctx).count {
+            it.state == TrafficRules.ST_SUSPECTED || it.state == TrafficRules.ST_MODERATE ||
+                it.state == TrafficRules.ST_SEVERE || it.state == TrafficRules.ST_EXTREME
+        }
+        parts.add(ctx.getString(R.string.traffic_src_engine, live))
+        val lastLive = TrafficStore.lastRefreshMs(ctx)
+        if (lastLive > 0) {
+            val fresh = System.currentTimeMillis() - lastLive <= TrafficStore.STATE_TTL_MS
+            parts.add(
+                ctx.getString(
+                    if (fresh) R.string.traffic_src_engine_live else R.string.traffic_src_engine_old,
+                    NavigationController.formatTimeOfDay(lastLive)
+                )
+            )
+        } else {
+            parts.add(ctx.getString(R.string.traffic_src_engine_none))
+        }
         if (feedOk) parts.add(ctx.getString(R.string.traffic_src_feed_ok))
         else if (lastFeedFetchMs > 0) parts.add(ctx.getString(R.string.traffic_src_feed_old))
         else parts.add(ctx.getString(R.string.traffic_src_feed_none))

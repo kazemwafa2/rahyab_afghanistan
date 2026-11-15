@@ -101,4 +101,39 @@
     <string name="nav_gps_off_body">برای مسیریابی دقیق و هشدارهای جاده‌ای، روشن بودن موقعیت‌یاب (GPS) گوشی لازم است. آیا موقعیت‌یاب روشن شود؟</string>
     <string name="nav_gps_off_open">روشن کردن موقعیت‌یاب</string>
     <string name="nav_gps_off_continue">ادامه بدون GPS</string>
+
+    <!-- ===== موتور ترافیک خودکار (بخش ۱۰ تا ۱۴) — وضعیت‌ها (بخش ۱۴) ===== -->
+    <string name="traffic_state_normal">عادی</string>
+    <string name="traffic_state_suspected">احتمال ترافیک</string>
+    <string name="traffic_state_moderate">ترافیک متوسط</string>
+    <string name="traffic_state_severe">ترافیک سنگین</string>
+    <string name="traffic_state_extreme">ترافیک بسیار شدید</string>
+    <string name="traffic_state_closed">بسته بودن جاده</string>
+    <string name="traffic_state_insufficient">اطلاعات ناکافی</string>
+    <string name="traffic_state_expired">پایان یافته</string>
+    <string name="traffic_conf_preliminary">اعتماد اولیه</string>
+    <string name="traffic_conf_higher">اعتماد بالاتر</string>
+    <string name="traffic_alert_ahead">در %1$s در پیش رو</string>
+    <string name="traffic_src_engine">موتور ترافیک: %1$d قطعهٔ فعال</string>
+    <string name="traffic_src_engine_live">داده زنده — آخرین دریافت %1$s</string>
+    <string name="traffic_src_engine_old">آخرین دریافت %1$s — زنده نیست</string>
+    <string name="traffic_src_engine_none">بدون داده زندهٔ ترافیک</string>
+    <string name="traffic_contribute_title">اشتراک‌گذاری ناشناس سرعت برای تشخیص ترافیک</string>
+    <string name="traffic_pending_samples">نمونه‌های سرعت در انتظار ارسال: %1$d</string>
+    <!-- ===== شدت گزارش (بخش ۸) ===== -->
+    <string name="report_severity_title">شدت حادثه:</string>
+    <string name="report_severity_low">کم</string>
+    <string name="report_severity_medium">متوسط</string>
+    <string name="report_severity_high">زیاد</string>
+    <!-- ===== تأیید اجتماعی گزارش‌ها (بخش ۹) ===== -->
+    <string name="report_vote_message">آیا این گزارش را تأیید می‌کنید؟ رأی شما به رانندگان دیگر کمک می‌کند. دو تأیید = تأییدشده؛ سه رد = کنار گذاشته می‌شود.</string>
+    <string name="report_vote_confirm">تأیید می‌کنم</string>
+    <string name="report_vote_deny">رد می‌کنم</string>
+    <string name="report_vote_done">رأی شما ثبت شد</string>
+    <string name="report_vote_failed">ثبت رأی ناموفق بود</string>
+    <!-- ===== نشانگر وضعیت GPS (بخش ۲۱) ===== -->
+    <string name="gps_state_strong">GPS: قوی</string>
+    <string name="gps_state_medium">GPS: متوسط</string>
+    <string name="gps_state_weak">GPS: ضعیف</string>
+    <string name="gps_state_lost">GPS: بدون اتصال</string>
 </resources>

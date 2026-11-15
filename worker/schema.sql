@@ -111,6 +111,12 @@ CREATE TABLE IF NOT EXISTS live_reports (
   lon REAL NOT NULL,
   device_id TEXT,
   client_uuid TEXT,                      -- شناسهٔ یکتای عملیات (تکراری‌فرستانی ردیف دوباره نمی‌سازد)
+  severity TEXT,                         -- شدت حادثه (بخش ۸): low / medium / high
+  seg TEXT,                              -- شناسهٔ قطعهٔ جاده (بخش ۸ و ۱۰) — «g{lonIdx}_{latIdx}_{dirBin}»
+  dir INTEGER,                           -- خانهٔ جهت ۰ تا ۷ (۴۵ درجه؛ ۰=شمال)
+  confirm_count INTEGER NOT NULL DEFAULT 0,  -- شمار رأی تأیید رانندگان (بخش ۹)
+  deny_count INTEGER NOT NULL DEFAULT 0,     -- شمار رأی رد رانندگان
+  verification TEXT,                     -- unverified / confirmed / rejected (بخش ۹)
   created_at INTEGER NOT NULL,
   expires_at INTEGER NOT NULL            -- پیش‌فرض ۲۴ ساعت (انسداد/ریزش/سیلاب: ۴۸ ساعت)
 );
@@ -118,3 +124,73 @@ CREATE TABLE IF NOT EXISTS live_reports (
 CREATE INDEX IF NOT EXISTS idx_live_reports_time ON live_reports (expires_at);
 CREATE INDEX IF NOT EXISTS idx_live_reports_type ON live_reports (type, expires_at);
 CREATE UNIQUE INDEX IF NOT EXISTS idx_live_reports_client_uuid ON live_reports (client_uuid) WHERE client_uuid IS NOT NULL;
+
+-- رأی تأیید/رد رانندگان دربارهٔ گزارش‌های زنده (بخش ۹) — هر دستگاه یک رأی
+CREATE TABLE IF NOT EXISTS live_report_votes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  report_id INTEGER NOT NULL,
+  device_id TEXT NOT NULL,
+  vote_type TEXT NOT NULL,               -- confirm / deny
+  created_at INTEGER NOT NULL,
+  UNIQUE(report_id, device_id)
+);
+CREATE INDEX IF NOT EXISTS idx_livereports_votes ON live_report_votes (report_id, vote_type);
+
+-- تاریخچهٔ تغییر وضعیت گزارش زنده (بخش ۹): created / merged / vote_confirm /
+-- vote_deny / verification_confirmed / verification_rejected
+CREATE TABLE IF NOT EXISTS live_report_events (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  report_id INTEGER NOT NULL,
+  event TEXT NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_livereports_events ON live_report_events (report_id, created_at);
+
+-- ============================================================
+-- موتور هوشمند تشخیص ترافیک (بخش ۱۰ تا ۱۴ سند جامع)
+-- حریم خصوصی (بخش ۲۴): در نمونه‌ها هیچ مختصاتی ذخیره نمی‌شود؛ فقط شناسهٔ
+-- قطعهٔ شبکه‌ای + سرعت + جهت + دقت GPS. مرکز قطعه از شناسهٔ آن ساخته می‌شود.
+-- ============================================================
+
+-- قطعات جاده (بخش ۱۰): خانه‌های ≈۵۵۵ متر + خانهٔ جهت ۴۵ درجه → شناسهٔ پایدار
+-- مانند «g19714_6932_3». نوع سرک: city/main/intercity/mountain/dirt (بخش ۱۲)
+CREATE TABLE IF NOT EXISTS traffic_segments (
+  seg TEXT PRIMARY KEY,
+  road_type TEXT NOT NULL DEFAULT 'main',
+  road_name TEXT,
+  lat REAL,                              -- مرکز خانه — از شناسهٔ قطعه ساخته می‌شود
+  lon REAL,
+  created_at INTEGER NOT NULL
+);
+
+-- نمونه‌های سرعت ناشناس رانندگان (بخش ۱۱) — پنجرهٔ زنده: ۲۰ دقیقه؛ نگهداری: ۷ روز
+CREATE TABLE IF NOT EXISTS traffic_samples (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  seg TEXT NOT NULL,
+  device_id TEXT NOT NULL,               -- تصادفی per-install؛ فقط برای شمار رانندهٔ مستقل
+  speed_kmh REAL NOT NULL,               -- فیلترشده: ۳ تا ۱۵۰
+  bearing INTEGER NOT NULL,              -- ۰ تا ۳۵۹
+  acc INTEGER,                           -- دقت GPS متر (بیشتر از ۵۰ پذیرفته نمی‌شود)
+  minute INTEGER NOT NULL,               -- ts/60000 برای ضدتکرار
+  ts INTEGER NOT NULL
+);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_tsamples_dedupe ON traffic_samples (seg, device_id, minute);
+CREATE INDEX IF NOT EXISTS idx_tsamples_seg_time ON traffic_samples (seg, ts);
+
+-- وضعیت نهایی هر قطعه (بخش ۱۴): normal / suspected / moderate / severe /
+-- extreme / insufficient — شامل زمان شروع، آخرین مشاهده، شدت، اعتماد، منبع
+CREATE TABLE IF NOT EXISTS traffic_states (
+  seg TEXT PRIMARY KEY,
+  state TEXT NOT NULL,
+  intensity REAL,                        -- ۰ تا ۱ (۱−نسبت سرعت به پایه)
+  drivers INTEGER,                       -- شمار رانندهٔ مستقل در پنجره
+  baseline REAL,                         -- سرعت پایهٔ محاسبه‌شده (km/h)
+  avg_speed REAL,                        -- میانگین سرعت رانندگان (km/h)
+  confidence TEXT,                       -- insufficient / preliminary / higher
+  started_at INTEGER,                    -- آغاز دورهٔ ترافیک
+  last_observed INTEGER,                 -- آخرین مشاهده
+  road_type TEXT,
+  road_name TEXT,
+  updated_at INTEGER
+);
+CREATE INDEX IF NOT EXISTS idx_tstates_state ON traffic_states (state, last_observed);

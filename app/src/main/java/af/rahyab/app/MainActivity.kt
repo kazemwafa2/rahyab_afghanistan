@@ -225,6 +225,44 @@ class MainActivity : AppCompatActivity() {
 
     private val notifPermLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()) { }
 
+    // ---------- نشانگر وضعیت GPS (بخش ۲۱ سند جامع) ----------
+    private var lastGpsFixMs = 0L
+    private var gpsLostScheduled = false
+    private val gpsLostChecker = Runnable {
+        gpsLostScheduled = false
+        if ((NavigationController.navigating || NavigationController.freeMode) &&
+            System.currentTimeMillis() - lastGpsFixMs > 15_000L
+        ) updateGpsChip(0f, false)
+    }
+
+    /** نشانگر وضعیت دریافت موقعیت در بنر ناوبری: قوی/متوسط/ضعیف/قطع */
+    private fun updateGpsChip(accM: Float, hasFix: Boolean) {
+        val tv = try { findViewById<TextView>(R.id.tvGpsState) } catch (e: Exception) { null } ?: return
+        if (!NavigationController.navigating && !NavigationController.freeMode) {
+            tv.visibility = View.GONE
+            return
+        }
+        tv.visibility = View.VISIBLE
+        when {
+            !hasFix -> {
+                tv.text = getString(R.string.gps_state_lost)
+                tv.setTextColor(0xFFFF8A80.toInt())
+            }
+            accM <= 15f -> {
+                tv.text = getString(R.string.gps_state_strong)
+                tv.setTextColor(0xFF9FE3B4.toInt())
+            }
+            accM <= 40f -> {
+                tv.text = getString(R.string.gps_state_medium)
+                tv.setTextColor(0xFFFFD54F.toInt())
+            }
+            else -> {
+                tv.text = getString(R.string.gps_state_weak)
+                tv.setTextColor(0xFFFF8A80.toInt())
+            }
+        }
+    }
+
     // گوش‌دهی به کنترلر ناوبری
     private val uiListener = { st: NavigationController.UiState -> onNavState(st) }
     private val fixListener = { loc: Location -> onFixDuringNav(loc) }
@@ -381,6 +419,8 @@ class MainActivity : AppCompatActivity() {
                 if (NavigationController.navigating || mode == Mode.NAV) return@addOnMapClickListener false
                 // ضمیمهٔ ۱: اگر روی نقطهٔ جاده‌ای لمس شد، برگهٔ همان مکان باز شود
                 if (poiHitAt(pt)) return@addOnMapClickListener true
+                // بخش ۹: لمس روی گزارش زندهٔ دیگران → برگهٔ تأیید/رد
+                if (reportHitAt(pt)) return@addOnMapClickListener true
                 // ضمیمهٔ ۱: حالت «انتخاب روی نقشه» برای ثبت مکان جدید
                 if (poiPick) { onPoiLocationPicked(pt.latitude, pt.longitude); return@addOnMapClickListener true }
                 onMapPointChosen(pt.latitude, pt.longitude, false)
@@ -1416,9 +1456,16 @@ class MainActivity : AppCompatActivity() {
             NavigationController.formatDuration(this, remainingS)
     }
 
-    /** هر قرائت GPS هنگام ناوبری: دوربین دنبال می‌کند + سرعت‌سنج */
+    /** هر قرائت GPS هنگام ناوبری: دوربین دنبال می‌کند + سرعت‌سنج + نشانگر GPS */
     @SuppressLint("MissingPermission")
     private fun onFixDuringNav(loc: Location) {
+        // نشانگر وضعیت GPS (بند ۲۱): کیفیت قرائت + بررسی قطع‌شدن با زمان‌سنج
+        lastGpsFixMs = System.currentTimeMillis()
+        updateGpsChip(if (loc.hasAccuracy()) loc.accuracy else 0f, true)
+        if (!gpsLostScheduled) {
+            gpsLostScheduled = true
+            ui.postDelayed(gpsLostChecker, 15_000L)
+        }
         if (NavigationController.freeMode) {
             // رانندگی آزاد: سرعت‌سنج بزرگ + دنبال‌کردن نرم موقعیت
             if (loc.hasSpeed()) tvFreeSpeed.text = (loc.speed * 3.6).roundToInt().coerceIn(0, 240).toString()
@@ -2541,6 +2588,48 @@ class MainActivity : AppCompatActivity() {
         } catch (e: Exception) { false }
     }
 
+    /**
+     * لمس روی گزارش زندهٔ دیگران (بخش ۹ سند) — برگهٔ تأیید/رد باز می‌شود.
+     * تأیید اجتماعی: ۲ رأی تأیید = تأییدشده؛ ۳ رد = کنار گذاشته (سرور).
+     */
+    private fun reportHitAt(pt: LatLng): Boolean {
+        val m = map ?: return false
+        val s = style ?: return false
+        if (s.getLayer("traffic-red") == null) return false
+        return try {
+            val sp = m.projection.toScreenLocation(pt)
+            val feats = m.queryRenderedFeatures(
+                sp, "traffic-green", "traffic-orange", "traffic-red"
+            )
+            if (feats.isEmpty()) false
+            else {
+                val rid = try { feats[0].getNumberProperty("rid").toLong() } catch (e: Exception) { 0L }
+                if (rid <= 0) false else { showReportVoteDialog(rid); true }
+            }
+        } catch (e: Exception) { false }
+    }
+
+    /** برگهٔ تأیید/رد گزارش زندهٔ دیگران — بخش ۹ سند جامع */
+    private fun showReportVoteDialog(sid: Long) {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.report_title)
+            .setMessage(R.string.report_vote_message)
+            .setPositiveButton(R.string.report_vote_confirm) { _, _ ->
+                ReportsModule.verifyReport(this, sid, "confirm") { ok ->
+                    toast(if (ok) R.string.report_vote_done else R.string.report_vote_failed)
+                    if (ok) ui.post { renderTraffic() }
+                }
+            }
+            .setNegativeButton(R.string.report_vote_deny) { _, _ ->
+                ReportsModule.verifyReport(this, sid, "deny") { ok ->
+                    toast(if (ok) R.string.report_vote_done else R.string.report_vote_failed)
+                    if (ok) ui.post { renderTraffic() }
+                }
+            }
+            .setNeutralButton(R.string.close, null)
+            .show()
+    }
+
     private fun poiStatusLabel(status: String): String = getString(
         when (status) {
             "official" -> R.string.poi_status_official
@@ -2838,7 +2927,7 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** ترسیم نقاط ترافیک: گزارش‌های کاربران + فید جامعه — فقط رنگ واقعی، بدون داده جعلی */
+    /** ترسیم نقاط ترافیک: گزارش‌های کاربران + وضعیت‌های زندهٔ موتور ترافیک + فید — فقط رنگ واقعی، بدون داده جعلی */
     private fun renderTraffic() {
         val st = style ?: return
         val pts = if (trafficOn) TrafficModule.allPoints(this) else emptyList()
@@ -2846,6 +2935,8 @@ class MainActivity : AppCompatActivity() {
         for (p in pts) {
             val f = Feature.fromGeometry(Point.fromLngLat(p.lon, p.lat))
             f.addStringProperty("title", p.title)
+            // شناسهٔ سروری گزارش — برای تأیید/رد با لمس نقشه (بخش ۹)
+            if (p.rid > 0) f.addNumberProperty("rid", p.rid)
             when (p.color) {
                 "#23A455" -> green.add(f)
                 "#F5A623" -> orange.add(f)
@@ -2873,6 +2964,8 @@ class MainActivity : AppCompatActivity() {
     private fun refreshTrafficData() {
         io.execute {
             TrafficModule.refreshFeed(this@MainActivity)
+            // وضعیت‌های زندهٔ موتور ترافیک پیرامون مرکز نقشه (بند ۱۴)
+            mapCenter()?.let { (lat, lon) -> TrafficSync.refreshNearAsync(this@MainActivity, lat, lon) }
             ui.post { renderTraffic() }
         }
         scheduleTrafficRefresh()
@@ -2896,6 +2989,14 @@ class MainActivity : AppCompatActivity() {
         val tvStatus = TextView(this)
         tvStatus.text = TrafficModule.statusLine(this)
         tvStatus.textSize = 13f
+        // کلید مشارکت در دادهٔ ترافیک — حریم خصوصی: کاربر کنترل دارد (بخش ۲۴)
+        val swShare = android.widget.Switch(this)
+        swShare.text = getString(R.string.traffic_contribute_title)
+        swShare.isChecked = TrafficStore.contributionEnabled(this)
+        swShare.textSize = 13f
+        val tvPending = TextView(this)
+        tvPending.text = getString(R.string.traffic_pending_samples, TrafficStore.pendingCount(this))
+        tvPending.textSize = 12f
         val etKey = EditText(this)
         etKey.hint = getString(R.string.traffic_tomtom_hint)
         etKey.setText(TrafficModule.tomtomKey(this))
@@ -2905,12 +3006,15 @@ class MainActivity : AppCompatActivity() {
         etFeed.setText(TrafficModule.feedUrl(this))
         etFeed.textSize = 13f
         container.addView(tvStatus)
+        container.addView(swShare)
+        container.addView(tvPending)
         container.addView(etKey)
         container.addView(etFeed)
         AlertDialog.Builder(this)
             .setTitle(R.string.traffic_settings)
             .setView(container)
             .setPositiveButton(R.string.save_ok) { _, _ ->
+                TrafficStore.setContribution(this, swShare.isChecked)
                 TrafficModule.setTomtomKey(this, etKey.text.toString())
                 TrafficModule.setFeedUrl(this, etFeed.text.toString())
                 TrafficModule.lastFeedFetchReset()
@@ -3075,14 +3179,46 @@ class MainActivity : AppCompatActivity() {
         et.hint = getString(R.string.report_note_hint)
         val pad = dp(20)
         et.setPadding(pad, pad / 2, pad, pad / 2)
+        // شدت حادثه (بخش ۸ سند) — پیش‌فرض: متوسط
+        val sevGroup = android.widget.RadioGroup(this).apply { orientation = android.widget.RadioGroup.HORIZONTAL }
+        val sevOptions = listOf(
+            Triple("low", R.string.report_severity_low, 1),
+            Triple("medium", R.string.report_severity_medium, 0),
+            Triple("high", R.string.report_severity_high, 2)
+        )
+        var selectedSeverity = "medium"
+        for ((value, label, pad2) in sevOptions) {
+            val rb = android.widget.RadioButton(this)
+            rb.id = View.generateViewId()
+            rb.text = getString(label)
+            rb.textSize = 13f
+            rb.isChecked = value == "medium"
+            rb.setOnCheckedChangeListener { _, checked -> if (checked) selectedSeverity = value }
+            sevGroup.addView(rb)
+        }
+        val sevWrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(pad, 0, pad, 0)
+            addView(TextView(this@MainActivity).apply {
+                text = getString(R.string.report_severity_title); textSize = 12f
+            })
+            addView(sevGroup)
+        }
+        val wrap = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            addView(et)
+            addView(sevWrap)
+        }
         AlertDialog.Builder(this)
             .setTitle(R.string.report_note_title)
-            .setView(et)
+            .setView(wrap)
             .setPositiveButton(R.string.report_save) { _, _ ->
                 val note = et.text.toString().trim().take(300)
                 val sensitive = ReportsModule.isSensitive(note)
                 try {
-                    ReportsModule.add(this, type, note, lat, lon)
+                    // جهت حرکت (بخش ۸ و ۱۵): در ناوبری از قطعهٔ مسیر؛ در رانندگی آزاد از GPS
+                    val heading = NavigationController.lastHeadingDeg
+                    ReportsModule.add(this, type, note, lat, lon, selectedSeverity, heading)
                     ReportsModule.purgeExpired(this)
                     toast(if (sensitive) R.string.report_saved_local else R.string.report_saved)
                     if (!sensitive) NavigationController.voiceReportSaved()

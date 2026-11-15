@@ -23,6 +23,10 @@ class RahyabApp : Application() {
         // زمان‌بندی دوره‌ای WorkManager — هر ۳ ساعت با اتصال اینترنت
         ReportsModule.syncNow(this)
         ReportsSyncWorker.schedule(this)
+        // موتور ترافیک (بخش ۱۱ و ۱۹): ارسال صف نمونه‌ها + تازه‌سازی وضعیت‌ها —
+        // فقط با اینترنت؛ هیچ موقعیت‌گیری پس‌زمینه‌ای انجام نمی‌شود (بخش ۲۲ و ۲۴)
+        TrafficSync.flushSamplesAsync(this)
+        TrafficSyncWorker.schedule(this)
     }
 
     /**

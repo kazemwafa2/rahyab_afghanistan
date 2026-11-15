@@ -98,7 +98,42 @@
     <string name="radio_cat_news">News</string>
     <string name="radio_cat_music">Music</string>
     <string name="nav_gps_off_title">Location is off</string>
-    <string name="nav_gps_off_body">Accurate navigation and road alerts need your phone\'s location (GPS) to be on. Turn location on?</string>
+    <string name="nav_gps_off_body">Accurate navigation and road alerts need your phone's location (GPS) to be on. Turn location on?</string>
     <string name="nav_gps_off_open">Turn on location</string>
     <string name="nav_gps_off_continue">Continue without GPS</string>
+
+    <!-- ===== Automatic traffic engine (sections 10-14) — states (section 14) ===== -->
+    <string name="traffic_state_normal">Normal</string>
+    <string name="traffic_state_suspected">Possible traffic</string>
+    <string name="traffic_state_moderate">Moderate traffic</string>
+    <string name="traffic_state_severe">Heavy traffic</string>
+    <string name="traffic_state_extreme">Very heavy traffic</string>
+    <string name="traffic_state_closed">Road closed</string>
+    <string name="traffic_state_insufficient">Not enough data</string>
+    <string name="traffic_state_expired">Ended</string>
+    <string name="traffic_conf_preliminary">Low confidence</string>
+    <string name="traffic_conf_higher">Higher confidence</string>
+    <string name="traffic_alert_ahead">%1$s ahead</string>
+    <string name="traffic_src_engine">Traffic engine: %1$d active segments</string>
+    <string name="traffic_src_engine_live">Live data — updated %1$s</string>
+    <string name="traffic_src_engine_old">Last update %1$s — not live</string>
+    <string name="traffic_src_engine_none">No live traffic data</string>
+    <string name="traffic_contribute_title">Anonymous speed sharing for traffic detection</string>
+    <string name="traffic_pending_samples">Speed samples waiting to send: %1$d</string>
+    <!-- ===== Report severity (section 8) ===== -->
+    <string name="report_severity_title">Severity:</string>
+    <string name="report_severity_low">Low</string>
+    <string name="report_severity_medium">Medium</string>
+    <string name="report_severity_high">High</string>
+    <!-- ===== Community verification (section 9) ===== -->
+    <string name="report_vote_message">Do you confirm this report? Your vote helps other drivers. Two confirms = verified; three denies = dismissed.</string>
+    <string name="report_vote_confirm">Confirm</string>
+    <string name="report_vote_deny">Deny</string>
+    <string name="report_vote_done">Your vote was saved</string>
+    <string name="report_vote_failed">Voting failed</string>
+    <!-- ===== GPS status chip (section 21) ===== -->
+    <string name="gps_state_strong">GPS: strong</string>
+    <string name="gps_state_medium">GPS: medium</string>
+    <string name="gps_state_weak">GPS: weak</string>
+    <string name="gps_state_lost">GPS: no signal</string>
 </resources>

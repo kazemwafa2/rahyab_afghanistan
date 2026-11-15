@@ -178,6 +178,8 @@ object NavigationController {
     private var _lastToManeuver = 0.0
     private var _lastKey = "depart"
     private var _lastName = ""
+    /** پیشرفت جاری روی مسیر (متر از مبدأ) — برای هشدارهای مسیرمحور (بند ۱۵) */
+    private var _lastProgressM = 0.0
 
     /** نقطه چسبیده‌به‌مسیر (برای تیرک جهت — همیشه دقیقاً روی مسیر) */
     val hasSnap: Boolean get() = _hasSnap
@@ -188,6 +190,16 @@ object NavigationController {
     private var _snapLat = 0.0
     private var _snapLon = 0.0
     private var _snapBearing = 0.0
+
+    /**
+     * آخرین جهت حرکت معلوم (درجه ۰ تا ۳۶۰) — برای قطعه‌سازی گزارش‌ها و
+     * نمونه‌های ترافیک (بخش ۸ و ۱۱). خروجی null = جهت معلوم نیست.
+     */
+    val lastHeadingDeg: Double?
+        get() {
+            lastFix?.let { if (it.hasBearing()) return it.bearing.toDouble() }
+            return if (_hasSnap && navigating) _snapBearing else null
+        }
 
     fun instrTitle(key: String, name: String, ctx: Context? = null): String {
         val app = try { ctx ?: locCtx() } catch (e: Exception) { appCtx } ?: return key
@@ -285,6 +297,9 @@ object NavigationController {
         _lastKey = "depart"; _lastName = r.steps.firstOrNull()?.name ?: ""
         _lastRemainingM = r.distanceM
         _lastRemainingS = r.durationS
+        _lastProgressM = 0.0
+        routeAlertState = RouteAlerts.St()
+        lastTrafficStatesRefreshMs = 0L
 
         // وضعیت اولیهٔ تیرک/دوربین: چسبیده به مبدأ مسیر با جهت نخستین قطعه — تا دوربین
         // بی‌درنگ روی مبدأ زوم کند و نشانگر وسیله رو به مسیر باشد، حتی پیش از رسیدن
@@ -316,6 +331,9 @@ object NavigationController {
         _hasSnap = false
         stopLocationUpdates()
         releaseWakeLock()
+        // موتور ترافیک: پایان نشست — تلاش نهایی ارسال نمونه‌ها + پاک‌سازی (بند ۱۱ و ۲۴)
+        try { appCtx?.let { TrafficCollector.onSessionEnd(it) } } catch (e: Exception) { }
+        routeAlertState = RouteAlerts.St()
         if (userInitiated && wasNavigating) {
             // «سفر شما به پایان رسید. از همراهی شما سپاسگزاریم.»
             val app = try { locCtx() } catch (e: Exception) { appCtx }
@@ -344,6 +362,8 @@ object NavigationController {
         freeMode = false
         stopLocationUpdates()
         releaseWakeLock()
+        try { appCtx?.let { TrafficCollector.onSessionEnd(it) } } catch (e: Exception) { }
+        routeAlertState = RouteAlerts.St()
         voice?.stop()
         emit()
     }
@@ -416,6 +436,14 @@ object NavigationController {
         lastFix = loc
         fixListeners.forEach { l -> ui.post { try { l(loc) } catch (e: Exception) { } } }
         checkAlerts(loc) // هشدارها در ناوبری و رانندگی آزاد هر دو فعال‌اند
+        // موتور ترافیک: نمونه‌برداری سرعت (بند ۱۱) — فقط در حرکت واقعی و با GPS سالم
+        try {
+            appCtx?.let {
+                TrafficCollector.onFix(it, loc, if (navigating) _lastName.ifEmpty { null } else null)
+            }
+        } catch (e: Exception) { }
+        // هشدارهای مسیرمحور (بند ۱۵ و ۱۶) — فقط هنگام ناوبری
+        maybeRouteAlerts(loc)
         if (!navigating) return
         val r = route ?: return
         val eng = engine ?: return
@@ -429,6 +457,7 @@ object NavigationController {
             _snapLat = st.snapLat
             _snapLon = st.snapLon
             _snapBearing = st.snapBearing
+            _lastProgressM = st.progress
 
             // خروج از مسیر — دو محافظ ضد خطای کاذب:
             //  ۱) آستانهٔ پویا: با دقت GPS مقیاس می‌شود (دقت ۴۰m → آستانهٔ ۶۰m) تا لرزش
@@ -629,6 +658,77 @@ object NavigationController {
                 }
             }
         }
+    }
+
+    // ---------- هشدارهای مسیرمحور (بند ۱۵ و ۱۶) ----------
+    private var routeAlertState = RouteAlerts.St()
+    private var lastRouteAlertMs = 0L
+    private var lastTrafficStatesRefreshMs = 0L
+    private val taIo = SafeExecutors.fixed(1)
+
+    /**
+     * هر ۱۰ ثانیه یک‌بار: وضعیت‌های ترافیک مسیر جلوِ رو + گزارش‌های قطعه‌دار
+     * دیگران ارزیابی می‌شوند؛ هشدارهای تازه صوتی (دری) و متنی اعلام می‌شوند.
+     * رانندهٔ بی‌ربط (جهت دیگر/مسیر دیگر) هرگز هشدار نمی‌گیرد (بند ۱۵).
+     */
+    private fun maybeRouteAlerts(loc: Location) {
+        if (!navigating) return
+        val now = System.currentTimeMillis()
+        if (now - lastRouteAlertMs < 10_000L) return
+        lastRouteAlertMs = now
+        val ctx = appCtx ?: return
+        val r = route ?: return
+        val progress = _lastProgressM
+        val bearing = if (_hasSnap) _snapBearing else
+            (if (loc.hasBearing()) loc.bearing.toDouble() else 0.0)
+        taIo.execute {
+            // تازه‌سازی وضعیت‌های مسیر از سرور — هر ۵ دقیقه
+            if (now - lastTrafficStatesRefreshMs > 5 * 60_000L) {
+                lastTrafficStatesRefreshMs = now
+                try { TrafficSync.refreshAlongRouteBlocking(ctx, r) } catch (e: Exception) { }
+            }
+            val congestions = try {
+                TrafficStore.cachedStates(ctx).map {
+                    RouteAlerts.Congestion(it.seg, it.state, it.roadType, it.roadName)
+                }
+            } catch (e: Exception) { emptyList<RouteAlerts.Congestion>() }
+            // گزارش‌های قطعه‌دار دیگران (با شدت) — برای هشدار زودهنگام (بند ۱۵)
+            val repAhead = try {
+                ReportsModule.active(ctx).filter { it.fromServer && it.seg != null }.map {
+                    RouteAlerts.ReportAhead(
+                        "rp:${it.sid}:${it.type}", it.type, it.severity,
+                        it.lat, it.lon, it.dirBin
+                    )
+                }
+            } catch (e: Exception) { emptyList<RouteAlerts.ReportAhead>() }
+            val (ns, events) = RouteAlerts.evaluate(r.points, progress, bearing, congestions, repAhead, routeAlertState)
+            routeAlertState = ns
+            if (events.isEmpty()) return@execute
+            val app = try { locCtx() } catch (e: Exception) { appCtx } ?: return@execute
+            for (ev in events) {
+                val text = if (ev.state != null) {
+                    val label = app.getString(trafficStateRes(ev.state))
+                    val road = ev.roadName?.takeIf { it.isNotBlank() }?.let { " — $it" } ?: ""
+                    app.getString(R.string.traffic_alert_ahead, formatDistance(app, ev.aheadM)) + "، " + label + road
+                } else {
+                    alertText(ev.clip)
+                }
+                voice?.speak(text, listOf(ev.clip))
+                ui.post { alertListeners.forEach { l -> try { l(ev.clip) } catch (e: Exception) { } } }
+            }
+        }
+    }
+
+    /** منبع رشتهٔ برچسب وضعیت ترافیک */
+    fun trafficStateRes(state: String): Int = when (state) {
+        TrafficRules.ST_SUSPECTED -> R.string.traffic_state_suspected
+        TrafficRules.ST_MODERATE -> R.string.traffic_state_moderate
+        TrafficRules.ST_SEVERE -> R.string.traffic_state_severe
+        TrafficRules.ST_EXTREME -> R.string.traffic_state_extreme
+        TrafficRules.ST_CLOSED -> R.string.traffic_state_closed
+        TrafficRules.ST_INSUFFICIENT -> R.string.traffic_state_insufficient
+        TrafficRules.ST_EXPIRED -> R.string.traffic_state_expired
+        else -> R.string.traffic_state_normal
     }
 
     // ---------- محاسبه مجدد مسیر ----------

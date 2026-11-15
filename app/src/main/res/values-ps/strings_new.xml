@@ -101,4 +101,39 @@
     <string name="nav_gps_off_body">د سمې لارښودنې او د سړک خبرتیاوو لپاره د تلیفون موقعیت‌یاب (GPS) روشنېدل ضروري دي. ایا موقعیت‌یاب روشن شي؟</string>
     <string name="nav_gps_off_open">موقعیت‌یاب روشن کړه</string>
     <string name="nav_gps_off_continue">د GPS پرته دوام</string>
+
+    <!-- ===== اتوماتیک د ترافیک انجن (بنډونه ۱۰ تر ۱۴) — حالتونه (بنډ ۱۴) ===== -->
+    <string name="traffic_state_normal">عادي</string>
+    <string name="traffic_state_suspected">د ترافیک شک</string>
+    <string name="traffic_state_moderate">منځنی ترافیک</string>
+    <string name="traffic_state_severe">سخت ترافیک</string>
+    <string name="traffic_state_extreme">ډېر سخت ترافیک</string>
+    <string name="traffic_state_closed">د سړک بندېدل</string>
+    <string name="traffic_state_insufficient">کافي معلومات نشته</string>
+    <string name="traffic_state_expired">پایان شو</string>
+    <string name="traffic_conf_preliminary">لومړی باور</string>
+    <string name="traffic_conf_higher">لوړ باور</string>
+    <string name="traffic_alert_ahead">د %1$s په واټن کې</string>
+    <string name="traffic_src_engine">د ترافیک انجن: %1$d فعال برخې</string>
+    <string name="traffic_src_engine_live">ژوندي معلومات — وروستنی ترلاسه %1$s</string>
+    <string name="traffic_src_engine_old">وروستنی ترلاسه %1$s — ژوندی نه دی</string>
+    <string name="traffic_src_engine_none">ژوندي ترافیک معلومات نشته</string>
+    <string name="traffic_contribute_title">د ترافیک پېژندنې لپاره ناپېژانده چټکټیا شریکول</string>
+    <string name="traffic_pending_samples">د چټکټیا هغه نمونې چې لیږل کیږي: %1$d</string>
+    <!-- ===== د راپور شدت (بنډ ۸) ===== -->
+    <string name="report_severity_title">شدت پېښه:</string>
+    <string name="report_severity_low">ټیټ</string>
+    <string name="report_severity_medium">منځنی</string>
+    <string name="report_severity_high">لوړ</string>
+    <!-- ===== ټولنیز تایید (بنډ ۹) ===== -->
+    <string name="report_vote_message">ایا دا راپور تاییدوئ؟ ستاسو رایې نورو چلوونکو سره مرسته کوي. دوه تایید = تایید شوی؛ درې رد = څنډه کیږي.</string>
+    <string name="report_vote_confirm">تاییدوم</string>
+    <string name="report_vote_deny">ردوم</string>
+    <string name="report_vote_done">ستاسو رایه ثبت شوه</string>
+    <string name="report_vote_failed">د رایې ثبت ناکام شو</string>
+    <!-- ===== د GPS حالت نښه (بنډ ۲۱) ===== -->
+    <string name="gps_state_strong">GPS: پیاوړی</string>
+    <string name="gps_state_medium">GPS: منځنی</string>
+    <string name="gps_state_weak">GPS: کمزوری</string>
+    <string name="gps_state_lost">GPS: بې اړیکه</string>
 </resources>

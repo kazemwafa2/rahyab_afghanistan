@@ -189,6 +189,18 @@
                     android:textAlignment="viewStart"
                     android:textColor="#FFFFFF"
                     android:textSize="13sp" />
+
+                <!-- نشانگر وضعیت GPS (بخش ۲۱ سند جامع): قوی/ضعیف/قطع -->
+                <TextView
+                    android:id="@+id/tvGpsState"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:alpha="0.75"
+                    android:textAlignment="viewStart"
+                    android:textColor="#9FE3B4"
+                    android:textSize="11sp"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
             </LinearLayout>
         </LinearLayout>
 

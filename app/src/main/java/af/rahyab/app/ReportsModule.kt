@@ -96,7 +96,13 @@ object ReportsModule {
     class Report(
         val id: Long, val type: String, val note: String,
         val lat: Double, val lon: Double, val ts: Long,
-        val fromServer: Boolean = false
+        val fromServer: Boolean = false,
+        val sid: Long = 0,                       // شناسهٔ سرور (گزارش‌های زندهٔ دیگران)
+        val severity: String? = null,            // شدت (بخش ۸): low / medium / high
+        val seg: String? = null,                 // شناسهٔ قطعهٔ جاده (بخش ۸ و ۱۰)
+        val dirBin: Int? = null,                 // خانهٔ جهت ۰ تا ۷
+        val confirm: Int = 0, val deny: Int = 0, // شمار رأی رانندگان (بخش ۹)
+        val verification: String? = null         // unverified / confirmed / rejected
     ) {
         val expired: Boolean get() = System.currentTimeMillis() - ts > EXPIRY_MS
 
@@ -202,16 +208,21 @@ object ReportsModule {
      *    جلوگیری از ثبت تکراری گزارش در سرور (بند ۱۹ سند جامع؛ عملیات idempotent).
      *    فقط ADD COLUMN + پرکردن ردیف‌های قدیمی با UUID تصادفی؛ داده‌ها دست‌نخورده می‌مانند.
      *    بازگشت (rollback): ستون nullable است؛ نسخهٔ قبلی برنامه آن را نادیده می‌گیرد.
+     *  - نسخهٔ ۴ (بخش ۸ و ۹): شدت (severity)، شناسهٔ قطعه (seg) و خانهٔ جهت (dir)
+     *    برای گزارش‌های صف‌شده + شمار رأی/وضعیت تأیید برای گزارش‌های دریافتی.
+     *    همه فقط ADD COLUMN با nullable؛ نسخهٔ قبلی برنامه آن‌ها را نادیده می‌گیرد.
      */
-    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, "reports.db", null, 3) {
+    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, "reports.db", null, 4) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, note TEXT, lat REAL NOT NULL, lon REAL NOT NULL, ts INTEGER NOT NULL)")
             createV2(db)
             createV3(db)
+            createV4(db)
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) createV2(db)
             if (oldVersion < 3) createV3(db)
+            if (oldVersion < 4) createV4(db)
         }
         private fun createV2(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS pending_reports(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, note TEXT, lat REAL NOT NULL, lon REAL NOT NULL, ts INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)")
@@ -226,6 +237,22 @@ object ReportsModule {
             try {
                 db.execSQL("UPDATE pending_reports SET client_uuid = lower(hex(randomblob(16))) WHERE client_uuid IS NULL")
             } catch (e: Exception) { }
+        }
+        private fun createV4(db: SQLiteDatabase) {
+            // بخش ۸ و ۹ سند جامع — همهٔ تغییرها فقط «افزودن» و بازگشت‌پذیر
+            for (sql in arrayOf(
+                "ALTER TABLE pending_reports ADD COLUMN severity TEXT",
+                "ALTER TABLE pending_reports ADD COLUMN seg TEXT",
+                "ALTER TABLE pending_reports ADD COLUMN dir INTEGER",
+                "ALTER TABLE remote_reports ADD COLUMN severity TEXT",
+                "ALTER TABLE remote_reports ADD COLUMN seg TEXT",
+                "ALTER TABLE remote_reports ADD COLUMN dir INTEGER",
+                "ALTER TABLE remote_reports ADD COLUMN confirm INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE remote_reports ADD COLUMN deny INTEGER NOT NULL DEFAULT 0",
+                "ALTER TABLE remote_reports ADD COLUMN verification TEXT"
+            )) {
+                try { db.execSQL(sql) } catch (e: Exception) { }
+            }
         }
     }
 
@@ -257,11 +284,22 @@ object ReportsModule {
         return SENSITIVE_PATTERNS.any { n.contains(it) }
     }
 
-    /** ثبت گزارش؛ خروجی: id یا خطا. هم‌زمان در صف سرور هم قرار می‌گیرد. */
-    fun add(ctx: Context, type: String, note: String, lat: Double, lon: Double): Long {
+    /**
+     * ثبت گزارش؛ خروجی: id یا خطا. هم‌زمان در صف سرور هم قرار می‌گیرد.
+     *  @param severity شدت حادثه (بخش ۸) — low/medium/high یا null
+     *  @param bearing جهت حرکت هنگام ثبت (بخش ۸ و ۱۵) — اگر معلوم باشد شناسهٔ قطعه
+     *                 ساخته می‌شود تا هشدارهای مسیرمحور جهت‌دار شوند
+     */
+    fun add(
+        ctx: Context, type: String, note: String, lat: Double, lon: Double,
+        severity: String? = null, bearing: Double? = null
+    ): Long {
         require(validType(type)) { ctx.getString(R.string.report_err_bad_type) }
         require(lat in -90.0..90.0 && lon in -180.0..180.0) { ctx.getString(R.string.report_err_bad_coords) }
         require(note.length <= 300) { ctx.getString(R.string.report_err_long_note) }
+        require(severity == null || severity in listOf("low", "medium", "high")) {
+            ctx.getString(R.string.report_err_bad_type)
+        }
         val ts = System.currentTimeMillis()
         val cv = ContentValues().apply {
             put("type", type); put("note", note); put("lat", lat); put("lon", lon); put("ts", ts)
@@ -269,10 +307,16 @@ object ReportsModule {
         val id = getDb(ctx).writableDatabase.insert("reports", null, cv)
         // ارسال به سیستم گزارش زندهٔ سراسری — گزارش حساس هرگز از گوشی خارج نمی‌شود
         if (type in SERVER_TYPES && !isSensitive(note) && RoadPois.serverConfigured(ctx)) {
+            // شناسهٔ قطعهٔ شبکه‌ای — فقط وقتی جهت حرکت معلوم است (بخش ۸)
+            val seg = bearing?.let { RoadSegments.cellId(lat, lon, it) }
+            val dirBin = bearing?.let { RoadSegments.bearingBin(it) }
             try {
                 getDb(ctx).writableDatabase.insert("pending_reports", null, ContentValues().apply {
                     put("type", type); put("note", note); put("lat", lat); put("lon", lon); put("ts", ts)
                     put("client_uuid", java.util.UUID.randomUUID().toString()) // شناسهٔ یکتای عملیات (بند ۱۹)
+                    if (severity != null) put("severity", severity)
+                    if (seg != null) put("seg", seg)
+                    if (dirBin != null) put("dir", dirBin)
                 })
             } catch (e: Exception) { }
             syncNow(ctx)
@@ -303,7 +347,7 @@ object ReportsModule {
         // ادغام گزارش‌های زندهٔ دیگر رانندگان (از سرور) — با حذف تکرار گزارش محلی خودمان
         try {
             getDb(ctx).readableDatabase.rawQuery(
-                "SELECT sid, type, note, lat, lon, created_at FROM remote_reports WHERE expires_at > ? LIMIT 300",
+                "SELECT sid, type, note, lat, lon, created_at, severity, seg, dir, confirm, deny, verification FROM remote_reports WHERE expires_at > ? LIMIT 300",
                 arrayOf(now.toString())
             ).use { c ->
                 while (c.moveToNext()) {
@@ -319,11 +363,49 @@ object ReportsModule {
                         if (d > maxKm) continue
                     }
                     if (list.any { it.type == type && Geo.dist(it.lat, it.lon, lat, lon) < 150.0 && Math.abs(it.ts - ts) < 45 * 60 * 1000L }) continue
-                    list.add(Report(-sid, type, note, lat, lon, ts, fromServer = true))
+                    val severity = if (c.isNull(6)) null else c.getString(6)
+                    val seg = if (c.isNull(7)) null else c.getString(7)
+                    val dirBin = if (c.isNull(8)) null else c.getInt(8)
+                    val verification = if (c.isNull(11)) null else c.getString(11)
+                    list.add(Report(
+                        -sid, type, note, lat, lon, ts, fromServer = true,
+                        sid = sid, severity = severity, seg = seg, dirBin = dirBin,
+                        confirm = c.getInt(9), deny = c.getInt(10), verification = verification
+                    ))
                 }
             }
         } catch (e: Exception) { }
         return list
+    }
+
+    /**
+     * تأیید/رد گزارش زندهٔ دیگران توسط راننده — بخش ۹ سند جامع.
+     * رأی در سرور ثبت می‌شود؛ ۲ تأیید = تأییدشده، ۳ رد = کنار گذاشته.
+     * پس از رأی، کش گزارش‌ها دوباره تازه‌سازی می‌شود.
+     */
+    fun verifyReport(ctx: Context, sid: Long, vote: String, onDone: ((Boolean) -> Unit)? = null) {
+        require(vote == "confirm" || vote == "deny")
+        val app = ctx.applicationContext
+        try {
+            net.execute {
+                var ok = false
+                try {
+                    if (RoadPois.serverConfigured(app)) {
+                        val base = RoadPois.serverUrl(app).trimEnd('/')
+                        val body = Http.postJson(
+                            "$base/api/v1/reports/$sid/verify",
+                            JSONObject()
+                                .put("device_id", RoadPois.deviceId(app))
+                                .put("vote", vote).toString(),
+                            readTimeoutMs = 10000
+                        )
+                        ok = JSONObject(body).optBoolean("ok", false)
+                        if (ok) refreshRemote(app)
+                    }
+                } catch (e: Exception) { }
+                onDone?.let { cb -> android.os.Handler(android.os.Looper.getMainLooper()).post { cb(ok) } }
+            }
+        } catch (e: Exception) { onDone?.invoke(false) }
     }
 
     /** پاک‌سازی گزارش‌های منقضی (هر بار باز شدن صفحه گزارش‌ها) */
@@ -371,7 +453,7 @@ object ReportsModule {
         try {
             // سقف تلاش: ردیف‌های بیش از MAX_SEND_TRIES بار کوشیده موقتاً کنار گذاشته
             // می‌شوند تا یک خطای دائمی، کل صف را بلوکه نکند (داده در جدول reports محفوظ است)
-            db.rawQuery("SELECT id, type, note, lat, lon, ts, client_uuid FROM pending_reports WHERE tries < ? ORDER BY ts ASC LIMIT 80", arrayOf(MAX_SEND_TRIES.toString())).use { c ->
+            db.rawQuery("SELECT id, type, note, lat, lon, ts, client_uuid, severity, seg, dir FROM pending_reports WHERE tries < ? ORDER BY ts ASC LIMIT 80", arrayOf(MAX_SEND_TRIES.toString())).use { c ->
                 while (c.moveToNext()) {
                     // ردیف‌های قدیمیِ بدون شناسه: تولید و ثبت پایدار UUID پیش از ارسال —
                     // در تلاش‌های بعدی همین UUID دوباره فرستاده می‌شود (idempotent)
@@ -380,17 +462,18 @@ object ReportsModule {
                         uuid = java.util.UUID.randomUUID().toString()
                         try { db.execSQL("UPDATE pending_reports SET client_uuid=? WHERE id=?", arrayOf(uuid, c.getLong(0).toString())) } catch (e: Exception) { }
                     }
-                    rows.add(arrayOf(
-                        c.getLong(0),
-                        JSONObject()
-                            .put("type", c.getString(1))
-                            .put("note", c.getString(2) ?: "")
-                            .put("lat", c.getDouble(3))
-                            .put("lon", c.getDouble(4))
-                            .put("device_id", device)
-                            .put("client_uuid", uuid),
-                        c.getLong(5)
-                    ))
+                    val payload = JSONObject()
+                        .put("type", c.getString(1))
+                        .put("note", c.getString(2) ?: "")
+                        .put("lat", c.getDouble(3))
+                        .put("lon", c.getDouble(4))
+                        .put("device_id", device)
+                        .put("client_uuid", uuid)
+                    // بخش ۸: شدت + قطعهٔ جاده + جهت — اگر موقع ثبت معلوم بود
+                    if (!c.isNull(7)) payload.put("severity", c.getString(7))
+                    if (!c.isNull(8)) payload.put("seg", c.getString(8))
+                    if (!c.isNull(9)) payload.put("dir", c.getInt(9))
+                    rows.add(arrayOf(c.getLong(0), payload, c.getLong(5)))
                 }
             }
         } catch (e: Exception) { return }
@@ -446,6 +529,13 @@ object ReportsModule {
                         put("lat", lat); put("lon", lon)
                         put("created_at", r.optLong("created_at"))
                         put("expires_at", r.optLong("expires_at"))
+                        // بخش ۸ و ۹: شدت/قطعه/جهت + شمار رأی و وضعیت تأیید
+                        if (!r.isNull("severity")) put("severity", r.optString("severity"))
+                        if (!r.isNull("seg")) put("seg", r.optString("seg"))
+                        if (!r.isNull("dir")) put("dir", r.optInt("dir"))
+                        put("confirm", r.optInt("confirm_count", 0))
+                        put("deny", r.optInt("deny_count", 0))
+                        if (!r.isNull("verification")) put("verification", r.optString("verification"))
                     }
                     db.insertWithOnConflict("remote_reports", null, cv, SQLiteDatabase.CONFLICT_REPLACE)
                 }
