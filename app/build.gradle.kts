@@ -16,8 +16,8 @@ android {
         applicationId = "af.rahyab.app"
         minSdk = 21          // Android 5.0+
         targetSdk = 35
-        versionCode = 22
-        versionName = "1.0.2"
+        versionCode = 23
+        versionName = "1.0.3"
 
         // نشانی مخزن در BuildConfig قرار می‌گیرد تا User-Agent و نشانی manifest
         // بسته‌ها به‌صورت متمرکز ساخته شوند (Config.kt).
@@ -79,6 +79,9 @@ dependencies {
     implementation("com.google.android.material:material:1.12.0")
     // PMTiles از نسخه ۱۱٫۷ پشتیبانی می‌شود (نقشه آفلاین تک‌فایلی)
     implementation("org.maplibre.gl:android-sdk:11.11.0")
+    // همگام‌سازی خودکار گزارش‌ها پس از اتصال اینترنت (بند ۱۹ سند جامع) —
+    // فقط «افزودن» قابلیت؛ هیچ کد موجودی به Room/WorkManager بازنویسی نمی‌شود
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
 
     testImplementation("junit:junit:4.13.2")
     // org.json واقعی برای آزمون‌های واحد (شبیه‌ساز اندروید خروجی خالی می‌دهد)

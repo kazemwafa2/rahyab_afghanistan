@@ -19,6 +19,10 @@ class RahyabApp : Application() {
         }
         resetLanguageOnceAfterUpdate()
         installBasePackageIfNeeded()
+        // همگام‌سازی گزارش‌ها (بند ۱۹ سند جامع): نخستین ارسال صف در شروع فرایند +
+        // زمان‌بندی دوره‌ای WorkManager — هر ۳ ساعت با اتصال اینترنت
+        ReportsModule.syncNow(this)
+        ReportsSyncWorker.schedule(this)
     }
 
     /**

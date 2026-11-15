@@ -159,4 +159,10 @@
     <string name="gps_ok">د موقعیت سیسټم روښانه دی ✓</string>
     <string name="gps_step_open">د موقعیت سیسټم روښانه کول</string>
     <string name="gps_step_later">وروسته</string>
+    <string name="report_type_medium_traffic">منځنی ټرافیک</string>
+    <string name="report_type_temp_block">لنډمهاله بندښت</string>
+    <string name="report_type_landslide">د غر د ډبرو ریزش</string>
+    <string name="report_type_flood">سیلاب او اوبه</string>
+    <string name="report_type_roadworks">د سړک د کارونه او ترمیم</string>
+    <string name="reports_pending_count">%1$d راپور د لیږلو په تمه</string>
 </resources>

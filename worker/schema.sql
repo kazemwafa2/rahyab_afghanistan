@@ -100,6 +100,9 @@ CREATE INDEX IF NOT EXISTS idx_equip_coord  ON road_equipment (latitude, longitu
 CREATE INDEX IF NOT EXISTS idx_equip_time   ON road_equipment (last_verified_at);
 
 -- گزارش‌های زندهٔ جاده (بخش پنجم — به سیستم گزارش‌دهی قبلی متصل است)
+-- client_uuid (بند ۱۹ سند جامع): شناسهٔ یکتای عملیات از کلاینت برای idempotency؛
+-- برای دیتابیس‌های «موجود» نیازی به اجرای دوبارهٔ این فایل نیست — Worker هنگام
+-- نخستین POST ستون و ایندکس را به‌صورت خودکار و امن (ADD COLUMN + IF NOT EXISTS) اضافه می‌کند.
 CREATE TABLE IF NOT EXISTS live_reports (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   type TEXT NOT NULL,                    -- accident / heavy_traffic / road_closed / road_damage / hazard / speed_bump / …
@@ -107,9 +110,11 @@ CREATE TABLE IF NOT EXISTS live_reports (
   lat REAL NOT NULL,
   lon REAL NOT NULL,
   device_id TEXT,
+  client_uuid TEXT,                      -- شناسهٔ یکتای عملیات (تکراری‌فرستانی ردیف دوباره نمی‌سازد)
   created_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL            -- پیش‌فرض ۲۴ ساعت
+  expires_at INTEGER NOT NULL            -- پیش‌فرض ۲۴ ساعت (انسداد/ریزش/سیلاب: ۴۸ ساعت)
 );
 
 CREATE INDEX IF NOT EXISTS idx_live_reports_time ON live_reports (expires_at);
 CREATE INDEX IF NOT EXISTS idx_live_reports_type ON live_reports (type, expires_at);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_live_reports_client_uuid ON live_reports (client_uuid) WHERE client_uuid IS NOT NULL;

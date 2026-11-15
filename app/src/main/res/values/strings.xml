@@ -159,4 +159,10 @@
     <string name="gps_ok">موقعیت مکانی روشن است ✓</string>
     <string name="gps_step_open">روشن‌کردن موقعیت مکانی</string>
     <string name="gps_step_later">بعداً</string>
+    <string name="report_type_medium_traffic">ترافیک متوسط</string>
+    <string name="report_type_temp_block">انسداد موقت سرک</string>
+    <string name="report_type_landslide">ریزش کوه و سنگ</string>
+    <string name="report_type_flood">سیلاب و آب‌گرفتگی</string>
+    <string name="report_type_roadworks">عملیات ساختمانی و تعمیرات</string>
+    <string name="reports_pending_count">%1$d گزارش در انتظار ارسال به سرور</string>
 </resources>

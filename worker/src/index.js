@@ -543,7 +543,33 @@ async function listLiveReports(env, url) {
   return json({ ok: true, reports: results || [], count: results ? results.length : 0 });
 }
 
+/**
+ * مهاجرت امن خودپرداخت — بند ۱۹ سند جامع (عملیات idempotent):
+ * ستون client_uuid برای جلوگیری از ثبت تکراری گزارش‌ها. فقط «افزودن»؛
+ * هیچ جدول یا داده‌ای حذف یا تغییر نمی‌کند.
+ *  - ALTER TABLE اگر ستون از قبل موجود باشد خطا می‌دهد؛ خطا گرفته و نادیده می‌شود
+ *    (رفتار idempotent خود مهاجرت).
+ *  - ایندکس یکتای جزئی (فقط روی ردیف‌های دارای uuid) تکراری‌شدن را در سطح دیتابیس
+ *    ناممکن می‌کند؛ INSERT OR IGNORE به‌جای ثبت تکراری پاسخ duplicate می‌دهد.
+ *  - یک‌بار در هر isolate اجرا می‌شود (schemaReady) تا هزینهٔ PRAGMA/query نداشته باشد.
+ *  - بازگشت (rollback): مستقرکردن نسخهٔ قبلی Worker؛ ستون nullable است و کد قدیمی آن را نمی‌خواند.
+ */
+let reportsSchemaReady = false;
+async function ensureReportsSchema(env) {
+  if (reportsSchemaReady) return;
+  try {
+    await env.DB.prepare('ALTER TABLE live_reports ADD COLUMN client_uuid TEXT').run();
+  } catch (e) { /* ستون از قبل موجود است — مهاجرت idempotent */ }
+  try {
+    await env.DB.prepare(
+      'CREATE UNIQUE INDEX IF NOT EXISTS idx_live_reports_client_uuid ON live_reports(client_uuid) WHERE client_uuid IS NOT NULL'
+    ).run();
+  } catch (e) { /* ایندکس از قبل موجود است */ }
+  reportsSchemaReady = true;
+}
+
 async function createLiveReport(env, request) {
+  await ensureReportsSchema(env);
   let body;
   try { body = await request.json(); } catch { return err(400, 'bad_json', 'Body must be JSON'); }
   const type = cleanStr(body.type, 40);
@@ -551,6 +577,9 @@ async function createLiveReport(env, request) {
   const lat = num(body.lat ?? body.latitude);
   const lon = num(body.lon ?? body.longitude);
   const deviceId = cleanStr(body.device_id, 64) || 'anon';
+  // شناسهٔ یکتای عملیات از سمت کلاینت — تکراری‌فرستانی (قطع‌شدن شبکه پس از پذیرش
+  // سرور) هرگز ردیف دوباره نمی‌سازد (بند ۱۹ سند جامع)
+  const clientUuid = cleanStr(body.client_uuid, 64) || null;
   if (!type || !LIVE_REPORT_TYPES.has(type)) return err(400, 'bad_type', 'Unknown report type');
   if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) {
     return err(400, 'bad_coords', 'Invalid coordinates');
@@ -558,8 +587,19 @@ async function createLiveReport(env, request) {
   if (isSensitive(note)) return err(403, 'sensitive_content', 'This note cannot be published');
   const now = Date.now();
   const hours = type === 'road_closed' || type === 'landslide' || type === 'flood' ? 48 : 24;
-  await env.DB.prepare(
-    'INSERT INTO live_reports (type, note, lat, lon, device_id, created_at, expires_at) VALUES (?,?,?,?,?,?,?)'
-  ).bind(type, note, lat, lon, deviceId, now, now + hours * 3600 * 1000).run();
+  let r;
+  let duplicated = false;
+  if (clientUuid) {
+    r = await env.DB.prepare(
+      'INSERT OR IGNORE INTO live_reports (type, note, lat, lon, device_id, client_uuid, created_at, expires_at) VALUES (?,?,?,?,?,?,?,?)'
+    ).bind(type, note, lat, lon, deviceId, clientUuid, now, now + hours * 3600 * 1000).run();
+    // changes == 0 یعنی همین client_uuid از قبل ثبت شده است — موفق و بدون تکرار
+    duplicated = !!(r.meta && r.meta.changes === 0);
+  } else {
+    r = await env.DB.prepare(
+      'INSERT INTO live_reports (type, note, lat, lon, device_id, created_at, expires_at) VALUES (?,?,?,?,?,?,?)'
+    ).bind(type, note, lat, lon, deviceId, now, now + hours * 3600 * 1000).run();
+  }
+  if (duplicated) return json({ ok: true, duplicate: true, expires_in_hours: hours }, 200);
   return json({ ok: true, expires_in_hours: hours }, 201);
 }

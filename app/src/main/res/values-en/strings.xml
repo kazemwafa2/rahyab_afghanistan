@@ -159,4 +159,10 @@
     <string name="gps_ok">Location is on ✓</string>
     <string name="gps_step_open">Turn on location</string>
     <string name="gps_step_later">Later</string>
+    <string name="report_type_medium_traffic">Medium traffic</string>
+    <string name="report_type_temp_block">Temporary road block</string>
+    <string name="report_type_landslide">Landslide</string>
+    <string name="report_type_flood">Flooding</string>
+    <string name="report_type_roadworks">Road works</string>
+    <string name="reports_pending_count">%1$d report(s) waiting to sync</string>
 </resources>

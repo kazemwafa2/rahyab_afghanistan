@@ -1254,14 +1254,45 @@ class MainActivity : AppCompatActivity() {
         else -> R.drawable.ic_turn_straight
     }
 
+    /** آیا گوشی موقعیت‌یاب (GPS/شبکه) روشن دارد؟ */
+    private fun isLocationProviderOn(): Boolean = try {
+        val lm = getSystemService(LOCATION_SERVICE) as android.location.LocationManager
+        lm.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) ||
+            lm.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER)
+    } catch (e: Exception) { true }
+
+    private var pendingNavStart = false
+
+    /**
+     * بند ۲۱ سند جامع — راهنمای فعال‌کردن GPS هنگام شروع مسیریابی:
+     * صفحهٔ رسمی اندروید باز می‌شود و پس از بازگشت (onResume) اگر روشن شده بود
+     * مسیریابی خودکار ادامه می‌یابد؛ کاربر می‌تواند بدون GPS هم ادامه دهد.
+     */
+    private fun showGpsOffDialog() {
+        AlertDialog.Builder(this)
+            .setTitle(R.string.nav_gps_off_title)
+            .setMessage(R.string.nav_gps_off_body)
+            .setPositiveButton(R.string.nav_gps_off_open) { _, _ ->
+                pendingNavStart = true
+                try { startActivity(Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)) } catch (e: Exception) {
+                    try { startActivity(Intent(android.provider.Settings.ACTION_SETTINGS)) } catch (e2: Exception) { }
+                }
+            }
+            .setNegativeButton(R.string.nav_gps_off_continue) { _, _ -> startNav(force = true) }
+            .show()
+    }
+
     private fun updateCompassLabel() {
         btnCompass.text = getString(if (northUp) R.string.north else R.string.heading)
     }
 
-    private fun startNav() {
+    private fun startNav(force: Boolean = false) {
         val dest = selected ?: return
         val r = drawnRoute ?: return
         if (!hasLocationPermission()) { permLauncher.launch(Manifest.permission.ACCESS_FINE_LOCATION); return }
+        // بند ۲۱ سند جامع: بررسی روشن‌بودن موقعیت‌یاب پیش از شروع مسیریابی؛ اگر خاموش است
+        // راهنمای رسمی فعال‌سازی نمایش داده می‌شود (ادامهٔ بدون GPS هم برای کاربر باز است)
+        if (!force && !isLocationProviderOn()) { showGpsOffDialog(); return }
         // اجازه اعلان برای اندروید ۱۳+ (اگر رد شود سرویس باز هم کار می‌کند)
         if (Build.VERSION.SDK_INT >= 33 &&
             ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
@@ -2729,7 +2760,10 @@ class MainActivity : AppCompatActivity() {
         c.addView(TextView(this).apply {
             text = getString(R.string.poi_local_count, RoadPois.localCount(this@MainActivity)) +
                 (if (RoadPois.pendingCount(this@MainActivity) > 0)
-                    "\n" + getString(R.string.poi_pending_count, RoadPois.pendingCount(this@MainActivity)) else "")
+                    "\n" + getString(R.string.poi_pending_count, RoadPois.pendingCount(this@MainActivity)) else "") +
+                // وضعیت همگام‌سازی گزارش‌ها به کاربر (بند ۱۹ سند جامع)
+                (if (ReportsModule.pendingCount(this@MainActivity) > 0)
+                    "\n" + getString(R.string.reports_pending_count, ReportsModule.pendingCount(this@MainActivity)) else "")
             setPadding(0, dp(10), 0, dp(2)); textSize = 12f; setTextColor(0xFF556677.toInt())
         })
         c.addView(TextView(this).apply {
@@ -2942,7 +2976,7 @@ class MainActivity : AppCompatActivity() {
                 if (stations.isEmpty()) { toast(R.string.radio_failed); return@post }
                 val names = stations.map {
                     (if (RadioService.isPlaying() && RadioService.nowPlaying == it.name) "▶ " else "") +
-                        it.name + " — " + it.tag
+                        it.name + " — " + radioTagLabel(it.tag)
                 }.toTypedArray()
                 AlertDialog.Builder(this)
                     .setTitle(R.string.radio)
@@ -2959,6 +2993,16 @@ class MainActivity : AppCompatActivity() {
         Toast.makeText(this, getString(R.string.radio_playing_toast, s.name), Toast.LENGTH_SHORT).show()
     }
 
+    /** برچسب بومی ژانر ایستگاه رادیو — مقدار داخلی ثابت است، فقط نمایش بومی می‌شود */
+    private fun radioTagLabel(tag: String): String = when {
+        tag.contains("پشتو") -> getString(R.string.radio_cat_pashto)
+        tag.contains("دین") -> getString(R.string.radio_cat_religion)
+        tag.contains("خبر") -> getString(R.string.radio_cat_news)
+        tag.contains("موسیقی") -> getString(R.string.radio_cat_music)
+        tag.contains("دری") -> getString(R.string.radio_cat_dari)
+        else -> tag
+    }
+
     // ---------- گزارش حوادث (بخش هشتم چک‌لیست) ----------
     private fun showReportDialog() {
         val target = selected
@@ -2967,11 +3011,16 @@ class MainActivity : AppCompatActivity() {
         showReportTypePicker(loc.first, loc.second)
     }
 
-    /** انتخاب نوع گزارش، سپس یادداشت — همه انواع واژه‌نامه دری (بخش ۵) */
+    /** انتخاب نوع گزارش، سپس یادداشت — انواع سند جامع بخش ۷ + واژه‌نامه دری (بخش ۵) */
     private fun showReportTypePicker(lat: Double, lon: Double) {
         val labels = arrayOf(
             getString(R.string.report_accident), getString(R.string.report_damage),
             getString(R.string.report_closed), getString(R.string.report_jam),
+            getString(R.string.report_traffic_normal),   // ترافیک متوسط (سند ۷)
+            getString(R.string.report_temp_block),       // انسداد موقت (سند ۷)
+            getString(R.string.report_landslide),        // ریزش کوه و سنگ (سند ۷)
+            getString(R.string.report_flood),            // سیلاب و آب‌گرفتگی (سند ۷)
+            getString(R.string.report_roadworks),        // عملیات ساختمانی (سند ۷)
             getString(R.string.report_hazard), getString(R.string.report_bump),
             getString(R.string.report_cam),
             getString(R.string.report_police), getString(R.string.report_redlight),
@@ -2989,20 +3038,25 @@ class MainActivity : AppCompatActivity() {
                     1 -> ReportsModule.TYPE_ROAD_DAMAGE
                     2 -> ReportsModule.TYPE_ROAD_CLOSED
                     3 -> ReportsModule.TYPE_HEAVY_TRAFFIC
-                    4 -> ReportsModule.TYPE_HAZARD
-                    5 -> ReportsModule.TYPE_SPEED_BUMP
-                    6 -> ReportsModule.TYPE_SPEED_CAMERA
-                    7 -> ReportsModule.TYPE_POLICE
-                    8 -> ReportsModule.TYPE_RED_LIGHT_CAMERA
-                    9 -> ReportsModule.TYPE_SLIPPERY
-                    10 -> ReportsModule.TYPE_NARROW
-                    11 -> ReportsModule.TYPE_SCHOOL_ZONE
-                    12 -> ReportsModule.TYPE_CROSSWALK
-                    13 -> ReportsModule.TYPE_RAIL_CROSSING
-                    14 -> ReportsModule.TYPE_ANIMALS
-                    15 -> ReportsModule.TYPE_BROKEN_TRAFFIC_LIGHT
-                    16 -> ReportsModule.TYPE_SPEED_LIMIT_CHANGE
-                    17 -> ReportsModule.TYPE_STEEP_DOWN
+                    4 -> ReportsModule.TYPE_MEDIUM_TRAFFIC
+                    5 -> ReportsModule.TYPE_TEMP_BLOCK
+                    6 -> ReportsModule.TYPE_LANDSLIDE
+                    7 -> ReportsModule.TYPE_FLOOD
+                    8 -> ReportsModule.TYPE_ROAD_WORKS
+                    9 -> ReportsModule.TYPE_HAZARD
+                    10 -> ReportsModule.TYPE_SPEED_BUMP
+                    11 -> ReportsModule.TYPE_SPEED_CAMERA
+                    12 -> ReportsModule.TYPE_POLICE
+                    13 -> ReportsModule.TYPE_RED_LIGHT_CAMERA
+                    14 -> ReportsModule.TYPE_SLIPPERY
+                    15 -> ReportsModule.TYPE_NARROW
+                    16 -> ReportsModule.TYPE_SCHOOL_ZONE
+                    17 -> ReportsModule.TYPE_CROSSWALK
+                    18 -> ReportsModule.TYPE_RAIL_CROSSING
+                    19 -> ReportsModule.TYPE_ANIMALS
+                    20 -> ReportsModule.TYPE_BROKEN_TRAFFIC_LIGHT
+                    21 -> ReportsModule.TYPE_SPEED_LIMIT_CHANGE
+                    22 -> ReportsModule.TYPE_STEEP_DOWN
                     else -> ReportsModule.TYPE_STEEP_UP
                 }
                 showReportNoteDialog(type, lat, lon)
@@ -3574,6 +3628,12 @@ class MainActivity : AppCompatActivity() {
 
     override fun onResume() {
         super.onResume()
+        // بند ۲۱ سند جامع: پس از بازگشت از تنظیمات اندروید، اگر کاربر موقعیت‌یاب را
+        // روشن کرده بود، مسیریابی در انتظار خودکار ادامه می‌یابد
+        if (pendingNavStart) {
+            pendingNavStart = false
+            if (isLocationProviderOn() && selected != null && drawnRoute != null) startNav()
+        }
         mapView.onResume()
         // بازگشت از صفحه مجوز: اگر اجازه داده شده، موقعیت فعال شود
         if (hasLocationPermission() && style != null) enableLocation()

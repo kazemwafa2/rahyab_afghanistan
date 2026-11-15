@@ -22,8 +22,8 @@ import org.json.JSONObject
  *  - اعتبارسنجی: نوع باید معتبر و یادداشت کوتاه‌تر از ۳۰۰ نویسه باشد.
  *  - حفاظت اطلاعات حساس: هر یادداشتی دربارهٔ ایست بازرسی/نیروهای امنیتی باشد
  *    فقط روی همین گوشی می‌ماند و هرگز به سرور ارسال نمی‌شود.
- *  - مهاجرت دیتابیس نسخهٔ ۱→۲: فقط «افزودن» جدول‌های جدید؛ هیچ جدول یا دادهٔ
- *    موجودی حذف، بازسازی یا تغییر نمی‌کند.
+ *  - مهاجرت دیتابیس نسخهٔ ۱→۳: فقط «افزودن» جدول/ستون جدید؛ هیچ جدول یا دادهٔ
+ *    موجودی حذف، بازسازی یا تغییر نمی‌کند (قانون ۹ سند جامع).
  */
 object ReportsModule {
 
@@ -48,6 +48,13 @@ object ReportsModule {
     const val TYPE_SPEED_LIMIT_CHANGE = "speed_limit_change"
     const val TYPE_STEEP_DOWN = "steep_down"
     const val TYPE_STEEP_UP = "steep_up"
+    /** انواع گزارش سند جامع بخش ۷ — Worker زنده هر پنج را می‌پذیرد (LIVE_REPORT_TYPES) */
+    const val TYPE_MEDIUM_TRAFFIC = "medium_traffic"   // ترافیک متوسط (سند بخش ۷: «ترافیک»)
+    const val TYPE_TEMP_BLOCK = "temporary_restriction" // انسداد موقت
+    const val TYPE_LANDSLIDE = "landslide"              // ریزش کوه و سنگ
+    const val TYPE_FLOOD = "flood"                      // سیلاب و آب‌گرفتگی
+    const val TYPE_ROAD_WORKS = "road_works"            // عملیات ساختمانی و تعمیرات
+
     /** هشدارهای مکان‌های ثابت ضمیمهٔ ۱ — عوارض، مرز، پل، تونل، چراغ */
     const val TYPE_TOLL = "toll"
     const val TYPE_BORDER = "border"
@@ -68,8 +75,15 @@ object ReportsModule {
         TYPE_ACCIDENT, TYPE_ROAD_DAMAGE, TYPE_ROAD_CLOSED, TYPE_HEAVY_TRAFFIC, TYPE_HAZARD,
         TYPE_SPEED_BUMP, TYPE_SPEED_CAMERA, TYPE_POLICE, TYPE_RED_LIGHT_CAMERA, TYPE_SLIPPERY,
         TYPE_NARROW, TYPE_SCHOOL_ZONE, TYPE_CROSSWALK, TYPE_RAIL_CROSSING, TYPE_ANIMALS,
-        TYPE_BROKEN_TRAFFIC_LIGHT, TYPE_SPEED_LIMIT_CHANGE, TYPE_STEEP_DOWN, TYPE_STEEP_UP
+        TYPE_BROKEN_TRAFFIC_LIGHT, TYPE_SPEED_LIMIT_CHANGE, TYPE_STEEP_DOWN, TYPE_STEEP_UP,
+        TYPE_MEDIUM_TRAFFIC, TYPE_TEMP_BLOCK, TYPE_LANDSLIDE, TYPE_FLOOD, TYPE_ROAD_WORKS
     )
+
+    /** عمر سروری انواع انسدادی/طبیعی — سرور برای این سه ۴۸ ساعت اعتبار می‌دهد (worker/src/index.js) */
+    val SERVER_48H_TYPES = setOf(TYPE_ROAD_CLOSED, TYPE_LANDSLIDE, TYPE_FLOOD)
+
+    /** سقف تلاش برای ارسال هر گزارش صف‌شده؛ پس از آن گزارش در صف می‌ماند اما دیگر تلاش نمی‌شود */
+    const val MAX_SEND_TRIES = 10
 
     /** واژه‌های ممنوع برای انتشار — حفاظت نیروهای امنیتی و ایست‌های بازرسی */
     val SENSITIVE_PATTERNS = listOf(
@@ -112,6 +126,11 @@ object ReportsModule {
             TYPE_TUNNEL -> ctx.getString(R.string.report_type_tunnel)
             TYPE_TRAFFIC_LIGHT -> ctx.getString(R.string.report_type_traffic_light)
             TYPE_SURVEILLANCE -> ctx.getString(R.string.report_type_surveillance)
+            TYPE_MEDIUM_TRAFFIC -> ctx.getString(R.string.report_type_medium_traffic)
+            TYPE_TEMP_BLOCK -> ctx.getString(R.string.report_type_temp_block)
+            TYPE_LANDSLIDE -> ctx.getString(R.string.report_type_landslide)
+            TYPE_FLOOD -> ctx.getString(R.string.report_type_flood)
+            TYPE_ROAD_WORKS -> ctx.getString(R.string.report_type_roadworks)
             else -> ctx.getString(R.string.report_type_hazard)
         }
 
@@ -142,6 +161,11 @@ object ReportsModule {
                 TYPE_TUNNEL -> "تونل در پیش رو"
                 TYPE_TRAFFIC_LIGHT -> "چراغ ترافیکی"
                 TYPE_SURVEILLANCE -> "کمره نظارتی"
+                TYPE_MEDIUM_TRAFFIC -> "ترافیک متوسط"
+                TYPE_TEMP_BLOCK -> "انسداد موقت"
+                TYPE_LANDSLIDE -> "ریزش کوه و سنگ"
+                TYPE_FLOOD -> "سیلاب و آب‌گرفتگی"
+                TYPE_ROAD_WORKS -> "عملیات ساختمانی"
                 else -> "خطر جاده‌ای"
             }
 
@@ -161,26 +185,47 @@ object ReportsModule {
             TYPE_TUNNEL -> "#455A64"
             TYPE_TRAFFIC_LIGHT -> "#E0342C"
             TYPE_SURVEILLANCE -> "#7E57C2"
+            TYPE_MEDIUM_TRAFFIC -> "#F5A623"
+            TYPE_TEMP_BLOCK -> "#E0342C"
+            TYPE_LANDSLIDE -> "#8D6E63"
+            TYPE_FLOOD -> "#0288D1"
+            TYPE_ROAD_WORKS -> "#FB8C00"
             else -> "#F5A623"
         }
     }
 
     /**
-     * نسخهٔ ۲: افزودن صف ارسال (pending_reports) و کش گزارش‌های سرور
-     * (remote_reports). مهاجرت امن — فقط CREATE TABLE IF NOT EXISTS؛
-     * هیچ داده یا جدول موجودی تغییر نمی‌کند.
+     * مهاجرت‌های امن — هرگز جدول یا دادهٔ موجود حذف/بازسازی نمی‌شود:
+     *  - نسخهٔ ۲: افزودن صف ارسال (pending_reports) و کش گزارش‌های سرور (remote_reports)
+     *    با CREATE TABLE IF NOT EXISTS.
+     *  - نسخهٔ ۳: افزودن ستون client_uuid به صف — شناسهٔ یکتای هر عملیات برای
+     *    جلوگیری از ثبت تکراری گزارش در سرور (بند ۱۹ سند جامع؛ عملیات idempotent).
+     *    فقط ADD COLUMN + پرکردن ردیف‌های قدیمی با UUID تصادفی؛ داده‌ها دست‌نخورده می‌مانند.
+     *    بازگشت (rollback): ستون nullable است؛ نسخهٔ قبلی برنامه آن را نادیده می‌گیرد.
      */
-    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, "reports.db", null, 2) {
+    private class Db(ctx: Context) : SQLiteOpenHelper(ctx, "reports.db", null, 3) {
         override fun onCreate(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS reports(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, note TEXT, lat REAL NOT NULL, lon REAL NOT NULL, ts INTEGER NOT NULL)")
             createV2(db)
+            createV3(db)
         }
         override fun onUpgrade(db: SQLiteDatabase, oldVersion: Int, newVersion: Int) {
             if (oldVersion < 2) createV2(db)
+            if (oldVersion < 3) createV3(db)
         }
         private fun createV2(db: SQLiteDatabase) {
             db.execSQL("CREATE TABLE IF NOT EXISTS pending_reports(id INTEGER PRIMARY KEY AUTOINCREMENT, type TEXT NOT NULL, note TEXT, lat REAL NOT NULL, lon REAL NOT NULL, ts INTEGER NOT NULL, tries INTEGER NOT NULL DEFAULT 0)")
             db.execSQL("CREATE TABLE IF NOT EXISTS remote_reports(sid INTEGER PRIMARY KEY, type TEXT NOT NULL, note TEXT, lat REAL NOT NULL, lon REAL NOT NULL, created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL)")
+        }
+        private fun createV3(db: SQLiteDatabase) {
+            // اگر ستون از قبل موجود باشد (نصب پیشین نسخهٔ ۳) خطای SQLite گرفته و نادیده می‌شود
+            try {
+                db.execSQL("ALTER TABLE pending_reports ADD COLUMN client_uuid TEXT")
+            } catch (e: Exception) { }
+            // ردیف‌های قدیمی (بدون شناسه) یک UUID پایدار می‌گیرند تا دوباره‌فرستانی هم تکراری نسازد
+            try {
+                db.execSQL("UPDATE pending_reports SET client_uuid = lower(hex(randomblob(16))) WHERE client_uuid IS NULL")
+            } catch (e: Exception) { }
         }
     }
 
@@ -202,7 +247,8 @@ object ReportsModule {
         TYPE_POLICE, TYPE_RED_LIGHT_CAMERA, TYPE_SLIPPERY, TYPE_NARROW, TYPE_SCHOOL_ZONE,
         TYPE_CROSSWALK, TYPE_RAIL_CROSSING, TYPE_ANIMALS, TYPE_BROKEN_TRAFFIC_LIGHT,
         TYPE_SPEED_LIMIT_CHANGE, TYPE_STEEP_DOWN, TYPE_STEEP_UP,
-        TYPE_TOLL, TYPE_BORDER, TYPE_BRIDGE, TYPE_TUNNEL, TYPE_TRAFFIC_LIGHT, TYPE_SURVEILLANCE
+        TYPE_TOLL, TYPE_BORDER, TYPE_BRIDGE, TYPE_TUNNEL, TYPE_TRAFFIC_LIGHT, TYPE_SURVEILLANCE,
+        TYPE_MEDIUM_TRAFFIC, TYPE_TEMP_BLOCK, TYPE_LANDSLIDE, TYPE_FLOOD, TYPE_ROAD_WORKS
     )
 
     /** آیا متن شامل اطلاعات حساس امنیتی است؟ (چنین گزارشی فقط محلی ذخیره می‌شود) */
@@ -223,7 +269,12 @@ object ReportsModule {
         val id = getDb(ctx).writableDatabase.insert("reports", null, cv)
         // ارسال به سیستم گزارش زندهٔ سراسری — گزارش حساس هرگز از گوشی خارج نمی‌شود
         if (type in SERVER_TYPES && !isSensitive(note) && RoadPois.serverConfigured(ctx)) {
-            try { getDb(ctx).writableDatabase.insert("pending_reports", null, cv) } catch (e: Exception) { }
+            try {
+                getDb(ctx).writableDatabase.insert("pending_reports", null, ContentValues().apply {
+                    put("type", type); put("note", note); put("lat", lat); put("lon", lon); put("ts", ts)
+                    put("client_uuid", java.util.UUID.randomUUID().toString()) // شناسهٔ یکتای عملیات (بند ۱۹)
+                })
+            } catch (e: Exception) { }
             syncNow(ctx)
         }
         return id
@@ -260,7 +311,9 @@ object ReportsModule {
                     val note = c.getString(2) ?: ""
                     val lat = c.getDouble(3); val lon = c.getDouble(4); val ts = c.getLong(5)
                     if (!lat.isFinite() || !lon.isFinite()) continue
-                    if (now - ts > EXPIRY_MS) continue
+                    // انقضا با «expires_at» سرور حاکم است؛ برای انواع انسدادی/طبیعی
+                    // سرور ۴۸ ساعت اعتبار می‌دهد و فیلتر ثابت ۲۴ ساعتهٔ محلی آن‌ها را نمی‌کُشد
+                    if (type in SERVER_48H_TYPES && now - ts > 2 * EXPIRY_MS) continue
                     if (nearLat != null && nearLon != null) {
                         val d = Geo.dist(nearLat, nearLon, lat, lon) / 1000.0
                         if (d > maxKm) continue
@@ -288,6 +341,15 @@ object ReportsModule {
         try { net.execute { try { flushPending(app); refreshRemote(app) } catch (e: Exception) { } } } catch (e: Exception) { }
     }
 
+    /**
+     * همگام‌سازی روی نخِ فراخواننده — فقط برای ReportsSyncWorker (WorkManager)
+     * که خودش روی نخ پس‌زمینه اجرا می‌شود (بند ۱۹ سند جامع).
+     */
+    fun syncBlocking(ctx: Context) {
+        val app = ctx.applicationContext
+        try { flushPending(app); refreshRemote(app) } catch (e: Exception) { }
+    }
+
     /** تعداد گزارش‌های در انتظار ارسال (برای نمایش وضعیت در تنظیمات) */
     fun pendingCount(ctx: Context): Int = try {
         getDb(ctx).readableDatabase.rawQuery("SELECT COUNT(*) FROM pending_reports", null).use { c ->
@@ -307,8 +369,17 @@ object ReportsModule {
         val db = try { getDb(ctx).writableDatabase } catch (e: Exception) { return }
         val rows = ArrayList<Array<Any>>() // [id: Long, payload: JSONObject, ts: Long]
         try {
-            db.rawQuery("SELECT id, type, note, lat, lon, ts FROM pending_reports ORDER BY ts ASC LIMIT 80", null).use { c ->
+            // سقف تلاش: ردیف‌های بیش از MAX_SEND_TRIES بار کوشیده موقتاً کنار گذاشته
+            // می‌شوند تا یک خطای دائمی، کل صف را بلوکه نکند (داده در جدول reports محفوظ است)
+            db.rawQuery("SELECT id, type, note, lat, lon, ts, client_uuid FROM pending_reports WHERE tries < ? ORDER BY ts ASC LIMIT 80", arrayOf(MAX_SEND_TRIES.toString())).use { c ->
                 while (c.moveToNext()) {
+                    // ردیف‌های قدیمیِ بدون شناسه: تولید و ثبت پایدار UUID پیش از ارسال —
+                    // در تلاش‌های بعدی همین UUID دوباره فرستاده می‌شود (idempotent)
+                    var uuid = if (c.isNull(6)) null else c.getString(6)
+                    if (uuid == null || uuid.length < 8) {
+                        uuid = java.util.UUID.randomUUID().toString()
+                        try { db.execSQL("UPDATE pending_reports SET client_uuid=? WHERE id=?", arrayOf(uuid, c.getLong(0).toString())) } catch (e: Exception) { }
+                    }
                     rows.add(arrayOf(
                         c.getLong(0),
                         JSONObject()
@@ -316,7 +387,8 @@ object ReportsModule {
                             .put("note", c.getString(2) ?: "")
                             .put("lat", c.getDouble(3))
                             .put("lon", c.getDouble(4))
-                            .put("device_id", device),
+                            .put("device_id", device)
+                            .put("client_uuid", uuid),
                         c.getLong(5)
                     ))
                 }
@@ -333,7 +405,10 @@ object ReportsModule {
             }
             try {
                 val body = Http.postJson("$base/api/v1/reports", payload.toString(), readTimeoutMs = 10000)
-                if (JSONObject(body).optBoolean("ok", false)) {
+                val o = JSONObject(body)
+                // ok=true حتی وقتی duplicate=true — یعنی سرور پیش‌تر همین گزارش را با همین
+                // شناسهٔ یکتا پذیرفته است؛ عملیات موفق است و از صف حذف می‌شود (بند ۱۹)
+                if (o.optBoolean("ok", false)) {
                     db.delete("pending_reports", "id=?", arrayOf(id.toString()))
                 } else {
                     bumpTries(db, id)

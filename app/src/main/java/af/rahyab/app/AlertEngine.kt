@@ -89,6 +89,14 @@ object AlertEngine {
         ReportsModule.TYPE_TUNNEL -> "alert_tunnel"
         ReportsModule.TYPE_TRAFFIC_LIGHT -> "alert_trafficlight"
         ReportsModule.TYPE_SURVEILLANCE -> "alert_cam"
+        // انواع سند جامع بخش ۷ — با کلیپ‌های موجود نگاشت می‌شوند؛ صدای تازه لازم نیست:
+        // ترافیک متوسط ← صدای ترافیک، انسداد موقت ← صدای انسداد،
+        // ریزش کوه/سیلاب/عملیات ← صدای «خطر جاده‌ای»
+        ReportsModule.TYPE_MEDIUM_TRAFFIC -> "alert_traffic"
+        ReportsModule.TYPE_TEMP_BLOCK -> "alert_closed"
+        ReportsModule.TYPE_LANDSLIDE -> "alert_hazard"
+        ReportsModule.TYPE_FLOOD -> "alert_hazard"
+        ReportsModule.TYPE_ROAD_WORKS -> "alert_hazard"
         else -> null
     }
 
@@ -117,6 +125,12 @@ object AlertEngine {
         ReportsModule.TYPE_TUNNEL -> c.tunnel
         ReportsModule.TYPE_TRAFFIC_LIGHT -> c.trafficLight
         ReportsModule.TYPE_SURVEILLANCE -> c.cam
+        // انواع سند جامع بخش ۷ — از تنظیمات همان خانوادهٔ هشدار استفاده می‌کنند
+        ReportsModule.TYPE_MEDIUM_TRAFFIC -> c.traffic
+        ReportsModule.TYPE_TEMP_BLOCK -> c.closed
+        ReportsModule.TYPE_LANDSLIDE -> c.hazard
+        ReportsModule.TYPE_FLOOD -> c.hazard
+        ReportsModule.TYPE_ROAD_WORKS -> c.hazard
         else -> false
     }
 

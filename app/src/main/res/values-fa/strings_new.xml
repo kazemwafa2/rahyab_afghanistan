@@ -89,4 +89,16 @@
     <string name="show_place">نمایش این نقطه</string>
     <string name="check_update">بررسی به‌روزرسانی</string>
     <string name="save_ok">ذخیره</string>
+    <string name="report_traffic_normal">ترافیک متوسط</string>
+    <string name="report_temp_block">انسداد موقت جاده</string>
+    <string name="report_landslide">ریزش کوه و سنگ</string>
+    <string name="report_flood">سیلاب و آب‌گرفتگی</string>
+    <string name="report_roadworks">عملیات ساختمانی</string>
+    <string name="radio_cat_religion">دین و قرآن</string>
+    <string name="radio_cat_news">خبر</string>
+    <string name="radio_cat_music">موسیقی</string>
+    <string name="nav_gps_off_title">موقعیت‌یاب خاموش است</string>
+    <string name="nav_gps_off_body">برای مسیریابی دقیق و هشدارهای جاده‌ای، روشن بودن موقعیت‌یاب (GPS) گوشی لازم است. آیا موقعیت‌یاب روشن شود؟</string>
+    <string name="nav_gps_off_open">روشن کردن موقعیت‌یاب</string>
+    <string name="nav_gps_off_continue">ادامه بدون GPS</string>
 </resources>

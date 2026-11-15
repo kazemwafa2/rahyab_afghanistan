@@ -89,4 +89,16 @@
     <string name="show_place">دا ټکی ښودل</string>
     <string name="check_update">د تازه کولو کتنه</string>
     <string name="save_ok">خوندي</string>
+    <string name="report_traffic_normal">منځنی ټرافیک</string>
+    <string name="report_temp_block">لنډمهاله بندښت</string>
+    <string name="report_landslide">د غر د ډبرو ریزش</string>
+    <string name="report_flood">سیلاب او اوبه</string>
+    <string name="report_roadworks">د سړک کارونه</string>
+    <string name="radio_cat_religion">دین او قرآن</string>
+    <string name="radio_cat_news">خبرونه</string>
+    <string name="radio_cat_music">موسیقي</string>
+    <string name="nav_gps_off_title">موقعیت‌یاب بند دی</string>
+    <string name="nav_gps_off_body">د سمې لارښودنې او د سړک خبرتیاوو لپاره د تلیفون موقعیت‌یاب (GPS) روشنېدل ضروري دي. ایا موقعیت‌یاب روشن شي؟</string>
+    <string name="nav_gps_off_open">موقعیت‌یاب روشن کړه</string>
+    <string name="nav_gps_off_continue">د GPS پرته دوام</string>
 </resources>
