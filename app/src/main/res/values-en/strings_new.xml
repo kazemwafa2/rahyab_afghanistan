@@ -98,7 +98,7 @@
     <string name="radio_cat_news">News</string>
     <string name="radio_cat_music">Music</string>
     <string name="nav_gps_off_title">Location is off</string>
-    <string name="nav_gps_off_body">Accurate navigation and road alerts need your phone's location (GPS) to be on. Turn location on?</string>
+    <string name="nav_gps_off_body">Accurate navigation and road alerts need your phone\'s location (GPS) to be on. Turn location on?</string>
     <string name="nav_gps_off_open">Turn on location</string>
     <string name="nav_gps_off_continue">Continue without GPS</string>
 
