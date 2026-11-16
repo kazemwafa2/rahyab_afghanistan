@@ -744,7 +744,11 @@ def main():
     bbox = tuple(float(x) for x in args.bbox.split(","))
     assert len(bbox) == 4 and bbox[0] < bbox[2] and bbox[1] < bbox[3], "bbox نامعتبر: W,S,E,N"
 
-    data_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    data_date = os.environ.get("RAHYAB_DATA_DATE") or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    try:
+        datetime.strptime(data_date, "%Y-%m-%d")
+    except ValueError:
+        raise SystemExit(f"تاریخ داده نامعتبر است: {data_date}")
     os.makedirs(args.out, exist_ok=True)
     pkg_dir = os.path.join(args.work, f"pkg_{args.name}")
     os.makedirs(pkg_dir, exist_ok=True)
