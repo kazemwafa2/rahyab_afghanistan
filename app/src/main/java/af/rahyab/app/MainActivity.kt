@@ -99,6 +99,10 @@ class MainActivity : AppCompatActivity() {
     private var followUser = true
     /** آخرین زمان لمس نقشه هنگام ناوبری — پس از ۵ ثانیه دنبال‌کردن دوباره آغاز می‌شود */
     @Volatile private var navPanMs = 0L
+    /** آخرین حرکت دستی نقشه در پیش‌نمایش مسیر — پس از ۸ ثانیه دوربین به کل مسیر برمی‌گردد */
+    @Volatile private var lastRouteGestureMs = 0L
+    private var navRecenterPending = false
+    private var routeReturnPending = false
     private var offlineStyleActive = false
     /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
     @Volatile private var netReallyDown = false
@@ -130,6 +134,12 @@ class MainActivity : AppCompatActivity() {
     private lateinit var chipsRow: ViewGroup
     private lateinit var recentsList: ViewGroup
     private lateinit var tvRecentsTitle: TextView
+    private lateinit var sheetToggle: ImageView
+    private lateinit var sheetClose: ImageView
+    private lateinit var historyBlock: View
+    private lateinit var historyList: ViewGroup
+    private lateinit var btnHistoryClear: View
+    private var searchFocused = false
     private lateinit var bubbleLayer: FrameLayout
     private lateinit var bottomNav: BottomNavigationView
     private lateinit var fabColumn: View
@@ -185,9 +195,6 @@ class MainActivity : AppCompatActivity() {
     private enum class Pick { NONE, ORIGIN, DEST }
     private var pick = Pick.NONE
     private var originPlace: Place? = null   // null = موقعیت فعلی
-    // برگهٔ خانه (نوار جست‌وجو) به‌صورت جمع‌شده نمایش داده می‌شود تا نقشه را اشغال نکند
-    // (گزارش کارفرما)؛ با لمس دستگیره یا تمرکز روی کادر جست‌وجو باز می‌شود.
-    private var sheetExpanded = false
     private var northUp = false
 
     // زبانه‌های موتورسکل و بایسکل (بخش هفتم چک‌لیست)
@@ -299,6 +306,8 @@ class MainActivity : AppCompatActivity() {
         setContentView(R.layout.activity_main)
 
         prefs = getSharedPreferences("settings", Context.MODE_PRIVATE)
+        // مهاجرت پالت: یک بار رنگ‌های قدیمی پاک می‌شوند تا پالت رسمی جدید پیش‌فرض شود
+        MapTheme.ensurePaletteVersion(prefs)
         store = PlacesStore(this)
 
         // خوش‌آمد فقط در نخستین اجرا
@@ -321,6 +330,14 @@ class MainActivity : AppCompatActivity() {
         chipsRow = findViewById(R.id.chipsRow)
         recentsList = findViewById(R.id.recentsList)
         tvRecentsTitle = findViewById(R.id.tvRecentsTitle)
+        sheetToggle = findViewById(R.id.btnSheetToggle)
+        sheetClose = findViewById(R.id.btnSheetClose)
+        historyBlock = findViewById(R.id.historyBlock)
+        historyList = findViewById(R.id.historyList)
+        btnHistoryClear = findViewById(R.id.btnHistoryClear)
+        sheetToggle.setOnClickListener { toggleSheetExpanded() }
+        sheetClose.setOnClickListener { closeHomeSheet() }
+        btnHistoryClear.setOnClickListener { confirmClearHistory() }
         bubbleLayer = findViewById(R.id.bubbleLayer)
         bottomNav = findViewById(R.id.bottomNav)
         fabColumn = findViewById(R.id.fabColumn)
@@ -437,6 +454,14 @@ class MainActivity : AppCompatActivity() {
                     // نرم روی مسیر برمی‌گردد (هماهنگی دوربین با مسیر — درخواست کاربر)
                     if (NavigationController.navigating || NavigationController.freeMode) {
                         navPanMs = System.currentTimeMillis()
+                        // حتی بدون قرائت GPS هم بازگشت زمان‌بندی می‌شود (بند درخواست کاربر)
+                        scheduleNavRecenter()
+                    }
+                    // پیش‌نمایش مسیر: اگر کاربر زوم‌اوت کند تا همهٔ مسیرها را ببیند،
+                    // چند لحظه بعد دوربین نرم به کل مسیر با مبدأ برمی‌گردد
+                    if (mode == Mode.ROUTE && altRoutes.isNotEmpty()) {
+                        lastRouteGestureMs = System.currentTimeMillis()
+                        scheduleRoutePreviewReturn()
                     }
                 }
             }
@@ -457,28 +482,19 @@ class MainActivity : AppCompatActivity() {
         etSearch.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_SEARCH) { doSearch(); true } else false
         }
+        etSearch.setOnFocusChangeListener { _, hasFocus ->
+            searchFocused = hasFocus
+            if (hasFocus && !sheetExpanded()) {
+                // با تمرکز روی جست‌وجو، برگه باز می‌شود تا تاریخچه دیده شود
+                prefs.edit().putBoolean("home_sheet_expanded", true).apply()
+            }
+            applySheetState()
+        }
         lvResults.setOnItemClickListener { _, _, pos, _ -> select(results[pos]) }
         findViewById<View>(R.id.ivMic).setOnClickListener { startVoiceSearch() }
         findViewById<View>(R.id.btnProfile).setOnClickListener { showSettings() }
         findViewById<View>(R.id.fabLocation).setOnClickListener { onMyLocation() }
         fabRoute.setOnClickListener { onPlanRoute() }
-        // دکمهٔ شناور جست‌وجو: خروج از رانندگی آزاد یا بازگشت به برگهٔ خانه (نوار جست‌وجو)
-        findViewById<View>(R.id.fabSearch).setOnClickListener {
-            if (NavigationController.freeMode) endFreeDriving() else clearAll()
-        }
-        // برگهٔ جمع‌شدهٔ جست‌وجو: با لمس دستگیره باز و بسته می‌شود
-        findViewById<View>(R.id.sheetHandle).setOnClickListener {
-            sheetExpanded = !sheetExpanded
-            applySheetState()
-        }
-        // با لمس کادر جست‌وجو، دسته‌ها و تاریخچه خودکار باز می‌شوند
-        etSearch.setOnFocusChangeListener { _, hasFocus ->
-            if (hasFocus && !sheetExpanded) {
-                sheetExpanded = true
-                applySheetState()
-            }
-        }
-        applySheetState()
         findViewById<View>(R.id.fabLayers).setOnClickListener { showMapModeDialog() }
         btnRouteSettings.setOnClickListener { showMapModeDialog() }
         findViewById<View>(R.id.btnRoute).setOnClickListener { requestRoute(navProfile) }
@@ -506,7 +522,14 @@ class MainActivity : AppCompatActivity() {
 
         bottomNav.setOnItemSelectedListener { item ->
             when (item.itemId) {
-                R.id.tab_map -> { hideKeyboard(); resultsCard.visibility = View.GONE; true }
+                R.id.tab_map -> {
+                    hideKeyboard(); resultsCard.visibility = View.GONE
+                    // برگهٔ نقشه برگهٔ جست‌وجوی بسته‌شده را دوباره باز می‌کند (نسخهٔ ۱.۱.۱)
+                    if (prefs.getBoolean("home_sheet_closed", false)) {
+                        prefs.edit().putBoolean("home_sheet_closed", false).apply()
+                    }
+                    true
+                }
                 R.id.tab_free -> { startFreeDriving(); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
                 R.id.tab_saved -> { showPlaces(); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
                 R.id.tab_packs -> { startActivity(Intent(this, MapPackagesActivity::class.java)); bottomNav.post { bottomNav.selectedItemId = R.id.tab_map }; true }
@@ -681,15 +704,12 @@ class MainActivity : AppCompatActivity() {
                         if (routeSourceOffline) showSource(getString(R.string.route_offline_active))
                         else showSource(getString(R.string.source_online))
                         val ordered = if (prefs.getBoolean("r_avoid_traffic", false)) reorderLowTraffic(list) else list
-                        altRoutes = ordered
+                        altRoutes = orderMainAndNearest(ordered)
                         selectedRouteIdx = 0
                         setMode(Mode.ROUTE)
                         drawAllRoutes()
                         rebuildBubbles()
-                        // گزارش کارفرما: با انتخاب مسیر، نشانگر و دوربین باید روی «مبدأ»
-                        // بیاید نه وسط مسیر — نشانگر پیش‌فرض مبدأ هم ترسیم می‌شود
-                        drawOriginMarker()
-                        focusOrigin()
+                        fitRoutes()
                         updateRouteInfo()
                         if (deepLinkReturn) {
                             val best = list[0]
@@ -747,165 +767,169 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** مدیریت تاریخچهٔ جست‌وجو در برگه خانه: حذف تکی، پاک کردن همه، نمایش همه */
+    /** سه مکان اخیر در برگه خانه */
     private fun refreshRecents() {
         recentsList.removeAllViews()
-        val list = store.recents()
-        if (list.isEmpty()) {
-            tvRecentsTitle.visibility = View.GONE
-            applySheetState()
+        val list = store.recents().take(3)
+        tvRecentsTitle.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
+        for (p in list) {
+            val row = LinearLayout(this)
+            row.orientation = LinearLayout.HORIZONTAL
+            row.gravity = android.view.Gravity.CENTER_VERTICAL
+            row.setPadding(0, dp(10), 0, dp(10))
+            val icon = ImageView(this)
+            icon.setImageResource(R.drawable.ic_history)
+            ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.parseColor("#7D8CA3")))
+            icon.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+            val name = TextView(this)
+            name.text = p.name
+            name.maxLines = 1
+            name.ellipsize = android.text.TextUtils.TruncateAt.END
+            name.textSize = 14f
+            name.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+            name.setTextColor(Color.parseColor("#1B2735"))
+            name.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                .apply { marginStart = dp(12) }
+            row.addView(icon)
+            row.addView(name)
+            row.setOnClickListener { select(p) }
+            recentsList.addView(row)
+        }
+    }
+
+    // ---------- تاریخچهٔ جست‌وجو (نسخهٔ ۱.۱.۱ — چک‌لیست بخش ۹) ----------
+    private fun searchHistory(): MutableList<String> {
+        return try {
+            val arr = org.json.JSONArray(prefs.getString("search_history", "[]"))
+            (0 until arr.length()).mapNotNull { arr.optString(it).takeIf { q -> q.isNotBlank() } }
+                .toMutableList()
+        } catch (_: Exception) { mutableListOf() }
+    }
+
+    private fun saveSearchHistory(list: List<String>) {
+        val arr = org.json.JSONArray()
+        for (q in list.take(12)) arr.put(q)
+        prefs.edit().putString("search_history", arr.toString()).apply()
+    }
+
+    private fun addSearchHistory(q: String) {
+        val cur = searchHistory().filterNot { it.equals(q, ignoreCase = true) }.toMutableList()
+        cur.add(0, q)
+        saveSearchHistory(cur)
+    }
+
+    private fun deleteSearchHistoryAt(i: Int) {
+        val cur = searchHistory()
+        if (i in cur.indices) {
+            cur.removeAt(i)
+            saveSearchHistory(cur)
+            refreshHistory()
+        }
+    }
+
+    private fun confirmClearHistory() {
+        androidx.appcompat.app.AlertDialog.Builder(this)
+            .setTitle(R.string.search_history_clear)
+            .setMessage(R.string.search_history_confirm)
+            .setPositiveButton(R.string.delete) { _, _ ->
+                saveSearchHistory(emptyList())
+                refreshHistory()
+                Toast.makeText(this, R.string.search_history_cleared, Toast.LENGTH_SHORT).show()
+            }
+            .setNegativeButton(R.string.close, null)
+            .show()
+    }
+
+    /** تاریخچه فقط وقتی نمایش داده می‌شود که کادر جست‌وجو متمرکز و برگهٔ خانه باز باشد */
+    private fun refreshHistory() {
+        if (!::historyBlock.isInitialized) return
+        val show = searchFocused && mode == Mode.HOME && homeSheet.visibility == View.VISIBLE && sheetExpanded()
+        if (!show) {
+            historyBlock.visibility = View.GONE
             return
         }
-        tvRecentsTitle.visibility = View.VISIBLE
-        tvRecentsTitle.text = getString(R.string.recents_title)
-
-        // ردیف عنوان: «پاک کردن همه» + «همهٔ تاریخچه» در سمت مقابل عنوان
-        val headRow = LinearLayout(this)
-        headRow.orientation = LinearLayout.HORIZONTAL
-        headRow.gravity = android.view.Gravity.CENTER_VERTICAL
-        headRow.setPadding(0, 0, 0, dp(2))
-        val headParams = LinearLayout.LayoutParams(
-            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-        headRow.layoutParams = headParams
-
-        val spacer = View(this)
-        spacer.layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
-
-        fun headAction(text: String, color: String, action: () -> Unit): TextView {
-            val t = TextView(this)
-            t.text = text
-            t.textSize = 12f
-            t.setTextColor(Color.parseColor(color))
-            t.setPadding(dp(10), dp(4), dp(10), dp(4))
-            t.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_ghost)
-            t.setOnClickListener { action() }
-            return t
-        }
-
-        headRow.addView(spacer)
-        headRow.addView(headAction(getString(R.string.recents_show_all), "#2E6DB4") { showHistoryDialog() })
-        headRow.addView(headAction(getString(R.string.recents_clear_all), "#D32F2F") {
-            AlertDialog.Builder(this)
-                .setTitle(R.string.recents_clear_all)
-                .setMessage(R.string.recents_clear_confirm)
-                .setPositiveButton(R.string.clear) { _, _ ->
-                    store.clearRecents()
-                    refreshRecents()
-                    toast(R.string.recents_cleared)
+        val items = searchHistory()
+        historyList.removeAllViews()
+        if (items.isEmpty()) {
+            btnHistoryClear.visibility = View.GONE
+            historyList.addView(TextView(this).apply {
+                text = getString(R.string.search_history_empty)
+                textSize = 13f
+                setTextColor(Color.parseColor("#7C879A"))
+                setPadding(0, dp(10), 0, dp(6))
+                textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+            })
+        } else {
+            btnHistoryClear.visibility = View.VISIBLE
+            items.forEachIndexed { i, q ->
+                val row = LinearLayout(this)
+                row.orientation = LinearLayout.HORIZONTAL
+                row.gravity = android.view.Gravity.CENTER_VERTICAL
+                row.setPadding(0, dp(10), 0, dp(10))
+                val icon = ImageView(this)
+                icon.setImageResource(R.drawable.ic_history)
+                ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.parseColor("#7D8CA3")))
+                icon.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+                val name = TextView(this).apply {
+                    text = q
+                    maxLines = 1
+                    ellipsize = android.text.TextUtils.TruncateAt.END
+                    textSize = 14f
+                    setTextColor(Color.parseColor("#1B2735"))
+                    textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+                    layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                        .apply { marginStart = dp(12) }
                 }
-                .setNegativeButton(R.string.close, null)
-                .show()
-        })
-
-        val headWrap = LinearLayout(this)
-        headWrap.orientation = LinearLayout.VERTICAL
-        headWrap.addView(headRow)
-        recentsList.addView(headWrap)
-
-        // تا چهار مکان اخیر در برگه خانه؛ بقیه در «همهٔ تاریخچه»
-        for (p in list.take(4)) recentsList.addView(recentRow(p))
-        if (list.size > 4) {
-            val more = TextView(this)
-            more.text = getString(R.string.recents_more, list.size - 4)
-            more.textSize = 13f
-            more.setTextColor(Color.parseColor("#2E6DB4"))
-            more.setPadding(dp(34), dp(6), 0, dp(6))
-            more.setOnClickListener { showHistoryDialog() }
-            recentsList.addView(more)
+                val del = ImageView(this).apply {
+                    setImageResource(R.drawable.ic_close)
+                    ImageViewCompat.setImageTintList(this, ColorStateList.valueOf(Color.parseColor("#9AA6B8")))
+                    layoutParams = LinearLayout.LayoutParams(dp(26), dp(26)).apply { marginStart = dp(8) }
+                    contentDescription = getString(R.string.delete)
+                    setOnClickListener { deleteSearchHistoryAt(i) }
+                }
+                row.addView(icon)
+                row.addView(name)
+                row.addView(del)
+                row.setOnClickListener { etSearch.setText(q); etSearch.clearFocus(); doSearch() }
+                historyList.addView(row)
+            }
         }
+        historyBlock.visibility = View.VISIBLE
+    }
+
+    // ---------- جمع‌شدن برگهٔ خانه (نسخهٔ ۱.۱.۱ — چک‌لیست بخش ۸) ----------
+    private fun sheetExpanded(): Boolean = prefs.getBoolean("home_sheet_expanded", true)
+
+    private fun toggleSheetExpanded() {
+        prefs.edit().putBoolean("home_sheet_expanded", !sheetExpanded()).apply()
         applySheetState()
     }
 
-    /** یک ردیف مکان اخیر با دکمهٔ حذف (×) */
-    private fun recentRow(p: Place): View {
-        val row = LinearLayout(this)
-        row.orientation = LinearLayout.HORIZONTAL
-        row.gravity = android.view.Gravity.CENTER_VERTICAL
-        row.setPadding(0, dp(10), 0, dp(10))
-        val icon = ImageView(this)
-        icon.setImageResource(R.drawable.ic_history)
-        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.parseColor("#7D8CA3")))
-        icon.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
-        val name = TextView(this)
-        name.text = p.name
-        name.maxLines = 1
-        name.ellipsize = android.text.TextUtils.TruncateAt.END
-        name.textSize = 14f
-        name.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
-        name.setTextColor(Color.parseColor("#1B2735"))
-        name.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            .apply { marginStart = dp(12) }
-        val del = ImageView(this)
-        del.setImageResource(R.drawable.ic_close)
-        ImageViewCompat.setImageTintList(del, ColorStateList.valueOf(Color.parseColor("#B9C1CF")))
-        del.setPadding(dp(8), dp(8), dp(2), dp(8))
-        del.layoutParams = LinearLayout.LayoutParams(dp(30), dp(30))
-        del.contentDescription = getString(R.string.recents_delete)
-        del.setOnClickListener {
-            store.removeRecent(p)
-            refreshRecents()
-            historyRebuild?.invoke()
-            toast(R.string.recents_deleted)
-        }
-        row.addView(icon)
-        row.addView(name)
-        row.addView(del)
-        row.setOnClickListener { select(p) }
-        return row
+    /** پس از انتخاب مکان، برگه جمع می‌شود تا نقشه بیشتر دیده شود (درخواست کاربر) */
+    private fun collapseSheet() {
+        if (!sheetExpanded()) return
+        prefs.edit().putBoolean("home_sheet_expanded", false).apply()
+        applySheetState()
     }
 
-    /** بازسازی تازهٔ گفت‌وگوی تاریخچه پس از حذف از داخل خود گفت‌وگو */
-    private var historyRebuild: (() -> Unit)? = null
+    /** بستن کامل برگهٔ جست‌وجو — با برگهٔ «نقشه» در نوار پایین دوباره باز می‌شود */
+    private fun closeHomeSheet() {
+        prefs.edit().putBoolean("home_sheet_closed", true).apply()
+        homeSheet.visibility = View.GONE
+        hideKeyboard()
+    }
 
-    /** گفت‌وگوی «همهٔ تاریخچه»: همهٔ جست‌وجوها با حذف تکی + پاک کردن همه */
-    private fun showHistoryDialog() {
-        val c = LinearLayout(this)
-        c.orientation = LinearLayout.VERTICAL
-        val pad = dp(18)
-        c.setPadding(pad, dp(6), pad, dp(6))
-        val sc = android.widget.ScrollView(this)
-        sc.addView(c)
-
-        fun rebuild() {
-            c.removeAllViews()
-            val all = store.recents()
-            if (all.isEmpty()) {
-                val empty = TextView(this)
-                empty.text = getString(R.string.recents_empty)
-                empty.textSize = 14f
-                empty.setTextColor(Color.parseColor("#7C879A"))
-                empty.setPadding(0, dp(18), 0, dp(18))
-                c.addView(empty)
-                return
-            }
-            for (p in all) {
-                val row = recentRow(p)
-                row.setPadding(0, dp(8), 0, dp(8))
-                c.addView(row)
-            }
-        }
-        rebuild()
-        historyRebuild = { rebuild() }
-
-        val dlg = AlertDialog.Builder(this)
-            .setTitle(R.string.history_title)
-            .setView(sc)
-            .setPositiveButton(R.string.close, null)
-            .setNeutralButton(R.string.recents_clear_all) { _, _ ->
-                AlertDialog.Builder(this)
-                    .setTitle(R.string.recents_clear_all)
-                    .setMessage(R.string.recents_clear_confirm)
-                    .setPositiveButton(R.string.clear) { _, _ ->
-                        store.clearRecents()
-                        refreshRecents()
-                        toast(R.string.recents_cleared)
-                    }
-                    .setNegativeButton(R.string.close, null)
-                    .show()
-            }
-            .create()
-        dlg.setOnDismissListener { historyRebuild = null }
-        dlg.show()
+    private fun applySheetState() {
+        if (!::sheetToggle.isInitialized || !::chipsScroll.isInitialized) return
+        val expanded = sheetExpanded()
+        chipsScroll.visibility = if (expanded) View.VISIBLE else View.GONE
+        tvRecentsTitle.visibility = if (expanded && store.recents().isNotEmpty()) View.VISIBLE else View.GONE
+        recentsList.visibility = if (expanded) View.VISIBLE else View.GONE
+        weatherCard.visibility = if (expanded && tvWeather.text.isNotEmpty()) View.VISIBLE else View.GONE
+        sheetToggle.setImageResource(if (expanded) R.drawable.ic_expand_more else R.drawable.ic_expand_less)
+        sheetToggle.contentDescription =
+            getString(if (expanded) R.string.sheet_details_hide else R.string.sheet_details_show)
+        if (expanded) refreshHistory() else historyBlock.visibility = View.GONE
     }
 
     private fun startVoiceSearch() {
@@ -942,6 +966,7 @@ class MainActivity : AppCompatActivity() {
     private fun doSearch() {
         val q = etSearch.text.toString().trim()
         if (q.isEmpty()) return
+        addSearchHistory(q)
         hideKeyboard()
         toast(R.string.searching)
         val lang = resources.configuration.locales[0].language
@@ -1072,6 +1097,7 @@ class MainActivity : AppCompatActivity() {
         resultsCard.visibility = View.GONE
         hideKeyboard()
         etSearch.setText("")
+        collapseSheet()
         when (pick) {
             Pick.ORIGIN, Pick.DEST -> {
                 assignPickedPoint(p)
@@ -1273,6 +1299,18 @@ class MainActivity : AppCompatActivity() {
         return if (top.isEmpty()) getString(R.string.route_no_names) else getString(R.string.via_fmt, top.joinToString(" - "))
     }
 
+    /**
+     * درخواست کاربر (نسخهٔ ۱.۱.۱): دقیقاً دو پیشنهاد روی نقشه —
+     * «اصلی» = بهترین مسیر (سریع‌ترین/کم‌ترافیک‌ترین) و «نزدیک‌ترین» = کوتاه‌ترین مسیر.
+     * اگر خودِ مسیر اصلی کوتاه‌ترین هم بود، فقط همان نمایش داده می‌شود.
+     */
+    private fun orderMainAndNearest(list: List<RouteResult>): List<RouteResult> {
+        if (list.size < 2) return list
+        val main = list.first()
+        val nearest = list.drop(1).minByOrNull { it.distanceM } ?: return listOf(main)
+        return if (nearest.distanceM < main.distanceM * 0.995) listOf(main, nearest) else listOf(main)
+    }
+
     /** حباب‌های زمان روی نقشه؛ مسیر انتخابی بنفش، جایگزین‌ها خاکستری (کلیک = انتخاب) */
     private fun clearBubbles() {
         bubbleLayer.removeAllViews()
@@ -1288,8 +1326,13 @@ class MainActivity : AppCompatActivity() {
             val frac = if (i == selectedRouteIdx) 0.5 else if (altCount++ % 2 == 0) 0.3 else 0.7
             val idx = (r.points.size * frac).toInt().coerceIn(0, r.points.size - 1)
             val pt = r.points[idx]
+            val label = when {
+                i == 0 -> getString(R.string.route_main) + " • "
+                i == 1 && altRoutes.size == 2 -> getString(R.string.route_nearest) + " • "
+                else -> ""
+            }
             val v = TextView(this)
-            v.text = NavigationController.formatDuration(this, r.durationS)
+            v.text = label + NavigationController.formatDuration(this, r.durationS)
             v.textSize = 13f
             v.setTypeface(v.typeface, android.graphics.Typeface.BOLD)
             v.setTextColor(Color.WHITE)
@@ -1349,24 +1392,15 @@ class MainActivity : AppCompatActivity() {
         drawnRoute = sel
         val line = LineString.fromLngLats(sel.points.map { Point.fromLngLat(it.first, it.second) })
         style?.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(Feature.fromGeometry(line))
+        // نشانگر مبدأ — دقیقاً روی نقطهٔ آغاز مسیر انتخابی و به رنگ مسیر
+        // (درخواست کاربر: «بعد از انتخاب مسیر، دقیق روی مبدأ به رنگ مسیریاب»)
+        if (sel.points.isNotEmpty()) {
+            val st = sel.points.first()
+            style?.getSourceAs<GeoJsonSource>("origin-src")
+                ?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(st.first, st.second)))
+        }
     }
 
-    /** نشانگر پیش‌فرض مبدأ — پین آبی در نقطهٔ شروع مسیر (گزارش کارفرما) */
-    private fun drawOriginMarker() {
-        val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
-        val src = style?.getSourceAs<GeoJsonSource>("origin-src") ?: return
-        val p = r.points.firstOrNull() ?: return
-        src.setGeoJson(Feature.fromGeometry(Point.fromLngLat(p.first, p.second)))
-    }
-
-    /** دوربین روی مبدأ مسیر می‌آید (نه وسط مسیر) — گزارش کارفرما */
-    private fun focusOrigin() {
-        val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
-        val p = r.points.firstOrNull() ?: return
-        map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.second, p.first), 15.5))
-    }
-
-    /** نمای کامل مسیر — از «مرور مسیر» در برگهٔ مسیر در دسترس است */
     private fun fitRoutes() {
         val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
         val b = LatLngBounds.Builder()
@@ -1408,8 +1442,6 @@ class MainActivity : AppCompatActivity() {
 
     private fun clearAll() {
         if (NavigationController.navigating) NavigationController.stop()
-        // احتیاط: اگر رانندگی آزاد فعال بود، × باید همیشه کاربر را به نوار جست‌وجو برگرداند
-        if (NavigationController.freeMode) endFreeDriving()
         resetToHome()
     }
 
@@ -1427,16 +1459,6 @@ class MainActivity : AppCompatActivity() {
         setMode(Mode.HOME)
     }
 
-    /** برگهٔ خانهٔ جمع‌شده: فقط نوار جست‌وجو دیده می‌شود تا نقشه آزاد بماند
-     *  (گزارش کارفرما)؛ دسته‌ها، هوا و تاریخچه در حالت باز نمایش داده می‌شوند. */
-    private fun applySheetState() {
-        val vis = if (sheetExpanded) View.VISIBLE else View.GONE
-        chipsScroll.visibility = vis
-        weatherCard.visibility = if (sheetExpanded && tvWeather.text.isNotEmpty()) View.VISIBLE else View.GONE
-        tvRecentsTitle.visibility = if (sheetExpanded && store.recents().isNotEmpty()) View.VISIBLE else View.GONE
-        recentsList.visibility = vis
-    }
-
     /** نمایش بخش‌های مناسب هر حالت (خانه / مکان / مسیر / ناوبری) */
     private fun setMode(m: Mode) {
         mode = m
@@ -1444,7 +1466,9 @@ class MainActivity : AppCompatActivity() {
         // در رانندگی آزاد برگه خانه (جست‌وجو) پنهان می‌شود تا کارت سرعت‌سنج و دکمه «پایان»
         // کامل روی صفحه جا شوند (اشکال نیمه‌صفحه در نسخه‌های قبل)
         val home = m == Mode.HOME && !NavigationController.freeMode
-        homeSheet.visibility = if (home) View.VISIBLE else View.GONE
+        val sheetClosed = prefs.getBoolean("home_sheet_closed", false)
+        homeSheet.visibility = if (home && !sheetClosed) View.VISIBLE else View.GONE
+        if (home && !sheetClosed) applySheetState()
         panel.visibility = if (m == Mode.PLACE) View.VISIBLE else View.GONE
         routeSheet.visibility = if (m == Mode.ROUTE) View.VISIBLE else View.GONE
         routeHeader.visibility = if (m == Mode.ROUTE) View.VISIBLE else View.GONE
@@ -1455,9 +1479,6 @@ class MainActivity : AppCompatActivity() {
         leftCol.visibility = if (nav) View.VISIBLE else View.GONE
         fabColumn.visibility = if (nav) View.GONE else View.VISIBLE
         fabRoute.visibility = if (home) View.VISIBLE else View.GONE
-        // دکمهٔ شناور جست‌وجو: هر جا نوار جست‌وجو پنهان است دیده می‌شود تا کاربر
-        // بتواند همیشه جست‌وجو را دوباره بیاورد (گزارش کارفرما: × نوار جست‌وجو)
-        findViewById<View>(R.id.fabSearch).visibility = if (home) View.GONE else View.VISIBLE
         bottomNav.visibility = if (m == Mode.HOME) View.VISIBLE else View.GONE
         if (m != Mode.HOME) resultsCard.visibility = View.GONE
         if (m != Mode.ROUTE) clearBubbles()
@@ -1539,8 +1560,11 @@ class MainActivity : AppCompatActivity() {
         if (locationEnabled) {
             val lc = map?.locationComponent
             lc?.cameraMode = CameraMode.NONE
-            // با نشانگر وسیله، نقطه آبی زیر وسیله نمایش داده می‌شود (نه پیکان دوبار)
-            lc?.renderMode = if (VehicleMarkers.isArrow(prefs)) RenderMode.GPS else RenderMode.NORMAL
+            // نقطهٔ آبی موقعیت خام GPS پنهان می‌شود — نشانگر وسیله فقط از تیرک مسیر
+            // (nav-arrow) کشیده می‌شود که همیشه دقیقاً روی مبدأ/مسیر می‌ایستد؛
+            // به این ترتیب فلش دقیقاً روی مبدأ دیده می‌شود حتی اگر آخرین قرائت GPS
+            // جای دیگری باشد (درخواست کاربر)
+            lc?.isLocationComponentEnabled = false
         }
 
         val ok = NavigationController.start(r, dest, navProfile)
@@ -1575,6 +1599,47 @@ class MainActivity : AppCompatActivity() {
         )
     }
 
+    /**
+     * بازگشت زمان‌بندی‌شدهٔ دوربین هنگام ناوبری — حتی بدون قرائت GPS:
+     * اگر کاربر نقشه را زوم‌اوت/کشیده باشد، پس از ۵ ثانیه دوربین نرم روی
+     * نقطهٔ چسبیده به مسیر (یا مبدأ در شروع سفر) برمی‌گردد.
+     */
+    private fun scheduleNavRecenter() {
+        if (navRecenterPending) return
+        navRecenterPending = true
+        ui.postDelayed({
+            navRecenterPending = false
+            if (isDestroyed || isFinishing) return@postDelayed
+            if (!NavigationController.navigating) return@postDelayed
+            if (System.currentTimeMillis() - navPanMs < 5000) { scheduleNavRecenter(); return@postDelayed }
+            if (NavigationController.hasSnap) {
+                val bearing = if (northUp) 0.0 else NavigationController.lastSnapBearing
+                map?.animateCamera(
+                    CameraUpdateFactory.newCameraPosition(
+                        CameraPosition.Builder().target(LatLng(NavigationController.lastSnapLat, NavigationController.lastSnapLon))
+                            .zoom(17.5).tilt(45.0).bearing(bearing).build()
+                    ), 1200
+                )
+            }
+        }, 5200L)
+    }
+
+    /**
+     * پیش‌نمایش مسیر: اگر کاربر زوم‌اوت کند تا همهٔ مسیرها را ببیند، پس از ۸ ثانیه
+     * بی‌حرکتی، دوربین نرم به کادر کامل مسیرها (با مبدأ) برمی‌گردد.
+     */
+    private fun scheduleRoutePreviewReturn() {
+        if (routeReturnPending) return
+        routeReturnPending = true
+        ui.postDelayed({
+            routeReturnPending = false
+            if (isDestroyed || isFinishing) return@postDelayed
+            if (mode != Mode.ROUTE || altRoutes.isEmpty()) return@postDelayed
+            if (System.currentTimeMillis() - lastRouteGestureMs < 8000) { scheduleRoutePreviewReturn(); return@postDelayed }
+            fitRoutes()
+        }, 8200L)
+    }
+
     /** حالت نمایش ناوبری: بنر مشکی، نوار پایین با ساعت رسیدن، سرعت‌سنج و قطب‌نما */
     private fun enterNavChrome() {
         if (mode != Mode.NAV) setMode(Mode.NAV)
@@ -1583,7 +1648,13 @@ class MainActivity : AppCompatActivity() {
     /** بازگشت پس از پایان ناوبری (توقف یا رسیدن) */
     private fun exitNavChrome(backToRoute: Boolean = false) {
         window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-        if (locationEnabled) map?.locationComponent?.renderMode = RenderMode.NORMAL
+        // بازگشت نقطهٔ موقعیت GPS پس از ناوبری
+        if (locationEnabled) {
+            try {
+                map?.locationComponent?.isLocationComponentEnabled = true
+                map?.locationComponent?.renderMode = RenderMode.NORMAL
+            } catch (_: Exception) { }
+        }
         map?.let { m ->
             m.animateCamera(CameraUpdateFactory.newCameraPosition(CameraPosition.Builder(m.cameraPosition).tilt(0.0).bearing(0.0).build()))
         }
@@ -2043,7 +2114,8 @@ class MainActivity : AppCompatActivity() {
      */
     private fun showVehicleMarkerDialog() {
         val marks = VehicleMarkers.ALL
-        val selId = prefs.getString("nav_marker", "arrow") ?: "arrow"
+        // پیش‌فرض: لندکروز (VehicleMarkers.DEFAULT_ID) — نشانگر انتخابی همیشه هایلایت است
+        val selId = VehicleMarkers.selected(prefs).id
         val c = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(10), dp(4), dp(10), dp(10))
@@ -2390,12 +2462,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addRouteLayers(s: Style) {
+        // رنگ‌های مسیر از پالت رسمی کاربر (route = آبی مسیر روز/شب)
+        val routeC = MapTheme.routeColor(prefs, wantDark())
+        val routeCs = MapTheme.routeCasingColor(prefs, wantDark())
+        val routeAlt = MapTheme.routeAltColor(prefs, wantDark())
         // منبع مسیرهای جایگزین
         s.addSource(GeoJsonSource("route-alt-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
         s.addSource(GeoJsonSource("route-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
         s.addSource(GeoJsonSource("dest-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
 
-        // مسیرهای جایگزین: بنفش کم‌رنگ با پوشش سفید (زیر مسیر اصلی)
+        // مسیرهای جایگزین: پوشش سفید + خط محوِ رنگ مسیر (زیر مسیر اصلی)
         s.addLayer(
             LineLayer("route-alt-casing", "route-alt-src").withProperties(
                 lineColor(Color.parseColor("#FFFFFF")), lineWidth(11f),
@@ -2404,20 +2480,20 @@ class MainActivity : AppCompatActivity() {
         )
         s.addLayer(
             LineLayer("route-alt-line", "route-alt-src").withProperties(
-                lineColor(Color.parseColor("#B39DDB")), lineWidth(8f),
+                lineColor(routeAlt), lineWidth(8f),
                 lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND)
             )
         )
-        // مسیر اصلی: پوشش تیره + بنفش ضخیم (سبک نشان)
+        // مسیر اصلی: پوشش تیره + خط ضخیم به رنگ مسیر پالت کاربر
         s.addLayer(
             LineLayer("route-casing", "route-src").withProperties(
-                lineColor(Color.parseColor("#4A1E9E")), lineWidth(12f),
+                lineColor(routeCs), lineWidth(12f),
                 lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND)
             )
         )
         s.addLayer(
             LineLayer("route-layer", "route-src").withProperties(
-                lineColor(Color.parseColor("#7C4DFF")), lineWidth(9f),
+                lineColor(routeC), lineWidth(9f),
                 lineCap(Property.LINE_CAP_ROUND), lineJoin(Property.LINE_JOIN_ROUND)
             )
         )
@@ -2445,41 +2521,20 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.w("MainActivity", "لایه پیکان مسیر ساخته نشد", e)
         }
 
-        // پین پیش‌فرض مقصد (قرمز) و مبدأ (آبی) — نشانگر پیش‌فرض درخواستی کارفرما
-        try {
-            if (s.getImage("pin-dest") == null) s.addImage("pin-dest", makePinBitmap("#E53935"))
-            if (s.getImage("pin-origin") == null) s.addImage("pin-origin", makePinBitmap("#1E88E5"))
-            s.addLayer(
-                SymbolLayer("dest-layer", "dest-src").withProperties(
-                    org.maplibre.android.style.layers.PropertyFactory.iconImage("pin-dest"),
-                    org.maplibre.android.style.layers.PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
-                    org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
-                    org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)
-                )
+        s.addLayer(
+            CircleLayer("dest-layer", "dest-src").withProperties(
+                circleColor(Color.parseColor("#E53935")), circleRadius(9f),
+                circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
             )
-            s.addLayer(
-                SymbolLayer("origin-layer", "origin-src").withProperties(
-                    org.maplibre.android.style.layers.PropertyFactory.iconImage("pin-origin"),
-                    org.maplibre.android.style.layers.PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
-                    org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
-                    org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)
-                )
+        )
+        // مبدأ مسیر — نقطهٔ آغاز مسیر به رنگ پالت کاربر
+        s.addSource(GeoJsonSource("origin-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
+        s.addLayer(
+            CircleLayer("origin-layer", "origin-src").withProperties(
+                circleColor(routeC), circleRadius(8f),
+                circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
             )
-        } catch (e: Exception) {
-            // اگر ساخت پین ممکن نشد، نقطهٔ سادهٔ قبلی نمایش داده می‌شود
-            s.addLayer(
-                CircleLayer("dest-layer", "dest-src").withProperties(
-                    circleColor(Color.parseColor("#E53935")), circleRadius(9f),
-                    circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
-                )
-            )
-            s.addLayer(
-                CircleLayer("origin-layer", "origin-src").withProperties(
-                    circleColor(Color.parseColor("#1E88E5")), circleRadius(8f),
-                    circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
-                )
-            )
-        }
+        )
         // تیرک جهت ناوبری — نشانگر وسیله انتخابی یا فلش، همیشه دقیقاً روی مسیر
         try {
             applyVehicleMarker(s)
@@ -2505,53 +2560,11 @@ class MainActivity : AppCompatActivity() {
         drawnRoute?.let { r ->
             val line = LineString.fromLngLats(r.points.map { Point.fromLngLat(it.first, it.second) })
             s.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(Feature.fromGeometry(line))
-            // نشانگر مبدأ پس از بازسازی استایل هم حفظ شود
-            r.points.firstOrNull()?.let { op ->
-                s.getSourceAs<GeoJsonSource>("origin-src")?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(op.first, op.second)))
-            }
         }
         selected?.let {
             s.getSourceAs<GeoJsonSource>("dest-src")?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)))
         }
         if (hasLocationPermission()) enableLocation()
-    }
-
-    /** پین نقشهٔ نشانگر پیش‌فرض مبدأ/مقصد — به‌صورت نرم‌افزاری ساخته می‌شود */
-    private fun makePinBitmap(colorHex: String): android.graphics.Bitmap {
-        val w = 44
-        val h = 58
-        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
-        val c = android.graphics.Canvas(bmp)
-        // سایهٔ زیر پین
-        val shadow = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor("#33000000")
-        }
-        c.drawOval(android.graphics.RectF(w / 2f - 11f, h - 11f, w / 2f + 11f, h - 1f), shadow)
-        val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.parseColor(colorHex)
-        }
-        val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-            style = android.graphics.Paint.Style.STROKE
-            strokeWidth = 3f
-        }
-        // دم مثلثی پین
-        val tail = android.graphics.Path()
-        tail.moveTo(w / 2f, h - 8f)
-        tail.lineTo(w / 2f - 10f, 26f)
-        tail.lineTo(w / 2f + 10f, 26f)
-        tail.close()
-        c.drawPath(tail, fill)
-        c.drawPath(tail, stroke)
-        // سر دایره‌ای پین
-        c.drawCircle(w / 2f, 18f, 15f, fill)
-        c.drawCircle(w / 2f, 18f, 15f, stroke)
-        // نقطهٔ سفید داخل پین
-        val dot = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
-            color = Color.WHITE
-        }
-        c.drawCircle(w / 2f, 18f, 5.5f, dot)
-        return bmp
     }
 
     /** بیت‌مپ تیرک ناوبری (پیکان آبی بزرگ به سبک نشان) */
@@ -3365,7 +3378,7 @@ class MainActivity : AppCompatActivity() {
             val d = WeatherModule.refresh(this@MainActivity, lat, lon)
             ui.post {
                 if (d != null) {
-                    if (sheetExpanded) weatherCard.visibility = View.VISIBLE
+                    weatherCard.visibility = View.VISIBLE
                     tvWeather.text = getString(R.string.weather_short,
                         WeatherModule.emoji(d.code), d.tempC.roundToInt(), WeatherModule.describe(this, d.code, d.isDay),
                         WeatherModule.aqiLabel(this, d.aqi))
@@ -3606,20 +3619,17 @@ class MainActivity : AppCompatActivity() {
         val selectedPack = arrayOf(if (hasPack) vg!!.packId else "")
         val selectedSource = arrayOf(prefs.getString("voice_source", "pack") ?: "pack")
         val radios = ArrayList<Pair<String, android.widget.RadioButton>>() // (packId یا "system")
+        // به‌روزرسانِ هشدار صدای گوشی — بعداً پس از ساختن هشدار مقدار می‌گیرد (نسخهٔ ۱٫۱٫۲)
+        var sysWarnUpdater: (() -> Unit)? = null
 
         fun selectWhich(which: String) {
             selectedSource[0] = if (which == "system") "system" else "pack"
             if (which != "system") selectedPack[0] = which
             for ((id, rb) in radios) rb.isChecked = id == which
+            sysWarnUpdater?.invoke()
         }
 
         /** یک ردیف صدا: دکمه رادیو + نام + جنسیت/تعداد + دکمه پخش */
-        fun langLabel(lang: String): String = getString(when (lang) {
-            "ps" -> R.string.voice_lang_pashto_name
-            "en" -> R.string.voice_lang_english_name
-            else -> R.string.voice_lang_dari_name
-        })
-
         fun addPackRow(p: af.rahyab.app.VoiceGuide.PackInfo) {
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
             val rb = android.widget.RadioButton(this).apply {
@@ -3628,17 +3638,17 @@ class MainActivity : AppCompatActivity() {
             radios.add(p.id to rb)
             val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(this).apply {
-                // بسته‌های چندزبانه برای همهٔ زبان‌ها کار می‌کنند؛ تک‌زبانه فقط زبان خودشان
-                text = p.name + "  —  " +
-                    (if (p.multiLang)
-                        getString(R.string.voice_group_all) + " (" + p.langs.joinToString("، ") { langLabel(it) } + ")"
-                    else langLabel(p.lang))
+                text = p.name + "  —  " + getString(when (p.lang) {
+                    "ps" -> R.string.voice_lang_pashto_name
+                    "en" -> R.string.voice_lang_english_name
+                    else -> R.string.voice_lang_dari_name
+                })
                 textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
             col.addView(TextView(this).apply {
                 text = getString(if (p.gender == "female") R.string.voice_female else R.string.voice_male) +
                     " • " + getString(R.string.voice_pack_status, p.clips).substringAfter(": ").substringBefore(" —") +
-                    (if (p.id == selectedPack[0] && selectedSource[0] == "pack")
+                    (if (p.id == selectedPack[0] && selectedSource[0] == "pack" && p.lang == curLang)
                         " • " + getString(R.string.voice_active_tag) else "")
                 textSize = 11f; setTextColor(0xFF777777.toInt())
             })
@@ -3649,9 +3659,8 @@ class MainActivity : AppCompatActivity() {
                 contentDescription = getString(R.string.voice_play)
             }
             play.setOnClickListener {
-                // جمله پشتیبان به زبان پخش پیش‌نمایش — اگر فایل صوتی پخش نشد، موتور گوشی حرف می‌زند
-                val plang = if (p.multiLang) curLang else p.lang
-                val sentence = when (plang) {
+                // جمله پشتیبان به زبان همان بسته — اگر فایل صوتی پخش نشد، موتور گوشی حرف می‌زند
+                val sentence = when (p.lang) {
                     "ps" -> "غږیز لارښود راحیاب چمتو دی."
                     "en" -> "Rahyab voice guidance is ready."
                     else -> "راهنمای صوتی راه‌یاب آماده است."
@@ -3667,25 +3676,15 @@ class MainActivity : AppCompatActivity() {
             rb.setOnClickListener { selectWhich(p.id) }
         }
 
-        // صداهای ضبط‌شده داخل برنامه — نخست گوینده‌های «همهٔ زبان‌ها»، سپس گروه‌بندی تک‌زبانه
-        // (گوینده‌های چندزبانه با هر زبان برنامه کار می‌کنند)
-        val multi = packs.filter { it.multiLang }
-        if (multi.isNotEmpty()) {
-            c.addView(TextView(this).apply {
-                text = getString(R.string.voice_group_all)
-                textSize = 13f; setTypeface(typeface, android.graphics.Typeface.BOLD)
-                setTextColor(0xFF2E6DB4.toInt())
-                setPadding(0, dp(10), 0, dp(2))
-            })
-            for (p in multi) addPackRow(p)
-        }
+        // صداهای ضبط‌شده داخل برنامه — به سه زبان گروه‌بندی شده
+        // (زبان راهنما همیشه همان زبان برنامه است؛ صدای زبان دیگر پس از تغییر زبان پخش می‌شود)
         val groups = listOf(
             Triple("fa", R.string.voice_group_dari, R.string.voice_lang_dari_name),
             Triple("ps", R.string.voice_group_pashto, R.string.voice_lang_pashto_name),
             Triple("en", R.string.voice_group_english, R.string.voice_lang_english_name)
         )
         for ((gl, labelRes, nameRes) in groups) {
-            val gp = packs.filter { !it.multiLang && it.lang == gl }
+            val gp = packs.filter { it.lang == gl }
             if (gp.isEmpty()) continue
             c.addView(TextView(this).apply {
                 text = getString(labelRes) +
@@ -3705,13 +3704,22 @@ class MainActivity : AppCompatActivity() {
         radios.add("system" to rbSystem)
         c.addView(rbSystem)
         rbSystem.setOnClickListener { selectWhich("system") }
-        val sysOk = vg?.hasPersianVoice() == true && (vg?.packAvailable() == false || selectedSource[0] == "system")
-        if (!sysOk) {
-            c.addView(TextView(this).apply {
-                text = getString(R.string.voice_system_unavailable) + " — «" + getString(R.string.voice_test) + "» را بزنید و در صورت نیاز «" + getString(R.string.voice_install) + "» را از راهنما استفاده کنید."
-                textSize = 11f; setTextColor(0xFFB00020.toInt()); setPadding(0, 0, 0, dp(4))
-            })
+        // نسخهٔ ۱٫۱٫۲ — رفع اشکال: هشدار «صدای گوشی نصب نیست» قبلاً همیشه نشان داده می‌شد
+        // حتی وقتی صدای ضبط‌شدهٔ داخل برنامه انتخاب بود. حالا فقط وقتی نمایش داده می‌شود
+        // که گزینهٔ «موتور گفتار گوشی» انتخاب شده باشد و موتور گوشی واقعاً صدا نداشته باشد.
+        val tvSysWarn = TextView(this).apply {
+            text = getString(R.string.voice_system_unavailable) + " — «" + getString(R.string.voice_test) + "» را بزنید و در صورت نیاز «" + getString(R.string.voice_install) + "» را از راهنما استفاده کنید."
+            textSize = 11f; setTextColor(0xFFB00020.toInt()); setPadding(0, 0, 0, dp(4))
+            visibility = View.GONE
         }
+        c.addView(tvSysWarn)
+
+        fun updateSysWarn() {
+            val warn = selectedSource[0] == "system" && vg?.systemVoiceOk() == false
+            tvSysWarn.visibility = if (warn) View.VISIBLE else View.GONE
+        }
+        sysWarnUpdater = { updateSysWarn() }
+        updateSysWarn()
 
         // ---------- بلندی صدا ----------
         c.addView(TextView(this).apply { text = getString(R.string.voice_volume); setPadding(0, dp(12), 0, dp(2)); textSize = 14f })
@@ -3998,33 +4006,13 @@ class MainActivity : AppCompatActivity() {
                 val rel = Updater.checkLatest() ?: throw BadResponseException("no release")
                 val newer = Updater.isNewer(rel, this@MainActivity)
                 ui.post {
-                    if (!newer) {
-                        // «نسخهٔ شما به‌روز است» — با شمارهٔ دقیق نسخهٔ نصب‌شده (درخواست کارفرما)
-                        AlertDialog.Builder(this)
-                            .setTitle(R.string.update_uptodate_title)
-                            .setMessage(
-                                getString(
-                                    R.string.update_uptodate,
-                                    Updater.currentVersionName(this), Updater.currentVersionCode(this)
-                                )
-                            )
-                            .setPositiveButton(R.string.close, null)
-                            .show()
-                    } else {
-                        AlertDialog.Builder(this)
-                            .setTitle(getString(R.string.update_available, rel.versionName))
-                            .setMessage(
-                                getString(
-                                    R.string.update_info_full,
-                                    Updater.currentVersionName(this),
-                                    rel.versionName,
-                                    fmtBytes(rel.sizeBytes)
-                                ) + "\n\n" + rel.notes.take(500)
-                            )
-                            .setPositiveButton(R.string.update_download) { _, _ -> downloadUpdate(rel) }
-                            .setNegativeButton(R.string.close, null)
-                            .show()
-                    }
+                    if (!newer) toast(R.string.update_latest)
+                    else AlertDialog.Builder(this)
+                        .setTitle(getString(R.string.update_available, rel.versionName))
+                        .setMessage(getString(R.string.update_info, rel.sizeBytes / 1048576) + "\n\n" + rel.notes.take(500))
+                        .setPositiveButton(R.string.update_download) { _, _ -> downloadUpdate(rel) }
+                        .setNegativeButton(R.string.close, null)
+                        .show()
                 }
             } catch (e: Exception) {
                 ui.post { toast(R.string.update_unavailable) }
@@ -4032,53 +4020,16 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** حجم انسانی فایل — «۴۵٫۲ مگابایت» */
-    private fun fmtBytes(b: Long): String = when {
-        b >= 1_048_576L -> String.format(java.util.Locale.US, "%.1f", b / 1048576.0) + " MB"
-        b >= 1024L -> (b / 1024).toString() + " KB"
-        else -> b.toString() + " B"
-    }
-
-    /** دانلود به‌روزرسانی با نوار پیشرفت، حجم فایل، سرعت و ادامهٔ دانلود پس از قطعی */
     private fun downloadUpdate(rel: Updater.Release) {
-        val bar = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
-        bar.max = 100
-        bar.progress = 0
         val tv = TextView(this)
-        tv.setPadding(dp(24), dp(10), dp(24), dp(4))
-        tv.textSize = 13f
-        // اگر دانلود ناتمامی از قبل هست، از همان‌جا ادامه می‌یابد
-        val hadPart = Updater.partFile(this).length()
-        if (hadPart > 0) tv.text = getString(R.string.update_resuming, fmtBytes(hadPart))
+        tv.setPadding(dp(24), dp(16), dp(24), dp(16))
         val dlg = AlertDialog.Builder(this)
             .setTitle(R.string.update_downloading)
-            .setView(android.widget.LinearLayout(this).apply {
-                orientation = android.widget.LinearLayout.VERTICAL
-                setPadding(dp(8), dp(16), dp(8), dp(8))
-                addView(bar, android.widget.LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                    .apply { setMargins(dp(16), 0, dp(16), dp(6)) })
-                addView(tv)
-            })
+            .setView(tv)
             .setNegativeButton(R.string.close, null)
             .show()
-        var lastMs = 0L
-        var lastBytes = 0L
         Updater.download(this, rel,
-            onProgress = { p, got, total ->
-                ui.post {
-                    bar.progress = p
-                    val now = System.currentTimeMillis()
-                    var speed = ""
-                    if (lastMs > 0 && now - lastMs > 400) {
-                        val kbps = ((got - lastBytes) / 1024.0) / ((now - lastMs) / 1000.0)
-                        speed = " — " + (if (kbps >= 1024) String.format(java.util.Locale.US, "%.1f", kbps / 1024) + " MB/s"
-                        else String.format(java.util.Locale.US, "%.0f", kbps) + " KB/s")
-                    }
-                    if (now - lastMs > 400) { lastMs = now; lastBytes = got }
-                    tv.text = "${fmtBytes(got)} / ${fmtBytes(total)} — $p٪$speed"
-                }
-            },
+            onProgress = { p -> ui.post { tv.text = getString(R.string.update_progress, p) } },
             onDone = { f ->
                 ui.post {
                     dlg.dismiss()
@@ -4093,17 +4044,8 @@ class MainActivity : AppCompatActivity() {
             },
             onError = { msg ->
                 ui.post {
-                    val kept = Updater.partFile(this).length()
                     dlg.dismiss()
-                    AlertDialog.Builder(this)
-                        .setTitle(R.string.update_failed_title)
-                        .setMessage(
-                            getString(R.string.update_failed_resume, msg) +
-                                (if (kept > 0) "\n" + getString(R.string.update_part_kept, fmtBytes(kept)) else "")
-                        )
-                        .setPositiveButton(R.string.update_retry) { _, _ -> downloadUpdate(rel) }
-                        .setNegativeButton(R.string.close, null)
-                        .show()
+                    toast(getString(R.string.update_failed, msg))
                 }
             }
         )

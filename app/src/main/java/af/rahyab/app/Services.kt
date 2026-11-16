@@ -219,18 +219,47 @@ class OsrmRouting(private val carBase: String, private val footBase: String, pri
         val url = "$base${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=true"
         val key = java.util.zip.CRC32().apply { update(url.toByteArray()) }.value.toString()
         cache.get(key)?.let { json ->
-            return try { parse(JSONObject(json)) } catch (e: Exception) { null }
+            return try { parseRoutes(JSONObject(json)).firstOrNull() } catch (e: Exception) { null }
         }
         val json = Http.get(url)
-        val r = parse(JSONObject(json))
-        cache.put(key, json)
-        return r
+        val routes = parseRoutes(JSONObject(json))
+        if (routes.isNotEmpty()) { cache.put(key, json); return routes.first() }
+        return null
     }
 
-    private fun parse(json: JSONObject): RouteResult? {
-        val routes = json.optJSONArray("routes") ?: return null
-        if (routes.length() == 0) return null
-        val r = routes.getJSONObject(0)
+    /**
+     * مسیرهای جایگزین آنلاین — درخواست کاربر (نسخهٔ ۱٫۱٫۳):
+     * سرور عمومی OSRM با alternatives=2 تا سه مسیر برمی‌گرداند تا مثل حالت آفلاین،
+     * «اصلی» و «نزدیک‌ترین» هر دو روی نقشه پیشنهاد شوند.
+     */
+    fun routeAlternatives(profile: Profile, fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): List<RouteResult> {
+        val base = when (profile) {
+            Profile.CAR, Profile.MOTO -> carBase
+            Profile.BIKE -> bikeBase ?: carBase
+            Profile.FOOT -> footBase
+        }
+        val url = "$base${fromLon},${fromLat};${toLon},${toLat}?overview=full&geometries=geojson&steps=true&alternatives=2"
+        val key = java.util.zip.CRC32().apply { update(url.toByteArray()) }.value.toString()
+        cache.get(key)?.let { json ->
+            return try { parseRoutes(JSONObject(json)) } catch (e: Exception) { emptyList() }
+        }
+        val json = Http.get(url)
+        val routes = parseRoutes(JSONObject(json))
+        if (routes.isNotEmpty()) cache.put(key, json)
+        return routes
+    }
+
+    /** تجزیه همهٔ مسیرهای پاسخ OSRM (مسیر اصلی + جایگزین‌ها) */
+    private fun parseRoutes(json: JSONObject): List<RouteResult> {
+        val routes = json.optJSONArray("routes") ?: return emptyList()
+        val out = ArrayList<RouteResult>(routes.length())
+        for (i in 0 until routes.length()) {
+            parseOne(routes.getJSONObject(i))?.let { out.add(it) }
+        }
+        return out
+    }
+
+    private fun parseOne(r: JSONObject): RouteResult? {
         val coords = r.getJSONObject("geometry").getJSONArray("coordinates")
         val pts = (0 until coords.length()).map {
             val c = coords.getJSONArray(it)
@@ -381,7 +410,7 @@ object Services {
 
     /**
      * مسیرهای جایگزین به سبک نشان/بلد: سریع‌ترین + جایگزین‌ها (تا ۳ مسیر).
-     * آفلاین: موتور داخلی با روش جریمه؛ آنلاین: تک‌مسیر سرویس عمومی.
+     * آفلاین: موتور داخلی با روش جریمه؛ آنلاین: OSRM با alternatives=2.
      * اگر هیچ مسیری نبود، فهرست خالی برمی‌گردد.
      */
     fun routeAlternatives(profile: Profile, fromLat: Double, fromLon: Double, toLat: Double, toLon: Double): Pair<List<RouteResult>, Source> {
@@ -395,8 +424,8 @@ object Services {
             }
             if (list.isNotEmpty()) return Pair(list, Source.OFFLINE)
         }
-        val r = onlineRouting.route(profile, fromLat, fromLon, toLat, toLon)
-        return if (r != null) Pair(listOf(r), Source.ONLINE) else Pair(emptyList(), Source.ONLINE)
+        val list = onlineRouting.routeAlternatives(profile, fromLat, fromLon, toLat, toLon)
+        return Pair(list, Source.ONLINE)
     }
 
     /** مسیر فقط با موتور آفلاین (برای محاسبه مجدد در ناوبری آفلاین) */

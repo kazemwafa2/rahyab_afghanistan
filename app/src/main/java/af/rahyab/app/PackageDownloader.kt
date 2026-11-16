@@ -94,6 +94,52 @@ object PackageDownloader {
         return out
     }
 
+    // ---------- اسکن پشتیبان دارایی‌های ریلیز ----------
+
+    /** الگوی نام فایل بسته در صفحهٔ دارایی‌ها: owner/repo + tag + «id-تاریخ.rahpkg.zip»
+     *  نشانی در HTML می‌تواند مطلق (https://github.com/…) یا نسبی (/owner/repo/…) باشد */
+    private val PKG_FILE_RX = Regex(
+        "((?:https?://github\\.com)?/?([^\"'\\s]+?))/releases/download/([^\"'\\s]+)/" +
+            "([A-Za-z0-9_]+)-(\\d{4}-\\d{2}-\\d{2})\\.rahpkg\\.zip"
+    )
+
+    /**
+     * اسکن صفحهٔ دارایی‌های ریلیز — پشتیبان وقتی manifest.json قدیمی است ولی
+     * فایل‌های بسته تازه‌تر بارگذاری شده‌اند. حجم با HEAD گرفته می‌شود.
+     */
+    fun fetchReleaseAssets(assetsUrl: String): List<RemotePkg> {
+        val parsed = parseReleaseAssets(Http.get(assetsUrl))
+        // حجم واقعی فقط برای فایل‌ها لازم است — با HEAD سریع و سبک
+        return parsed.map { it.copy(sizeBytes = headContentLength(it.url)) }
+    }
+
+    /** تجزیهٔ فهرست فایل‌ها از HTML صفحهٔ دارایی‌ها؛ برای هر id فقط تازه‌ترین تاریخ */
+    fun parseReleaseAssets(html: String): List<RemotePkg> {
+        val found = LinkedHashMap<String, Pair<String, String>>() // id -> (url, date)
+        for (m in PKG_FILE_RX.findAll(html)) {
+            val repo = m.groupValues[2].removePrefix("/")
+            val tag = m.groupValues[3]
+            val id = m.groupValues[4]; val date = m.groupValues[5]
+            val url = "https://github.com/$repo/releases/download/$tag/$id-$date.rahpkg.zip"
+            val cur = found[id]
+            if (cur == null || date > cur.second) found[id] = Pair(url, date)
+        }
+        return found.map { (id, v) -> RemotePkg(id, id, "", v.second, "", v.first, 0, "") }
+    }
+
+    /** درخواست HEAD برای گرفتن اندازهٔ فایل بدون دانلود */
+    fun headContentLength(url: String): Long = try {
+        val c = URL(url).openConnection() as HttpURLConnection
+        c.requestMethod = "HEAD"
+        c.connectTimeout = Config.HTTP_CONNECT_TIMEOUT_MS
+        c.readTimeout = Config.HTTP_CONNECT_TIMEOUT_MS
+        c.setRequestProperty("User-Agent", Config.USER_AGENT)
+        c.instanceFollowRedirects = true
+        val len = c.contentLengthLong
+        c.disconnect()
+        if (len > 0) len else 0
+    } catch (_: Exception) { 0 }
+
     // ---------- دانلود ----------
     /**
      * دانلود، راستی‌آزمایی و نصب بسته. کار همگام است — در نخ پس‌زمینه صدا زده شود.

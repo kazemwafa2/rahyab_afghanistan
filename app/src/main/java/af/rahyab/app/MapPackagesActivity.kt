@@ -139,19 +139,59 @@ class MapPackagesActivity : AppCompatActivity() {
         }
     }
 
-    private fun manifestUrl(): String =
-        getSharedPreferences("settings", MODE_PRIVATE).getString("manifest_url", null) ?: Config.MANIFEST_URL
+    private fun manifestUrl(): String {
+        val sp = getSharedPreferences("settings", MODE_PRIVATE)
+        val stored = sp.getString("manifest_url", null)
+        // مهاجرت (درخواست کاربر): نشانی‌های قدیمی فهرست بسته‌ها که به ریلیز map-data
+        // اشاره نمی‌کنند پاک می‌شوند تا همیشه نسخهٔ جدید بسته‌ها دیده شود
+        if (stored != null && !stored.contains("/releases/download/map-data/")) {
+            sp.edit().remove("manifest_url").apply()
+            return Config.MANIFEST_URL
+        }
+        return stored ?: Config.MANIFEST_URL
+    }
 
     private fun loadManifest() {
         tvStatus.text = getString(R.string.pkg_loading)
         io.execute {
-            try {
-                val online = PackageDownloader.fetchManifest(manifestUrl())
-                ui.post { showPackages(online) }
-            } catch (e: Exception) {
-                ui.post { onManifestError(e) }
+            // ۱) manifest رسمی
+            val manifest: List<PackageDownloader.RemotePkg>? = try {
+                PackageDownloader.fetchManifest(manifestUrl())
+            } catch (e: Exception) { null }
+            // ۲) اسکن پشتیبان دارایی‌های ریلیز — اگر manifest.json قدیمی باشد ولی
+            //    فایل‌های بسته تازه بارگذاری شده باشند (اشکال گزارش‌شدهٔ کاربر)،
+            //    نسخهٔ جدید همین‌جا دیده می‌شود و دکمهٔ «به‌روزرسانی» ظاهر می‌شود.
+            val scanned: List<PackageDownloader.RemotePkg> = try {
+                PackageDownloader.fetchReleaseAssets(Config.RELEASE_ASSETS_URL)
+            } catch (e: Exception) { emptyList() }
+            val merged = if (scanned.isEmpty()) manifest else mergeWithAssets(manifest, scanned)
+            ui.post {
+                if (merged != null) showPackages(merged)
+                else onManifestError(java.io.IOException("manifest_unavailable"))
             }
         }
+    }
+
+    /** ادغام manifest رسمی با اسکن دارایی‌ها؛ برای هر شناسه نسخهٔ تازه‌تر برنده است */
+    private fun mergeWithAssets(
+        manifest: List<PackageDownloader.RemotePkg>?,
+        scanned: List<PackageDownloader.RemotePkg>
+    ): List<PackageDownloader.RemotePkg> {
+        val byId = LinkedHashMap<String, PackageDownloader.RemotePkg>()
+        manifest?.forEach { byId[it.id] = it }
+        for (s in scanned) {
+            val cur = byId[s.id]
+            when {
+                cur == null ->
+                    // بسته‌ای که هنوز در manifest ثبت نشده (تازه بارگذاری شده)
+                    byId[s.id] = s.copy(name = s.id)
+                s.dataDate > cur.dataDate ->
+                    // manifest قدیمی است: نام نمایشی از manifest حفظ می‌شود
+                    byId[s.id] = s.copy(name = cur.name, region = cur.region)
+                else -> { /* manifest تازه‌تر/برابر — دست نمی‌زنیم */ }
+            }
+        }
+        return byId.values.toList()
     }
 
     private fun onManifestError(e: Exception) {

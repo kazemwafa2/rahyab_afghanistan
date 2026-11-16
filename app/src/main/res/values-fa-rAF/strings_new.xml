@@ -153,23 +153,4 @@
     <string name="auto_update_channel">به‌روزرسانی‌های راه‌یاب</string>
     <string name="auto_update_notification_title">نسخه جدید راه‌یاب آماده است</string>
     <string name="auto_update_notification_text">نسخه %1$s منتشر شده است. برای بررسی و دریافت آن لمس کنید.</string>
-    <string name="voice_group_all">همهٔ زبان‌ها</string>
-    <string name="recents_clear_all">پاک کردن همه</string>
-    <string name="recents_clear_confirm">همهٔ جست‌وجوهای اخیر پاک شود؟ این کار برگشت‌پذیر نیست.</string>
-    <string name="recents_cleared">تاریخچهٔ جست‌وجو پاک شد</string>
-    <string name="recents_deleted">جست‌وجو حذف شد</string>
-    <string name="recents_delete">حذف این جست‌وجو</string>
-    <string name="recents_show_all">همهٔ تاریخچه</string>
-    <string name="recents_more">%1$d مورد دیگر…</string>
-    <string name="recents_empty">هنوز جست‌وجویی ثبت نشده است</string>
-    <string name="history_title">تاریخچهٔ جست‌وجو</string>
-    <string name="search_show">نمایش نوار جست‌وجو</string>
-    <string name="update_uptodate_title">به‌روزرسانی</string>
-    <string name="update_uptodate">نسخهٔ شما به‌روز است.\nنسخهٔ نصب‌شده: %1$s (نسخهٔ شمارهٔ %2$d)</string>
-    <string name="update_info_full">نسخهٔ فعلی: %1$s\nنسخهٔ جدید: %2$s\nحجم فایل جدید: %3$s\n\nاطلاعات شما پس از نصب حفظ می‌شود.</string>
-    <string name="update_resuming">ادامهٔ دانلود از %1$s…</string>
-    <string name="update_failed_title">دانلود ناتمام ماند</string>
-    <string name="update_failed_resume">دانلود ناتمام ماند (%1$s). بخش دریافت‌شده حفظ می‌شود و دوباره از همان‌جا ادامه می‌یابد.</string>
-    <string name="update_part_kept">تاکنون %1$s دریافت شده است</string>
-    <string name="update_retry">تلاش دوباره</string>
 </resources>

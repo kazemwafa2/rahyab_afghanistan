@@ -16,8 +16,8 @@ android {
         applicationId = "af.rahyab.app"
         minSdk = 21          // Android 5.0+
         targetSdk = 35
-        versionCode = 25
-        versionName = "1.1.1"
+        versionCode = 27
+        versionName = "1.1.3"
 
         // نشانی مخزن در BuildConfig قرار می‌گیرد تا User-Agent و نشانی manifest
         // بسته‌ها به‌صورت متمرکز ساخته شوند (Config.kt).

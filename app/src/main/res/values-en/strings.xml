@@ -38,6 +38,18 @@
     <string name="map_offline_unavailable">No internet and no offline map package installed. Download your region package from “Offline maps” so the app works without internet.</string>
     <string name="offline_maps">Offline maps</string>
     <string name="welcome_title">Welcome to Rahyab Afghanistan!</string>
+    <!-- 1.1.1 — search history, collapsible home sheet, route labels -->
+    <string name="search_history_title">Search history</string>
+    <string name="search_history_clear">Clear all</string>
+    <string name="search_history_confirm">Delete all search phrases? Favorites and recent places are not touched.</string>
+    <string name="search_history_cleared">Search history cleared</string>
+    <string name="search_history_empty">Nothing searched yet</string>
+    <string name="delete">Delete</string>
+    <string name="sheet_details_show">Show details</string>
+    <string name="sheet_details_hide">Hide details</string>
+    <string name="sheet_close">Close search sheet</string>
+    <string name="route_main">Main</string>
+    <string name="route_nearest">Shortest</string>
     <string name="welcome_subtitle">Free maps &amp; navigation for Afghanistan — online and offline</string>
     <string name="welcome_go">Let\'s go!</string>
     <string name="welcome_what">What can Rahyab do?</string>

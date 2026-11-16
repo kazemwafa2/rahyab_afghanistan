@@ -35,12 +35,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Verify bundled map packages (base only)
+      - name: Verify map packages are not bundled
         run: |
           n=$(find app/src/main/assets -type f -name '*.rahpkg.zip' | wc -l)
           echo "bundled map packages: $n"
-          test -f app/src/main/assets/initial/afghanistan.rahpkg.zip || { echo "::error::national base package missing"; exit 1; }
-          test "$n" -eq 1 || { echo "::error::only the national base package may be bundled; provincial packages must be hosted in GitHub Releases"; exit 1; }
+          test "$n" -eq 0 || { echo "::error::map packages must be hosted only in GitHub Releases"; exit 1; }
 
       - uses: actions/setup-java@v4
         with:
@@ -156,16 +155,4 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: dist/*
-          body_path: release-notes.md
-          generate_release_notes: true
-
-      - name: Publish debug-signed test release (on tag without signing key)
-        if: startsWith(github.ref, 'refs/tags/v') && env.KIND == 'debug'
-        uses: softprops/action-gh-release@v2
-        with:
-          files: dist/*
-          prerelease: true
-          body: |
-            ⚠️ این انتشار با کلید امضای آزمایشی (debug) ساخته شده است و «نسخه رسمی» نیست.
-            برای انتشار رسمی، رازهای KEYSTORE_BASE64 و KEYSTORE_PASSWORD و KEY_ALIAS و KEY_PASSWORD
-            را مطابق docs/SIGNING.md تنظیم کنید و دوباره تگ بزنید.
+          body_path: release-notes.md\n

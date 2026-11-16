@@ -42,15 +42,23 @@ object Config {
     const val ROUTE_CACHE_MAX = 40
 
     // ---------- بسته‌های آفلاین ----------
+    /** ریلیز ثابت بسته‌های نقشه در مخزن پروژه */
+    const val RELEASE_TAG = "map-data"
+
     /** نشانی manifest بسته‌ها: ریلیز ثابت map-data در مخزن پروژه */
-    val MANIFEST_URL: String get() = "$REPO_URL/releases/download/map-data/manifest.json"
+    val MANIFEST_URL: String get() = "$REPO_URL/releases/download/$RELEASE_TAG/manifest.json"
+
+    /**
+     * صفحهٔ دارایی‌های ریلیز — اسکن پشتیبان فهرست بسته‌ها.
+     * اگر manifest.json روی سرور قدیمی بماند ولی فایل‌های بسته تازه بارگذاری شوند
+     * (دقیقاً اتفاقی که برای کاربر افتاد)، برنامه از همین صفحه نسخهٔ جدید را می‌بیند.
+     */
+    val RELEASE_ASSETS_URL: String get() = "$REPO_URL/releases/expanded_assets/$RELEASE_TAG"
 
     /** شناسه قدیمی بسته ملی؛ برای شناسایی داده‌های نصب‌شده نسخه‌های قبلی */
     const val BASE_PACKAGE_ID = "afghanistan"
     /** شناسه بسته پایه کامل (راه‌های اصلی شهرها هم) — دانلودی اختیاری، سنگین‌تر */
     const val BASE_FULL_PACKAGE_ID = "afghanistan_full"
-    /** مسیر دارایی بستهٔ پایهٔ ملی داخل APK — نصب خودکار آفلاین در نخستین اجرا (نسخهٔ ۱٫۱٫۰) */
-    const val BASE_PACKAGE_ASSET = "initial/afghanistan.rahpkg.zip"
 
     // ---------- سرور اطلاعات جاده‌ای (ضمیمهٔ ۱ — Cloudflare Worker + D1) ----------
     // ورکر مستقر و زندهٔ پروژه (نام: rahyab-api) — بدون هیچ توکن یا کلید مخفی.

@@ -330,7 +330,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ستون راست: جست‌وجو، لایه‌ها، موقعیت من، مسیریابی -->
+            <!-- ستون راست: لایه‌ها، موقعیت من، مسیریابی -->
             <LinearLayout
                 android:id="@+id/fabColumn"
                 android:layout_width="wrap_content"
@@ -338,19 +338,6 @@
                 android:layout_gravity="right|bottom"
                 android:gravity="center_horizontal"
                 android:orientation="vertical">
-
-                <!-- بازگرداندن نوار جست‌وجو — وقتی برگهٔ جست‌وجو پنهان است
-                     (برگهٔ مکان، برگهٔ مسیر یا رانندگی آزاد) همیشه دیده می‌شود -->
-                <com.google.android.material.floatingactionbutton.FloatingActionButton
-                    android:id="@+id/fabSearch"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="12dp"
-                    android:contentDescription="@string/search_show"
-                    app:backgroundTint="#FFF7E0"
-                    app:fabSize="mini"
-                    app:srcCompat="@drawable/ic_search"
-                    app:tint="@color/blue_primary" />
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/fabTraffic"
@@ -483,14 +470,40 @@
             android:paddingEnd="14dp"
             android:paddingBottom="10dp">
 
-            <!-- دستگیرهٔ برگه: با لمس، برگهٔ جمع‌شده باز و بسته می‌شود -->
-            <ImageView
-                android:id="@+id/sheetHandle"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_gravity="center_horizontal"
-                android:contentDescription="@string/search_hint"
-                android:src="@drawable/bg_handle" />
+            <!-- سربرگ برگه: دستهٔ کشویی + بستن + نمایش/بستن جزئیات (نسخهٔ ۱.۱.۱) -->
+            <FrameLayout
+                android:layout_width="match_parent"
+                android:layout_height="36dp">
+
+                <ImageView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:contentDescription="@null"
+                    android:src="@drawable/bg_handle" />
+
+                <ImageView
+                    android:id="@+id/btnSheetClose"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="start|center_vertical"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/sheet_close"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_close"
+                    app:tint="#7D8CA3" />
+
+                <ImageView
+                    android:id="@+id/btnSheetToggle"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_gravity="end|center_vertical"
+                    android:background="@drawable/bg_icon_box"
+                    android:contentDescription="@string/sheet_details_hide"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_expand_more"
+                    app:tint="#7D8CA3" />
+            </FrameLayout>
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -594,6 +607,49 @@
                     android:orientation="horizontal"
                     android:paddingBottom="2dp" />
             </HorizontalScrollView>
+
+            <!-- تاریخچهٔ جست‌وجو (نسخهٔ ۱.۱.۱): با تمرکز روی کادر جست‌وجو نمایش داده می‌شود -->
+            <LinearLayout
+                android:id="@+id/historyBlock"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:orientation="vertical"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <TextView
+                        android:id="@+id/tvHistoryTitle"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:text="@string/search_history_title"
+                        android:textAlignment="viewStart"
+                        android:textColor="@color/ink"
+                        android:textSize="16sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/btnHistoryClear"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:padding="6dp"
+                        android:text="@string/search_history_clear"
+                        android:textColor="@color/blue_primary"
+                        android:textSize="13sp" />
+                </LinearLayout>
+
+                <LinearLayout
+                    android:id="@+id/historyList"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical" />
+            </LinearLayout>
 
             <TextView
                 android:id="@+id/tvRecentsTitle"
