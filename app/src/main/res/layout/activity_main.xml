@@ -483,11 +483,13 @@
             android:paddingEnd="14dp"
             android:paddingBottom="10dp">
 
+            <!-- دستگیرهٔ برگه: با لمس، برگهٔ جمع‌شده باز و بسته می‌شود -->
             <ImageView
+                android:id="@+id/sheetHandle"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_gravity="center_horizontal"
-                android:contentDescription="@null"
+                android:contentDescription="@string/search_hint"
                 android:src="@drawable/bg_handle" />
 
             <LinearLayout

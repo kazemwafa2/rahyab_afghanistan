@@ -6,6 +6,22 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_welcome_gradient">
 
+    <!-- پس‌زمینهٔ تصویر خودرؤ راه‌یاب (درخواست کارفرما) -->
+    <ImageView
+        android:id="@+id/welcomeBackdrop"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:contentDescription="@null"
+        android:scaleType="centerCrop"
+        android:src="@drawable/img_welcome_car" />
+
+    <!-- پردهٔ تیره برای خوانایی متن روی تصویر -->
+    <View
+        android:id="@+id/welcomeScrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@drawable/bg_welcome_scrim" />
+
     <!-- ===== مرحله ۱: خوش‌آمد ===== -->
     <ScrollView
         android:id="@+id/cardIntro"
@@ -41,7 +57,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
                     android:text="@string/app_name"
-                    android:textColor="#2F4858"
+                    android:textColor="#FFFFFF"
                     android:textSize="18sp"
                     android:textStyle="bold" />
             </LinearLayout>
@@ -52,7 +68,7 @@
                 android:layout_marginTop="34dp"
                 android:text="@string/welcome_title"
                 android:textAlignment="viewStart"
-                android:textColor="#2F4858"
+                android:textColor="#FFFFFF"
                 android:textSize="34sp"
                 android:textStyle="bold" />
 
@@ -63,16 +79,12 @@
                 android:lineSpacingExtra="4dp"
                 android:text="@string/welcome_subtitle"
                 android:textAlignment="viewStart"
-                android:textColor="#587083"
+                android:textColor="#D5E3F0"
                 android:textSize="16sp" />
 
-            <ImageView
+            <Space
                 android:layout_width="match_parent"
-                android:layout_height="260dp"
-                android:layout_marginTop="12dp"
-                android:contentDescription="@null"
-                android:scaleType="fitCenter"
-                android:src="@drawable/img_welcome_route" />
+                android:layout_height="24dp" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnWhat"
@@ -100,7 +112,7 @@
                 android:layout_marginTop="18dp"
                 android:text="@string/welcome_privacy"
                 android:textAlignment="center"
-                android:textColor="#3D5568"
+                android:textColor="#CFDCE8"
                 android:textSize="12sp" />
         </LinearLayout>
     </ScrollView>

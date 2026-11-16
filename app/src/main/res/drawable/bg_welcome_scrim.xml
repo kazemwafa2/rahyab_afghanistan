@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- پردهٔ تیرهٔ روی تصویر پس‌زمینهٔ خوش‌آمد برای خوانایی متن -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android">
+    <gradient
+        android:angle="270"
+        android:startColor="#3D0A1B33"
+        android:centerColor="#660A1B33"
+        android:endColor="#BF0A1B33" />
+</shape>

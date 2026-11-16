@@ -37,7 +37,7 @@
     <string name="attribution_offline">© OpenStreetMap contributors · بسته آفلاین راه‌یاب · مجوز ODbL</string>
     <string name="map_offline_unavailable">انترنت وصل نیست و بسته نقشه آفلاین هم نصب نیست. از «نقشه‌های آفلاین» بسته منطقه خود را دانلود کنید تا برنامه بدون انترنت کار کند.</string>
     <string name="offline_maps">نقشه‌های آفلاین</string>
-    <string name="welcome_title">به راه‌یاب خوش آمدید!</string>
+    <string name="welcome_title">به راهیاب افغانستان خوش آمدید!</string>
     <string name="welcome_subtitle">نقشه و مسیریاب رایگان افغانستان — آنلاین و آفلاین</string>
     <string name="welcome_go">بزن بریم!</string>
     <string name="welcome_what">راه‌یاب چه کارهایی می‌کند؟</string>

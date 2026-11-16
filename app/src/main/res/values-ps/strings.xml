@@ -37,7 +37,7 @@
     <string name="attribution_offline">© OpenStreetMap contributors · د لارښود آفلاین بنډل · ODbL جواز</string>
     <string name="map_offline_unavailable">انټرنېټ نه دی او د آفلاین نقشې بنډل هم نصب نه دی. له «آفلاین نقشو» خپل د سیمې بنډل ډاونلوډ کړئ چې برنامه پرته له انټرنېټ کار وکړي.</string>
     <string name="offline_maps">آفلاین نقشې</string>
-    <string name="welcome_title">راهیاب ته ښه راغلاست!</string>
+    <string name="welcome_title">راهیاب افغانستان ته ښه راغلاست!</string>
     <string name="welcome_subtitle">د افغانستان وړیا نقشه او لارښود — آنلاین او آفلاین</string>
     <string name="welcome_go">پیل وکړو!</string>
     <string name="welcome_what">راهیاب څه کارونه لري؟</string>

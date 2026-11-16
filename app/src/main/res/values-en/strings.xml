@@ -37,7 +37,7 @@
     <string name="attribution_offline">© OpenStreetMap contributors · Rahyab offline package · ODbL license</string>
     <string name="map_offline_unavailable">No internet and no offline map package installed. Download your region package from “Offline maps” so the app works without internet.</string>
     <string name="offline_maps">Offline maps</string>
-    <string name="welcome_title">Welcome to Rahyab!</string>
+    <string name="welcome_title">Welcome to Rahyab Afghanistan!</string>
     <string name="welcome_subtitle">Free maps &amp; navigation for Afghanistan — online and offline</string>
     <string name="welcome_go">Let\'s go!</string>
     <string name="welcome_what">What can Rahyab do?</string>

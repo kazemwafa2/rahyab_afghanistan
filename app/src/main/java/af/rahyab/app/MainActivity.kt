@@ -185,6 +185,9 @@ class MainActivity : AppCompatActivity() {
     private enum class Pick { NONE, ORIGIN, DEST }
     private var pick = Pick.NONE
     private var originPlace: Place? = null   // null = موقعیت فعلی
+    // برگهٔ خانه (نوار جست‌وجو) به‌صورت جمع‌شده نمایش داده می‌شود تا نقشه را اشغال نکند
+    // (گزارش کارفرما)؛ با لمس دستگیره یا تمرکز روی کادر جست‌وجو باز می‌شود.
+    private var sheetExpanded = false
     private var northUp = false
 
     // زبانه‌های موتورسکل و بایسکل (بخش هفتم چک‌لیست)
@@ -463,6 +466,19 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.fabSearch).setOnClickListener {
             if (NavigationController.freeMode) endFreeDriving() else clearAll()
         }
+        // برگهٔ جمع‌شدهٔ جست‌وجو: با لمس دستگیره باز و بسته می‌شود
+        findViewById<View>(R.id.sheetHandle).setOnClickListener {
+            sheetExpanded = !sheetExpanded
+            applySheetState()
+        }
+        // با لمس کادر جست‌وجو، دسته‌ها و تاریخچه خودکار باز می‌شوند
+        etSearch.setOnFocusChangeListener { _, hasFocus ->
+            if (hasFocus && !sheetExpanded) {
+                sheetExpanded = true
+                applySheetState()
+            }
+        }
+        applySheetState()
         findViewById<View>(R.id.fabLayers).setOnClickListener { showMapModeDialog() }
         btnRouteSettings.setOnClickListener { showMapModeDialog() }
         findViewById<View>(R.id.btnRoute).setOnClickListener { requestRoute(navProfile) }
@@ -670,7 +686,10 @@ class MainActivity : AppCompatActivity() {
                         setMode(Mode.ROUTE)
                         drawAllRoutes()
                         rebuildBubbles()
-                        fitRoutes()
+                        // گزارش کارفرما: با انتخاب مسیر، نشانگر و دوربین باید روی «مبدأ»
+                        // بیاید نه وسط مسیر — نشانگر پیش‌فرض مبدأ هم ترسیم می‌شود
+                        drawOriginMarker()
+                        focusOrigin()
                         updateRouteInfo()
                         if (deepLinkReturn) {
                             val best = list[0]
@@ -734,6 +753,7 @@ class MainActivity : AppCompatActivity() {
         val list = store.recents()
         if (list.isEmpty()) {
             tvRecentsTitle.visibility = View.GONE
+            applySheetState()
             return
         }
         tvRecentsTitle.visibility = View.VISIBLE
@@ -793,6 +813,7 @@ class MainActivity : AppCompatActivity() {
             more.setOnClickListener { showHistoryDialog() }
             recentsList.addView(more)
         }
+        applySheetState()
     }
 
     /** یک ردیف مکان اخیر با دکمهٔ حذف (×) */
@@ -1330,6 +1351,22 @@ class MainActivity : AppCompatActivity() {
         style?.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(Feature.fromGeometry(line))
     }
 
+    /** نشانگر پیش‌فرض مبدأ — پین آبی در نقطهٔ شروع مسیر (گزارش کارفرما) */
+    private fun drawOriginMarker() {
+        val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
+        val src = style?.getSourceAs<GeoJsonSource>("origin-src") ?: return
+        val p = r.points.firstOrNull() ?: return
+        src.setGeoJson(Feature.fromGeometry(Point.fromLngLat(p.first, p.second)))
+    }
+
+    /** دوربین روی مبدأ مسیر می‌آید (نه وسط مسیر) — گزارش کارفرما */
+    private fun focusOrigin() {
+        val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
+        val p = r.points.firstOrNull() ?: return
+        map?.animateCamera(CameraUpdateFactory.newLatLngZoom(LatLng(p.second, p.first), 15.5))
+    }
+
+    /** نمای کامل مسیر — از «مرور مسیر» در برگهٔ مسیر در دسترس است */
     private fun fitRoutes() {
         val r = altRoutes.getOrNull(selectedRouteIdx) ?: return
         val b = LatLngBounds.Builder()
@@ -1388,6 +1425,16 @@ class MainActivity : AppCompatActivity() {
         refreshRecents()
         buildCategoryChips()
         setMode(Mode.HOME)
+    }
+
+    /** برگهٔ خانهٔ جمع‌شده: فقط نوار جست‌وجو دیده می‌شود تا نقشه آزاد بماند
+     *  (گزارش کارفرما)؛ دسته‌ها، هوا و تاریخچه در حالت باز نمایش داده می‌شوند. */
+    private fun applySheetState() {
+        val vis = if (sheetExpanded) View.VISIBLE else View.GONE
+        chipsScroll.visibility = vis
+        weatherCard.visibility = if (sheetExpanded && tvWeather.text.isNotEmpty()) View.VISIBLE else View.GONE
+        tvRecentsTitle.visibility = if (sheetExpanded && store.recents().isNotEmpty()) View.VISIBLE else View.GONE
+        recentsList.visibility = vis
     }
 
     /** نمایش بخش‌های مناسب هر حالت (خانه / مکان / مسیر / ناوبری) */
@@ -2398,20 +2445,41 @@ class MainActivity : AppCompatActivity() {
             android.util.Log.w("MainActivity", "لایه پیکان مسیر ساخته نشد", e)
         }
 
-        s.addLayer(
-            CircleLayer("dest-layer", "dest-src").withProperties(
-                circleColor(Color.parseColor("#E53935")), circleRadius(9f),
-                circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
+        // پین پیش‌فرض مقصد (قرمز) و مبدأ (آبی) — نشانگر پیش‌فرض درخواستی کارفرما
+        try {
+            if (s.getImage("pin-dest") == null) s.addImage("pin-dest", makePinBitmap("#E53935"))
+            if (s.getImage("pin-origin") == null) s.addImage("pin-origin", makePinBitmap("#1E88E5"))
+            s.addLayer(
+                SymbolLayer("dest-layer", "dest-src").withProperties(
+                    org.maplibre.android.style.layers.PropertyFactory.iconImage("pin-dest"),
+                    org.maplibre.android.style.layers.PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+                    org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
+                    org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)
+                )
             )
-        )
-        // مبدأ مسیر — نقطه آبی از مبدأ تا مقصد روی مسیر
-        s.addSource(GeoJsonSource("origin-src", FeatureCollection.fromFeatures(emptyList<Feature>())))
-        s.addLayer(
-            CircleLayer("origin-layer", "origin-src").withProperties(
-                circleColor(Color.parseColor("#1E88E5")), circleRadius(8f),
-                circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
+            s.addLayer(
+                SymbolLayer("origin-layer", "origin-src").withProperties(
+                    org.maplibre.android.style.layers.PropertyFactory.iconImage("pin-origin"),
+                    org.maplibre.android.style.layers.PropertyFactory.iconAnchor(Property.ICON_ANCHOR_BOTTOM),
+                    org.maplibre.android.style.layers.PropertyFactory.iconAllowOverlap(true),
+                    org.maplibre.android.style.layers.PropertyFactory.iconIgnorePlacement(true)
+                )
             )
-        )
+        } catch (e: Exception) {
+            // اگر ساخت پین ممکن نشد، نقطهٔ سادهٔ قبلی نمایش داده می‌شود
+            s.addLayer(
+                CircleLayer("dest-layer", "dest-src").withProperties(
+                    circleColor(Color.parseColor("#E53935")), circleRadius(9f),
+                    circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
+                )
+            )
+            s.addLayer(
+                CircleLayer("origin-layer", "origin-src").withProperties(
+                    circleColor(Color.parseColor("#1E88E5")), circleRadius(8f),
+                    circleStrokeColor(Color.WHITE), circleStrokeWidth(3f)
+                )
+            )
+        }
         // تیرک جهت ناوبری — نشانگر وسیله انتخابی یا فلش، همیشه دقیقاً روی مسیر
         try {
             applyVehicleMarker(s)
@@ -2437,11 +2505,53 @@ class MainActivity : AppCompatActivity() {
         drawnRoute?.let { r ->
             val line = LineString.fromLngLats(r.points.map { Point.fromLngLat(it.first, it.second) })
             s.getSourceAs<GeoJsonSource>("route-src")?.setGeoJson(Feature.fromGeometry(line))
+            // نشانگر مبدأ پس از بازسازی استایل هم حفظ شود
+            r.points.firstOrNull()?.let { op ->
+                s.getSourceAs<GeoJsonSource>("origin-src")?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(op.first, op.second)))
+            }
         }
         selected?.let {
             s.getSourceAs<GeoJsonSource>("dest-src")?.setGeoJson(Feature.fromGeometry(Point.fromLngLat(it.lon, it.lat)))
         }
         if (hasLocationPermission()) enableLocation()
+    }
+
+    /** پین نقشهٔ نشانگر پیش‌فرض مبدأ/مقصد — به‌صورت نرم‌افزاری ساخته می‌شود */
+    private fun makePinBitmap(colorHex: String): android.graphics.Bitmap {
+        val w = 44
+        val h = 58
+        val bmp = android.graphics.Bitmap.createBitmap(w, h, android.graphics.Bitmap.Config.ARGB_8888)
+        val c = android.graphics.Canvas(bmp)
+        // سایهٔ زیر پین
+        val shadow = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor("#33000000")
+        }
+        c.drawOval(android.graphics.RectF(w / 2f - 11f, h - 11f, w / 2f + 11f, h - 1f), shadow)
+        val fill = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.parseColor(colorHex)
+        }
+        val stroke = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+            style = android.graphics.Paint.Style.STROKE
+            strokeWidth = 3f
+        }
+        // دم مثلثی پین
+        val tail = android.graphics.Path()
+        tail.moveTo(w / 2f, h - 8f)
+        tail.lineTo(w / 2f - 10f, 26f)
+        tail.lineTo(w / 2f + 10f, 26f)
+        tail.close()
+        c.drawPath(tail, fill)
+        c.drawPath(tail, stroke)
+        // سر دایره‌ای پین
+        c.drawCircle(w / 2f, 18f, 15f, fill)
+        c.drawCircle(w / 2f, 18f, 15f, stroke)
+        // نقطهٔ سفید داخل پین
+        val dot = android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG).apply {
+            color = Color.WHITE
+        }
+        c.drawCircle(w / 2f, 18f, 5.5f, dot)
+        return bmp
     }
 
     /** بیت‌مپ تیرک ناوبری (پیکان آبی بزرگ به سبک نشان) */
@@ -3255,7 +3365,7 @@ class MainActivity : AppCompatActivity() {
             val d = WeatherModule.refresh(this@MainActivity, lat, lon)
             ui.post {
                 if (d != null) {
-                    weatherCard.visibility = View.VISIBLE
+                    if (sheetExpanded) weatherCard.visibility = View.VISIBLE
                     tvWeather.text = getString(R.string.weather_short,
                         WeatherModule.emoji(d.code), d.tempC.roundToInt(), WeatherModule.describe(this, d.code, d.isDay),
                         WeatherModule.aqiLabel(this, d.aqi))
