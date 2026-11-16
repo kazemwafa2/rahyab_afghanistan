@@ -83,4 +83,4 @@ jobs:
             gh release create map-data --title "بسته‌های آفلاین راه‌یاب" \
               --notes "بسته پایه کشوری + ۳۴ ولایت — ساخته‌شده خودکار توسط ورک‌فلو. © OpenStreetMap contributors (ODbL)"
           gh release upload map-data --clobber *.rahpkg.zip SHA256SUMS.txt
-gh release upload map-data --clobber manifest.json
+          gh release upload map-data --clobber manifest.json
