@@ -1,0 +1,462 @@
+{
+ "alert_accident": {
+  "fa": "هشدار! حادثه ترافیکی در پیش رو است.",
+  "ps": "احتیاط. مخکې سړک کې پېښه راپوره شوې ده",
+  "en": "Caution. An accident has been reported ahead"
+ },
+ "alert_animal": {
+  "fa": "هشدار! احتمال عبور حیوانات وجود دارد.",
+  "ps": "خبرتیا! کېدای شي څاروي تېر شي.",
+  "en": "Warning! Animals may be crossing."
+ },
+ "alert_border": {
+  "fa": "نقطه سرحدی در پیش رو است.",
+  "ps": "مخکې سرحدي نقطه ده.",
+  "en": "Border crossing ahead."
+ },
+ "alert_bridge": {
+  "fa": "پل در پیش رو است.",
+  "ps": "مخکې پل دی.",
+  "en": "Bridge ahead."
+ },
+ "alert_bump": {
+  "fa": "هشدار! دست‌انداز در پیش رو است.",
+  "ps": "احتیاط. مخکې سړک کې چټک‌ګیر دی",
+  "en": "Caution. Speed bump ahead"
+ },
+ "alert_cam": {
+  "fa": "هشدار! کمره کنترول سرعت در پیش رو است.",
+  "ps": "احتیاط. مخکې سړک کې د چټکتیا کمره ده",
+  "en": "Caution. Speed camera ahead"
+ },
+ "alert_closed": {
+  "fa": "هشدار! سرک در پیش رو بسته است.",
+  "ps": "مخکې سړک کې د سړک بنډ راپوره شوی دی",
+  "en": "A roadblock has been reported ahead"
+ },
+ "alert_crosswalk": {
+  "fa": "هشدار! گذرگاه عابران پیاده در پیش رو است.",
+  "ps": "خبرتیا! مخکې د پېاده تلو څېره ده.",
+  "en": "Warning! Pedestrian crossing ahead."
+ },
+ "alert_hazard": {
+  "fa": "هشدار! کار ترمیم سرک در پیش رو است.",
+  "ps": "احتیاط. مخکې سړک کې خطر دی",
+  "en": "Caution. Hazard ahead"
+ },
+ "alert_limit": {
+  "fa": "هشدار! محدودیت سرعت در پیش رو تغییر می‌کند.",
+  "ps": "خبرتیا! مخکې د چټکتیا محدودیت بدلیږي.",
+  "en": "Warning! The speed limit changes ahead."
+ },
+ "alert_narrow": {
+  "fa": "هشدار! سرک در پیش رو باریک می‌شود.",
+  "ps": "خبرتیا! مخکې سړک تنګېږي.",
+  "en": "Warning! The road narrows ahead."
+ },
+ "alert_police": {
+  "fa": "هشدار! احتمال حضور پولیس در پیش رو وجود دارد.",
+  "ps": "خبرتیا! کېدای شي مخکې پولیس وي.",
+  "en": "Warning! Police may be present ahead."
+ },
+ "alert_rail": {
+  "fa": "هشدار! گذرگاه ریل در پیش رو است.",
+  "ps": "خبرتیا! مخکې د رېل لار تېرېږي.",
+  "en": "Warning! Rail crossing ahead."
+ },
+ "alert_redlight": {
+  "fa": "هشدار! کمره چراغ سرخ در پیش رو است.",
+  "ps": "خبرتیا! مخکې د سور چراغ کمره ده.",
+  "en": "Warning! Red-light camera ahead."
+ },
+ "alert_school": {
+  "fa": "هشدار! مکتب در پیش رو است.",
+  "ps": "خبرتیا! مخکې د ښوونځي سیمه ده.",
+  "en": "Warning! School zone ahead."
+ },
+ "alert_slippery": {
+  "fa": "هشدار! سرک لغزنده است.",
+  "ps": "خبرتیا! سړک بهېدونکی دی.",
+  "en": "Warning! The road is slippery."
+ },
+ "alert_speed": {
+  "fa": "سرعت شما بیش از حد مجاز است. سرعت خود را کم کنید.",
+  "ps": "ستاسو چټکتیا زیاته ده. مهرباني وکړئ چټکتیا کمه کړئ",
+  "en": "You are driving too fast. Please slow down"
+ },
+ "alert_steep_down": {
+  "fa": "هشدار! سرازیری تند در پیش رو است.",
+  "ps": "خبرتیا! مخکې تېزه سراږه ده.",
+  "en": "Warning! Steep downhill ahead."
+ },
+ "alert_steep_up": {
+  "fa": "هشدار! سربالایی تند در پیش رو است.",
+  "ps": "خبرتیا! مخکې تېز پورته کېدونکی لار دی.",
+  "en": "Warning! Steep uphill ahead."
+ },
+ "alert_toll": {
+  "fa": "ایستگاه محصول سرک در پیش رو است.",
+  "ps": "مخکې د سړک د محصول سټېشن دی.",
+  "en": "Toll station ahead."
+ },
+ "alert_traffic": {
+  "fa": "هشدار! ترافیک سنگین در پیش رو است.",
+  "ps": "مخکې سړک کې ترافیکې ګنګلتیا راپوره شوې ده",
+  "en": "Traffic jam reported ahead"
+ },
+ "alert_trafficlight": {
+  "fa": "هشدار! چراغ ترافیکی در پیش رو است.",
+  "ps": "خبرتیا! مخکې د ترافیکو چراغ دی.",
+  "en": "Warning! Traffic light ahead."
+ },
+ "alert_tunnel": {
+  "fa": "تونل در پیش رو است.",
+  "ps": "مخکې تونل دی.",
+  "en": "Tunnel ahead."
+ },
+ "alt_found": {
+  "fa": "مسیر جایگزین پیدا شد.",
+  "ps": "بدیل لار پیدا شوه.",
+  "en": "An alternative route was found."
+ },
+ "approaching": {
+  "fa": "به مقصد نزدیک می‌شوید.",
+  "ps": "مو مقصد ته نږدې کېږئ.",
+  "en": "You are approaching your destination."
+ },
+ "arrive": {
+  "fa": "به مقصد رسیدید.",
+  "ps": "تاسو مقصد ته ورسېدل.",
+  "en": "You have arrived."
+ },
+ "arrive_farewell": {
+  "fa": "به مقصد رسیدید. سفر خوبی داشته باشید.",
+  "ps": "تاسو مقصد ته ورسېدل. سفر مو ښه وي.",
+  "en": "You have arrived. Have a pleasant trip."
+ },
+ "be_safe": {
+  "fa": "سلامت باشید.",
+  "ps": "خوندی اوسئ.",
+  "en": "Stay safe."
+ },
+ "continue": {
+  "fa": "مستقیم ادامه دهید.",
+  "ps": "مستقیم دوام ورکړئ.",
+  "en": "Continue straight."
+ },
+ "cross1_left": {
+  "fa": "در تقاطع بعدی به چپ بچرخید.",
+  "ps": "په راتلونکي تقاطع کې کیڼ ته تاو شئ.",
+  "en": "At the next intersection, turn left."
+ },
+ "cross1_right": {
+  "fa": "در تقاطع بعدی به راست بچرخید.",
+  "ps": "په راتلونکي تقاطع کې ښي ته تاو شئ.",
+  "en": "At the next intersection, turn right."
+ },
+ "d1000": {
+  "fa": "پس از یک کیلومتر.",
+  "ps": "له یو کیلومتره وروسته.",
+  "en": "In one kilometer."
+ },
+ "d200": {
+  "fa": "پس از دوصد متر.",
+  "ps": "له دوه سوه مترو وروسته.",
+  "en": "In two hundred meters."
+ },
+ "d40": {
+  "fa": "اکنون.",
+  "ps": "اوس.",
+  "en": "Now."
+ },
+ "d500": {
+  "fa": "پس از پانصد متر.",
+  "ps": "له پنځوسو مترو وروسته.",
+  "en": "In five hundred meters."
+ },
+ "depart": {
+  "fa": "آماده حرکت شوید.",
+  "ps": "د تګ لپاره چمتو شئ.",
+  "en": "Get ready to start."
+ },
+ "dest_200": {
+  "fa": "تا مقصد ۲۰۰ متر باقی مانده است.",
+  "ps": "مقصد ته ۲۰۰ متره پاتې دي.",
+  "en": "200 meters to destination."
+ },
+ "dest_500": {
+  "fa": "تا مقصد ۵۰۰ متر باقی مانده است.",
+  "ps": "مقصد ته ۵۰۰ متره پاتې دي.",
+  "en": "500 meters to destination."
+ },
+ "dest_left": {
+  "fa": "مقصد شما در طرف چپ قرار دارد.",
+  "ps": "ستاسو مقصد په کیڼ خوا کې دی.",
+  "en": "Destination is on your left."
+ },
+ "dest_right": {
+  "fa": "مقصد شما در طرف راست قرار دارد.",
+  "ps": "ستاسو مقصد په ښي خوا کې دی.",
+  "en": "Destination is on your right."
+ },
+ "dl_done": {
+  "fa": "بارگیری کامل شد.",
+  "ps": "ډاونلوډ بشپړ شو.",
+  "en": "Download completed."
+ },
+ "dl_failed": {
+  "fa": "بارگیری ناموفق بود.",
+  "ps": "ډاونلوډ ناکام شو.",
+  "en": "Download failed."
+ },
+ "dl_started": {
+  "fa": "بارگیری آغاز شد.",
+  "ps": "ډاونلوډ پیل شو.",
+  "en": "Download started."
+ },
+ "enter_alt": {
+  "fa": "به مسیر بدیل وارد شوید.",
+  "ps": "بډېل لار ته ننوځئ.",
+  "en": "Enter the alternative route."
+ },
+ "enter_main": {
+  "fa": "وارد مسیر اصلی شوید.",
+  "ps": "اصلي لار ته ننوځئ.",
+  "en": "Enter the main road."
+ },
+ "enter_road": {
+  "fa": "وارد سرک عمومی شوید.",
+  "ps": "اصلي سړک ته ننوځئ.",
+  "en": "Enter the public road."
+ },
+ "exit_1": {
+  "fa": "از خروجی اول خارج شوید.",
+  "ps": "له لومړي وتلو ووځئ.",
+  "en": "Take the first exit."
+ },
+ "exit_2": {
+  "fa": "از خروجی دوم خارج شوید.",
+  "ps": "له دويم وتلو ووځئ.",
+  "en": "Take the second exit."
+ },
+ "exit_3": {
+  "fa": "از خروجی سوم خارج شوید.",
+  "ps": "له درېيم وتلو ووځئ.",
+  "en": "Take the third exit."
+ },
+ "exit_main": {
+  "fa": "از مسیر اصلی خارج شوید.",
+  "ps": "له اصلي لار ووځئ.",
+  "en": "Leave the main road."
+ },
+ "exit_road": {
+  "fa": "از سرک عمومی خارج شوید.",
+  "ps": "له اصلي سړک ووځئ.",
+  "en": "Leave the public road."
+ },
+ "exit_roundabout": {
+  "fa": "از دوربرگردان خارج شوید.",
+  "ps": "له ګردچوک ووځئ.",
+  "en": "Exit the roundabout."
+ },
+ "faster_found": {
+  "fa": "مسیر سریع‌تری پیدا شد.",
+  "ps": "تر ژر لار پیدا شوه.",
+  "en": "A faster route was found."
+ },
+ "fork_left": {
+  "fa": "در دوراهی مسیر چپ را انتخاب کنید.",
+  "ps": "په دوه لارې کې کیڼ لار وټاکئ.",
+  "en": "At the fork, take the left path."
+ },
+ "fork_right": {
+  "fa": "در دوراهی مسیر راست را انتخاب کنید.",
+  "ps": "په دوه لارې کې ښي لار وټاکئ.",
+  "en": "At the fork, take the right path."
+ },
+ "free_start": {
+  "fa": "حالت رانندگی آزاد فعال شد. با احتیاط رانندگی کنید.",
+  "ps": "د آزادې موټروونې حالت فعال شو",
+  "en": "Free driving mode started"
+ },
+ "go_left_side": {
+  "fa": "به طرف چپ بروید.",
+  "ps": "کیڼ خوا ته لاړ شئ.",
+  "en": "Go to the left."
+ },
+ "go_right_side": {
+  "fa": "به طرف راست بروید.",
+  "ps": "ښي خوا ته لاړ شئ.",
+  "en": "Go to the right."
+ },
+ "gps_lost": {
+  "fa": "ارتباط GPS قطع شده است.",
+  "ps": "د GPS اړیکه پرې شوه.",
+  "en": "GPS signal lost."
+ },
+ "gps_restored": {
+  "fa": "ارتباط GPS دوباره برقرار شد.",
+  "ps": "د GPS اړیکه بېرته ټينګه شوه.",
+  "en": "GPS signal restored."
+ },
+ "keep_left": {
+  "fa": "در لین چپ حرکت کنید.",
+  "ps": "له کیڼ لېن څخه تېر شئ.",
+  "en": "Keep to the left lane."
+ },
+ "keep_right": {
+  "fa": "در لین راست حرکت کنید.",
+  "ps": "د ښي لېن څخه تېر شئ.",
+  "en": "Keep to the right lane."
+ },
+ "keep_road": {
+  "fa": "به راه خود ادامه دهید.",
+  "ps": "خپلې لارې ته دوام ورکړئ.",
+  "en": "Keep on the road."
+ },
+ "lane_change": {
+  "fa": "لین خود را عوض کنید.",
+  "ps": "خپل لېن بدل کړئ.",
+  "en": "Change your lane."
+ },
+ "left": {
+  "fa": "به چپ بچرخید.",
+  "ps": "کیڼ ته تاو شئ.",
+  "en": "Turn left."
+ },
+ "limit_60": {
+  "fa": "محدودیت سرعت، شصت کیلومتر در ساعت.",
+  "ps": "د چټکتیا محدودیت، شپېته کیلومتره په ساعت کې.",
+  "en": "Speed limit, sixty kilometers per hour."
+ },
+ "loc_acquired": {
+  "fa": "موقعیت شما تعیین شد.",
+  "ps": "ستاسو موقعیت معلوم شو.",
+  "en": "Your location was found."
+ },
+ "loc_unknown": {
+  "fa": "موقعیت شما معلوم نیست.",
+  "ps": "ستاسو موقعیت معلوم نه ده.",
+  "en": "Your location is not known."
+ },
+ "locating": {
+  "fa": "در حال تعیین موقعیت.",
+  "ps": "د موقعیت ټاکنه روانه ده.",
+  "en": "Locating your position."
+ },
+ "map_loading": {
+  "fa": "در حال بارگیری نقشه.",
+  "ps": "نخشه بارګېږي.",
+  "en": "Loading the map."
+ },
+ "map_ready": {
+  "fa": "نقشه آماده است.",
+  "ps": "نخشه چمتو ده.",
+  "en": "The map is ready."
+ },
+ "no_internet": {
+  "fa": "انترنت در دسترس نیست.",
+  "ps": "انټرنټ نه ده پیدا کېږي.",
+  "en": "No internet connection."
+ },
+ "offroute": {
+  "fa": "از مسیر خارج شدید.",
+  "ps": "تاسو له لارې بهر شوي یاست.",
+  "en": "You are off the route."
+ },
+ "report_saved": {
+  "fa": "گزارش شما ثبت شد. سپاس.",
+  "ps": "ستاسو راپور ثبت شو. مننه.",
+  "en": "Your report was saved. Thank you."
+ },
+ "rerouted": {
+  "fa": "مسیر جدید تنظیم شد.",
+  "ps": "نوې لار ټاکل شوه.",
+  "en": "New route set."
+ },
+ "right": {
+  "fa": "به راست بچرخید.",
+  "ps": "ښي خوا ته تاو شئ.",
+  "en": "Turn right."
+ },
+ "roundabout": {
+  "fa": "وارد دوربرگردان شوید.",
+  "ps": "ګردچوک ته ننوځئ.",
+  "en": "Enter the roundabout."
+ },
+ "route_changed": {
+  "fa": "مسیر شما تغییر کرد.",
+  "ps": "ستاسو لار بدله شوه.",
+  "en": "Your route changed."
+ },
+ "route_started": {
+  "fa": "مسیر شما آغاز شد.",
+  "ps": "ستاسو لار پیل شوه.",
+  "en": "Your route has started."
+ },
+ "sharp_left": {
+  "fa": "تند به چپ بچرخید.",
+  "ps": "تیز کيڼ خوا ته تاو شئ.",
+  "en": "Turn sharply left."
+ },
+ "sharp_right": {
+  "fa": "تند به راست بچرخید.",
+  "ps": "تیز ښي خوا ته تاو شئ.",
+  "en": "Turn sharply right."
+ },
+ "slight_left": {
+  "fa": "کمی به چپ بروید.",
+  "ps": "لږ کیڼ ته اړ شئ.",
+  "en": "Slightly to the left."
+ },
+ "slight_right": {
+  "fa": "کمی به راست بروید.",
+  "ps": "لږ ښي خوا ته اړ شئ.",
+  "en": "Slightly to the right."
+ },
+ "slow_down": {
+  "fa": "سرعت خود را کم کنید.",
+  "ps": "چټکتیا کمه کړئ.",
+  "en": "Slow down."
+ },
+ "stay_left": {
+  "fa": "در مسیر چپ بمانید.",
+  "ps": "په کیڼ لار کې پاتې شئ.",
+  "en": "Stay on the left."
+ },
+ "stay_right": {
+  "fa": "در مسیر راست بمانید.",
+  "ps": "په ښي لار کې پاتې شئ.",
+  "en": "Stay on the right."
+ },
+ "straight": {
+  "fa": "به مسیر خود ادامه دهید.",
+  "ps": "خپلې لارې ته دوام ورکړئ.",
+  "en": "Continue on your route."
+ },
+ "test": {
+  "fa": "آزمایش صدای راهیاب.",
+  "ps": "د راهیاب غږ ازمویښت.",
+  "en": "Rahyab voice test."
+ },
+ "thanks_bye": {
+  "fa": "سپاس از همراهی شما. به امید دیدار.",
+  "ps": "ستاسو د ملګرتیا څخه مننه. بيا به ګورو.",
+  "en": "Thank you for riding with us. Goodbye."
+ },
+ "trip_end": {
+  "fa": "سفر شما به پایان رسید. از همراهی شما سپاسگزاریم.",
+  "ps": "ستاسو سفر پای ته ورسېد. له ملگرتیا مو مننه کوو.",
+  "en": "Your trip has ended. Thank you for traveling with us."
+ },
+ "using_offline": {
+  "fa": "از نقشه آفلاین استفاده می‌شود.",
+  "ps": "له آفلاین نخشه څخه کار اخیستل کېږي.",
+  "en": "Using the offline map."
+ },
+ "uturn": {
+  "fa": "به عقب برگردید.",
+  "ps": "شا واړئ.",
+  "en": "Make a U-turn."
+ }
+}

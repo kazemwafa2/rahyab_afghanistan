@@ -330,7 +330,7 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ستون راست: لایه‌ها، موقعیت من، مسیریابی -->
+            <!-- ستون راست: جست‌وجو، لایه‌ها، موقعیت من، مسیریابی -->
             <LinearLayout
                 android:id="@+id/fabColumn"
                 android:layout_width="wrap_content"
@@ -338,6 +338,19 @@
                 android:layout_gravity="right|bottom"
                 android:gravity="center_horizontal"
                 android:orientation="vertical">
+
+                <!-- بازگرداندن نوار جست‌وجو — وقتی برگهٔ جست‌وجو پنهان است
+                     (برگهٔ مکان، برگهٔ مسیر یا رانندگی آزاد) همیشه دیده می‌شود -->
+                <com.google.android.material.floatingactionbutton.FloatingActionButton
+                    android:id="@+id/fabSearch"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:contentDescription="@string/search_show"
+                    app:backgroundTint="#FFF7E0"
+                    app:fabSize="mini"
+                    app:srcCompat="@drawable/ic_search"
+                    app:tint="@color/blue_primary" />
 
                 <com.google.android.material.floatingactionbutton.FloatingActionButton
                     android:id="@+id/fabTraffic"

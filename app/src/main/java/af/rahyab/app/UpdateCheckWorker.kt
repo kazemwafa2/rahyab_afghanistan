@@ -21,7 +21,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.util.concurrent.TimeUnit
 
-/** بررسی هفتگی نسخهٔ جدید و اعلان به کاربر؛ نصب همچنان با تأیید خود کاربر انجام می‌شود. */
+/** بررسی روزانهٔ نسخهٔ جدید در پس‌زمینه + اعلان؛ نصب همچنان با تأیید خود کاربر انجام می‌شود. */
 class UpdateCheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorker(ctx, params) {
     override suspend fun doWork(): Result {
         val ctx = applicationContext
@@ -81,11 +81,12 @@ class UpdateCheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorke
         const val PREF_LAST_CHECK = "auto_update_last_check"
         const val PREF_LAST_NOTIFIED_CODE = "auto_update_last_notified_code"
         const val EXTRA_OPEN_UPDATES = "af.rahyab.app.OPEN_UPDATES"
-        const val UNIQUE_PERIODIC = "rahyab_auto_update_weekly"
+        const val UNIQUE_PERIODIC = "rahyab_auto_update_daily"
         const val UNIQUE_ONCE = "rahyab_auto_update_startup"
         private const val CHANNEL_ID = "rahyab_updates"
         private const val NOTIFICATION_ID = 2303
-        private const val CHECK_INTERVAL_MS = 7L * 24 * 60 * 60 * 1000
+        /** درخواست کارفرما: بررسی خودکار روزانه (روشن/خاموش از تنظیمات) */
+        private const val CHECK_INTERVAL_MS = 24L * 60 * 60 * 1000
 
         fun schedule(ctx: Context) {
             val prefs = ctx.getSharedPreferences("settings", Context.MODE_PRIVATE)
@@ -98,7 +99,7 @@ class UpdateCheckWorker(ctx: Context, params: WorkerParameters) : CoroutineWorke
             val constraints = Constraints.Builder()
                 .setRequiredNetworkType(NetworkType.CONNECTED)
                 .build()
-            val periodic = PeriodicWorkRequestBuilder<UpdateCheckWorker>(7, TimeUnit.DAYS)
+            val periodic = PeriodicWorkRequestBuilder<UpdateCheckWorker>(1, TimeUnit.DAYS)
                 .setConstraints(constraints)
                 .build()
             wm.enqueueUniquePeriodicWork(UNIQUE_PERIODIC, ExistingPeriodicWorkPolicy.KEEP, periodic)

@@ -407,9 +407,55 @@ object OfflineData {
         return inst
     }
 
+    /**
+     * نصب بستهٔ پایهٔ ملی از دارایی‌های خود APK (بدون انترنت، در نخستین اجرا).
+     * همان مسیر نصب اتمیک دانلود: استخراج در staging، اعتبارسنجی، ثبت.
+     * بازگردانده‌شده در نسخهٔ ۱٫۱٫۰ — کار تازه‌نصب را کاملاً آفلاین می‌کند
+     * (اولویت نخست کارفرما: نقشه با هر بار شروع، حتی بی‌انترنت، نمایش داده شود).
+     */
+    fun installFromAsset(ctx: Context, assetPath: String): Installed? {
+        val staging = File(File(baseDir, "staging"), "asset-${Config.BASE_PACKAGE_ID}")
+        staging.deleteRecursively()
+        staging.mkdirs()
+        try {
+            ctx.assets.open(assetPath).use { ins ->
+                java.util.zip.ZipInputStream(ins.buffered()).use { z ->
+                    val outCanonical = staging.canonicalFile
+                    var e: java.util.zip.ZipEntry? = z.nextEntry
+                    while (e != null) {
+                        val f = File(staging, e.name)
+                        if (!f.canonicalPath.startsWith(outCanonical.canonicalPath + File.separator) &&
+                            f.canonicalPath != outCanonical.canonicalPath
+                        ) throw SecurityException("مسیر مشکوک در زیپ: ${e.name}")
+                        if (e.isDirectory) f.mkdirs()
+                        else {
+                            f.parentFile?.mkdirs()
+                            FileOutputStream(f).use { z.copyTo(it) }
+                        }
+                        z.closeEntry()
+                        e = z.nextEntry
+                    }
+                }
+            }
+            return installFromStaging(staging)
+        } catch (e: Exception) {
+            Log.e(TAG, "نصب بستهٔ پایه از دارایی‌های برنامه ناموفق", e)
+            staging.deleteRecursively()
+            return null
+        }
+    }
+
+    /** آیا بستهٔ پایه (هر نسخه‌ای از آن) هنوز نصب نشده است؟ */
+    fun needsBaseInstall(): Boolean {
+        ensureLoaded()
+        return installedById(Config.BASE_PACKAGE_ID) == null
+    }
+
     fun delete(id: String): Boolean {
         ensureLoaded()
         val pkg = registry.firstOrNull { it.id == id } ?: return false
+        // بستهٔ پایهٔ ملی همراه APK حذف نمی‌شود؛ نسخهٔ کامل دانلودی قابل حذف است
+        if (pkg.id == Config.BASE_PACKAGE_ID) return false
         val ok = dirOf(pkg).deleteRecursively()
         registry.removeAll { it.id == id }
         saveRegistry()

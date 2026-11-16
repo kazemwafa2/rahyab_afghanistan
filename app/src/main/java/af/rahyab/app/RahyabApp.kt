@@ -1,8 +1,10 @@
 package af.rahyab.app
 
 import android.app.Application
+import android.util.Log
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.core.os.LocaleListCompat
+import kotlin.concurrent.thread
 class RahyabApp : Application() {
     override fun onCreate() {
         super.onCreate()
@@ -15,6 +17,7 @@ class RahyabApp : Application() {
             AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa-AF"))
         }
         resetLanguageOnceAfterUpdate()
+        installBasePackageIfNeeded()
         // همگام‌سازی گزارش‌ها (بند ۱۹ سند جامع): نخستین ارسال صف در شروع فرایند +
         // زمان‌بندی دوره‌ای WorkManager — هر ۳ ساعت با اتصال اینترنت
         ReportsModule.syncNow(this)
@@ -23,7 +26,7 @@ class RahyabApp : Application() {
         // فقط با اینترنت؛ هیچ موقعیت‌گیری پس‌زمینه‌ای انجام نمی‌شود (بخش ۲۲ و ۲۴)
         TrafficSync.flushSamplesAsync(this)
         TrafficSyncWorker.schedule(this)
-        // بررسی خودکار هفتگی نسخهٔ جدید؛ اعلان فقط با اینترنت و نصب با تأیید کاربر
+        // بررسی خودکار روزانهٔ نسخهٔ جدید؛ اعلان فقط با اینترنت و نصب با تأیید کاربر
         UpdateCheckWorker.schedule(this)
     }
 
@@ -41,4 +44,23 @@ class RahyabApp : Application() {
         AppCompatDelegate.setApplicationLocales(LocaleListCompat.forLanguageTags("fa-AF"))
     }
 
+    /**
+     * نصب خودکار «بستهٔ پایهٔ ملی» در نخستین اجرا — از دارایی‌های خود APK،
+     * بدون انترنت و بدون هیچ اقدامی از کاربر. برنامه از همان ابتدا نقشهٔ کل
+     * کشور، مسیریابی بین‌ولایتی و جست‌وجوی سراسری آفلاین دارد (اولویت نخست
+     * کارفرما: نقشه با هر بار شروع، حتی بی‌انترنت، نمایش داده شود). بسته‌های
+     * ولایتی همچنان از ریلیز «map-data» دانلود می‌شوند و داخل APK نیستند.
+     */
+    private fun installBasePackageIfNeeded() {
+        if (!OfflineData.needsBaseInstall()) return
+        thread(name = "base-install") {
+            val t0 = System.currentTimeMillis()
+            val inst = OfflineData.installFromAsset(this, Config.BASE_PACKAGE_ASSET)
+            if (inst != null) {
+                Log.i("RahyabApp", "بستهٔ پایهٔ ملی نصب شد (${inst.id}, ${inst.sizeBytes / 1048576}MB) در ${System.currentTimeMillis() - t0}ms")
+            } else {
+                Log.e("RahyabApp", "نصب بستهٔ پایه ناموفق بود؛ کاربر می‌تواند بسته‌ها را دستی نصب کند")
+            }
+        }
+    }
 }

@@ -50,6 +50,12 @@ class PlacesStore(ctx: Context) {
         writeList("recent", l.take(15))
     }
 
+    /** حذف یک جست‌وجوی اخیر (درخواست کاربر: مدیریت تاریخچهٔ جست‌وجو) */
+    fun removeRecent(p: Place) {
+        val l = readList("recent"); l.removeAll { it.lat == p.lat && it.lon == p.lon }
+        writeList("recent", l)
+    }
+
     fun clearRecents() = writeList("recent", emptyList())
 
     /** جست‌وجوی آفلاین بین مکان‌های ذخیره‌شده */

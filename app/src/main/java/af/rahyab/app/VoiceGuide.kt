@@ -24,6 +24,10 @@ import java.util.Locale
  *  ۲. صداهای ضبط‌شده برای هر سه زبان داخل برنامه هست: دری/فارسی (دلارا زن،
  *     فرید مرد)، پشتو (لطیفه زن، گل‌نواز مرد) و انگلیسی (اریا زن) — همه با
  *     صدای عصبی واقعی و هر بسته ۹۲ پیام کامل، همیشه قابل انتخاب و پیش‌نمایش.
+ *     از نسخهٔ ۱٫۱٫۰ چهار گویندهٔ تازه هم با «همهٔ زبان‌ها» اضافه شده است
+ *     (سحر و نظیره زن، نجیب و رحمت مرد) — هر گوینده ۹۲ پیام در هر سه زبان
+ *     دارد و با هر زبان برنامه قابل انتخاب است؛ بسته‌های چندزبانه زیرپوشهٔ
+ *     fa/ps/en دارند و برنامه خودش زیرپوشهٔ زبان جاری را می‌خواند.
  *  ۳. ارقام پیش از گفتن به حروف تبدیل می‌شوند (TtsText) تا موتور گوشی
  *     «۲۰۰» را «دوصد» بگوید نه «دویست» — کاملاً دری افغانستان.
  *  ۴. زبان موتور گفتار گوشی هم مطابق زبان برنامه تنظیم می‌شود
@@ -37,9 +41,13 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
         val id: String,
         val name: String,
         val gender: String,   // female / male
-        val lang: String,     // fa / ps / en
-        val clips: Int
-    )
+        val lang: String,     // زبان اصلی بسته — fa / ps / en
+        val clips: Int,
+        val langs: List<String> = listOf(lang) // همهٔ زبان‌های پشتیبانی‌شده
+    ) {
+        /** آیا این بسته برای همهٔ زبان‌های برنامه صدای آماده دارد؟ */
+        val multiLang: Boolean get() = langs.size > 1
+    }
 
     /** زبان برنامه: «fa» (دری/فارسی)، «ps» (پشتو) یا «en» (انگلیسی) — از تنظیم زبان خود برنامه */
     fun appLang(): String {
@@ -101,8 +109,9 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
     private val clipsCache = HashMap<String, Set<String>>()
     private val metaCache = HashMap<String, org.json.JSONObject>()
 
-    private fun clipsFor(pack: String): Set<String> = clipsCache.getOrPut(pack) {
-        try { ctx.assets.list("voice/$pack")?.toSet() ?: emptySet() } catch (e: Exception) { emptySet() }
+    /** فایل‌های یک پوشهٔ خام — کلید کش، مسیر نسبی زیر «voice/» است */
+    private fun clipsForRaw(rel: String): Set<String> = clipsCache.getOrPut(rel) {
+        try { ctx.assets.list("voice/$rel")?.toSet() ?: emptySet() } catch (e: Exception) { emptySet() }
     }
 
     private fun metaFor(pack: String): org.json.JSONObject = metaCache.getOrPut(pack) {
@@ -112,12 +121,31 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
         } catch (e: Exception) { org.json.JSONObject() }
     }
 
-    private fun packLangOf(pack: String): String =
-        langOfTag(try { metaFor(pack).optString("lang", "fa-AF") } catch (e: Exception) { "fa-AF" })
+    /** همهٔ زبان‌های پشتیبانی‌شدهٔ بسته: meta «langs» یا تک‌زبان از «lang» */
+    private fun packLangs(pack: String): List<String> = try {
+        val m = metaFor(pack)
+        val arr = m.optJSONArray("langs")
+        if (arr != null && arr.length() > 0)
+            (0 until arr.length()).map { langOfTag(arr.optString(it, "fa")) }
+        else listOf(langOfTag(m.optString("lang", "fa-AF")))
+    } catch (e: Exception) { listOf("fa") }
 
-    /** شمار فایل‌های گفتاری بسته (بدون زنگ) */
+    private fun packLangOf(pack: String): String = packLangs(pack).firstOrNull() ?: "fa"
+
+    private fun multiLang(pack: String): Boolean = packLangs(pack).size > 1
+
+    /** پوشهٔ کلیپ‌های زبان موردنظر بسته؛ null یعنی بسته این زبان را ندارد */
+    private fun clipDir(pack: String, lang: String): String? = when {
+        multiLang(pack) -> if (packLangs(pack).contains(lang) &&
+            clipsForRaw("$pack/$lang").isNotEmpty()) "$pack/$lang" else null
+        packLangs(pack).contains(lang) -> pack
+        else -> null
+    }
+
+    /** شمار فایل‌های گفتاری بسته (بدون زنگ) — برای زبان اصلی بسته */
     private fun speechClips(pack: String): Int =
-        clipsFor(pack).count { it != "chime.ogg" && (it.endsWith(".ogg") || it.endsWith(".wav") || it.endsWith(".mp3")) }
+        clipsForRaw(if (multiLang(pack)) "$pack/${packLangOf(pack)}" else pack)
+            .count { it != "chime.ogg" && (it.endsWith(".ogg") || it.endsWith(".wav") || it.endsWith(".mp3")) }
 
     /** فهرست همه صداهای ضبط‌شده داخل برنامه (برای صفحه انتخاب صدا) */
     fun packs(): List<PackInfo> {
@@ -127,41 +155,52 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             if (n < 5) continue // پوشه بدون بسته معتبر
             val name = try { metaFor(dir).optString("name", dir) } catch (e: Exception) { dir }
             val gender = try { metaFor(dir).optString("gender", "") } catch (e: Exception) { "" }
-            out.add(PackInfo(dir, name, gender, packLangOf(dir), n))
+            out.add(PackInfo(dir, name, gender, packLangOf(dir), n, packLangs(dir)))
         }
         return out
     }
 
-    /** صداهای یک زبان مشخص (fa / ps / en) */
-    fun packsFor(lang: String): List<PackInfo> = packs().filter { it.lang == lang }
+    /** صداهای آماده برای یک زبان مشخص (fa / ps / en) — بسته‌های چندزبانه هم شامل */
+    fun packsFor(lang: String): List<PackInfo> = packs().filter { it.langs.contains(lang) }
 
-    /** تعداد عبارت‌های بسته (برای نمایش در تنظیمات) */
-    fun packClipCount(pack: String): Int = speechClips(pack)
+    /** تعداد عبارت‌های بسته برای زبان برنامه (نمایش در تنظیمات) */
+    fun packClipCount(pack: String): Int {
+        val lang = appLang()
+        val dir = clipDir(pack, lang) ?: return speechClips(pack)
+        return clipsForRaw(dir)
+            .count { it != "chime.ogg" && (it.endsWith(".ogg") || it.endsWith(".wav") || it.endsWith(".mp3")) }
+            .takeIf { it >= 5 } ?: speechClips(pack)
+    }
 
-    /** زبان بسته صدای انتخابی فعلی */
+    /** زبان اصلی بسته صدای انتخابی فعلی */
     fun packLang(): String {
         val p = packs().firstOrNull { it.id == packId }
         return p?.lang ?: appLang()
     }
 
     /**
-     * بسته صدای انتخابی کاربر — برای هر زبان برنامه جداگانه ذخیره می‌شود
-     * (voice_pack_fa / voice_pack_ps / voice_pack_en) تا با تغییر زبان برنامه،
-     * صدای همان زبان — که آخرین بار کاربر انتخاب کرده — پخش شود.
+     * بسته صدای انتخابی کاربر. از نسخهٔ ۱٫۱٫۰ انتخاب «گوینده» است و برای همهٔ
+     * زبان‌ها معتبر می‌ماند (کلید مشترک voice_persona)؛ کلیدهای قدیمی
+     * voice_pack_fa/ps/en برای مهاجرت بی‌دردسر خوانده می‌شوند.
      */
     var packId: String
         get() {
             val lang = appLang()
+            val persona = prefs.getString("voice_persona", null)
+            if (persona != null && packsFor(lang).any { it.id == persona }) return persona
             val saved = prefs.getString("voice_pack_$lang", null)
             if (saved != null && packsFor(lang).any { it.id == saved }) return saved
-            // مهاجرت از نسخه‌های قدیمی (یک کلید مشترک)
+            // مهاجرت از نسخه‌های قدیمی‌تر (یک کلید مشترک)
             if (lang == "fa") {
                 val old = prefs.getString("voice_pack", null)
                 if (old != null && packsFor("fa").any { it.id == old }) return old
             }
             return defaultPackId(lang)
         }
-        set(v) { prefs.edit().putString("voice_pack_${appLang()}", v).apply() }
+        set(v) {
+            prefs.edit().putString("voice_persona", v)
+                .putString("voice_pack_${appLang()}", v).apply()
+        }
 
     private fun defaultPackId(lang: String): String =
         packsFor(lang).firstOrNull()?.id ?: when (lang) {
@@ -170,7 +209,7 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             else -> "farid"
         }
 
-    /** آیا فایل‌های صدای بسته انتخابی موجودند؟ */
+    /** آیا بستهٔ انتخابی برای زبان جاری برنامه کلیپ آماده دارد؟ */
     fun packAvailable(): Boolean = packClipCount(packId) >= 5
 
     /** تعداد عبارت‌های صوتی بسته فعال (برای نمایش در تنظیمات) */
@@ -198,15 +237,28 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             if (!v) watchCalls() else stopCallWatch()
         }
 
-    /** آیا بسته انتخابی از زبان برنامه است؟ در این صورت پیام‌ها از فایل‌های ضبط‌شده پخش می‌شوند */
+    /** آیا پیام‌ها از فایل‌های ضبط‌شده پخش می‌شوند؟ (بستهٔ انتخابی زبان برنامه را پوشش دهد) */
     private fun usePackClips(): Boolean =
-        source() == "pack" && packAvailable() && packLang() == appLang()
+        source() == "pack" && packAvailable()
 
-    private fun clipFile(pack: String, name: String): String? = when {
-        clipsFor(pack).contains("$name.ogg") -> "$name.ogg"
-        clipsFor(pack).contains("$name.wav") -> "$name.wav"
-        clipsFor(pack).contains("$name.mp3") -> "$name.mp3"
-        else -> null
+    /**
+     * مسیر نسبی کلیپ زیر «voice/» — برای بسته‌های چندزبانه زیرپوشهٔ زبان جاری
+     * برنامه جست‌وجو می‌شود و در صورت نبود، ریشهٔ بسته (زنگ هشدار و…).
+     * خروجی مثل «sahar/fa/depart.ogg» یا «dilara/depart.ogg» است.
+     */
+    private fun clipFile(pack: String, name: String): String? {
+        val exts = listOf("$name.ogg", "$name.wav", "$name.mp3")
+        if (multiLang(pack)) {
+            for (lang in listOf(appLang()) + packLangs(pack)) {
+                val names = clipsForRaw("$pack/$lang")
+                exts.firstOrNull { names.contains(it) }?.let { return "$pack/$lang/$it" }
+            }
+            val root = clipsForRaw(pack)
+            exts.firstOrNull { root.contains(it) }?.let { return "$pack/$it" }
+            return null
+        }
+        val names = clipsForRaw(pack)
+        return exts.firstOrNull { names.contains(it) }?.let { "$pack/$it" }
     }
 
     private fun clipFile(name: String): String? = clipFile(packId, name)
@@ -408,7 +460,7 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
             val f = clipFile("test")
             if (f != null) { play(listOf(f), packId, sentence); return true }
         }
-        if (source() == "pack" && packAvailable() && packLang() == appLang()) {
+        if (source() == "pack" && packAvailable()) {
             val f = clipFile("test")
             if (f != null) { play(listOf(f), packId, sentence); return true }
         }
@@ -516,7 +568,8 @@ class VoiceGuide(private val ctx: Context, private val onNoVoice: () -> Unit) :
      */
     private fun playOne(pack: String, file: String, spokenText: String? = null, onDone: () -> Unit) {
         try {
-            val afd = ctx.assets.openFd("voice/$pack/$file")
+            // file مسیر کامل نسبی زیر voice/ است — مثل «sahar/fa/depart.ogg»
+            val afd = ctx.assets.openFd("voice/$file")
             val m = MediaPlayer()
             m.setAudioAttributes(attrs)
             m.setDataSource(afd.fileDescriptor, afd.startOffset, afd.length)

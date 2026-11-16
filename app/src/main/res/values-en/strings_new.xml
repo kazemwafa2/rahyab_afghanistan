@@ -143,4 +143,23 @@
     <string name="auto_update_channel">Rahyab updates</string>
     <string name="auto_update_notification_title">A new Rahyab version is available</string>
     <string name="auto_update_notification_text">Version %1$s is available. Tap to review and download it.</string>
+    <string name="voice_group_all">All languages</string>
+    <string name="recents_clear_all">Clear all</string>
+    <string name="recents_clear_confirm">Delete all recent searches? This cannot be undone.</string>
+    <string name="recents_cleared">Search history cleared</string>
+    <string name="recents_deleted">Search deleted</string>
+    <string name="recents_delete">Delete this search</string>
+    <string name="recents_show_all">All history</string>
+    <string name="recents_more">%1$d more…</string>
+    <string name="recents_empty">No searches yet</string>
+    <string name="history_title">Search history</string>
+    <string name="search_show">Show search bar</string>
+    <string name="update_uptodate_title">Update</string>
+    <string name="update_uptodate">Your version is up to date.\nInstalled version: %1$s (version %2$d)</string>
+    <string name="update_info_full">Current version: %1$s\nNew version: %2$s\nNew file size: %3$s\n\nYour data is preserved after installation.</string>
+    <string name="update_resuming">Resuming download from %1$s…</string>
+    <string name="update_failed_title">Download incomplete</string>
+    <string name="update_failed_resume">Download did not finish (%1$s). The downloaded part is kept and the download will resume from there.</string>
+    <string name="update_part_kept">%1$s downloaded so far</string>
+    <string name="update_retry">Retry</string>
 </resources>

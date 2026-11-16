@@ -459,6 +459,10 @@ class MainActivity : AppCompatActivity() {
         findViewById<View>(R.id.btnProfile).setOnClickListener { showSettings() }
         findViewById<View>(R.id.fabLocation).setOnClickListener { onMyLocation() }
         fabRoute.setOnClickListener { onPlanRoute() }
+        // دکمهٔ شناور جست‌وجو: خروج از رانندگی آزاد یا بازگشت به برگهٔ خانه (نوار جست‌وجو)
+        findViewById<View>(R.id.fabSearch).setOnClickListener {
+            if (NavigationController.freeMode) endFreeDriving() else clearAll()
+        }
         findViewById<View>(R.id.fabLayers).setOnClickListener { showMapModeDialog() }
         btnRouteSettings.setOnClickListener { showMapModeDialog() }
         findViewById<View>(R.id.btnRoute).setOnClickListener { requestRoute(navProfile) }
@@ -724,34 +728,163 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    /** سه مکان اخیر در برگه خانه */
+    /** مدیریت تاریخچهٔ جست‌وجو در برگه خانه: حذف تکی، پاک کردن همه، نمایش همه */
     private fun refreshRecents() {
         recentsList.removeAllViews()
-        val list = store.recents().take(3)
-        tvRecentsTitle.visibility = if (list.isEmpty()) View.GONE else View.VISIBLE
-        for (p in list) {
-            val row = LinearLayout(this)
-            row.orientation = LinearLayout.HORIZONTAL
-            row.gravity = android.view.Gravity.CENTER_VERTICAL
-            row.setPadding(0, dp(10), 0, dp(10))
-            val icon = ImageView(this)
-            icon.setImageResource(R.drawable.ic_history)
-            ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.parseColor("#7D8CA3")))
-            icon.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
-            val name = TextView(this)
-            name.text = p.name
-            name.maxLines = 1
-            name.ellipsize = android.text.TextUtils.TruncateAt.END
-            name.textSize = 14f
-            name.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
-            name.setTextColor(Color.parseColor("#1B2735"))
-            name.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-                .apply { marginStart = dp(12) }
-            row.addView(icon)
-            row.addView(name)
-            row.setOnClickListener { select(p) }
-            recentsList.addView(row)
+        val list = store.recents()
+        if (list.isEmpty()) {
+            tvRecentsTitle.visibility = View.GONE
+            return
         }
+        tvRecentsTitle.visibility = View.VISIBLE
+        tvRecentsTitle.text = getString(R.string.recents_title)
+
+        // ردیف عنوان: «پاک کردن همه» + «همهٔ تاریخچه» در سمت مقابل عنوان
+        val headRow = LinearLayout(this)
+        headRow.orientation = LinearLayout.HORIZONTAL
+        headRow.gravity = android.view.Gravity.CENTER_VERTICAL
+        headRow.setPadding(0, 0, 0, dp(2))
+        val headParams = LinearLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+        headRow.layoutParams = headParams
+
+        val spacer = View(this)
+        spacer.layoutParams = LinearLayout.LayoutParams(0, 1, 1f)
+
+        fun headAction(text: String, color: String, action: () -> Unit): TextView {
+            val t = TextView(this)
+            t.text = text
+            t.textSize = 12f
+            t.setTextColor(Color.parseColor(color))
+            t.setPadding(dp(10), dp(4), dp(10), dp(4))
+            t.background = ContextCompat.getDrawable(this, R.drawable.bg_btn_ghost)
+            t.setOnClickListener { action() }
+            return t
+        }
+
+        headRow.addView(spacer)
+        headRow.addView(headAction(getString(R.string.recents_show_all), "#2E6DB4") { showHistoryDialog() })
+        headRow.addView(headAction(getString(R.string.recents_clear_all), "#D32F2F") {
+            AlertDialog.Builder(this)
+                .setTitle(R.string.recents_clear_all)
+                .setMessage(R.string.recents_clear_confirm)
+                .setPositiveButton(R.string.clear) { _, _ ->
+                    store.clearRecents()
+                    refreshRecents()
+                    toast(R.string.recents_cleared)
+                }
+                .setNegativeButton(R.string.close, null)
+                .show()
+        })
+
+        val headWrap = LinearLayout(this)
+        headWrap.orientation = LinearLayout.VERTICAL
+        headWrap.addView(headRow)
+        recentsList.addView(headWrap)
+
+        // تا چهار مکان اخیر در برگه خانه؛ بقیه در «همهٔ تاریخچه»
+        for (p in list.take(4)) recentsList.addView(recentRow(p))
+        if (list.size > 4) {
+            val more = TextView(this)
+            more.text = getString(R.string.recents_more, list.size - 4)
+            more.textSize = 13f
+            more.setTextColor(Color.parseColor("#2E6DB4"))
+            more.setPadding(dp(34), dp(6), 0, dp(6))
+            more.setOnClickListener { showHistoryDialog() }
+            recentsList.addView(more)
+        }
+    }
+
+    /** یک ردیف مکان اخیر با دکمهٔ حذف (×) */
+    private fun recentRow(p: Place): View {
+        val row = LinearLayout(this)
+        row.orientation = LinearLayout.HORIZONTAL
+        row.gravity = android.view.Gravity.CENTER_VERTICAL
+        row.setPadding(0, dp(10), 0, dp(10))
+        val icon = ImageView(this)
+        icon.setImageResource(R.drawable.ic_history)
+        ImageViewCompat.setImageTintList(icon, ColorStateList.valueOf(Color.parseColor("#7D8CA3")))
+        icon.layoutParams = LinearLayout.LayoutParams(dp(22), dp(22))
+        val name = TextView(this)
+        name.text = p.name
+        name.maxLines = 1
+        name.ellipsize = android.text.TextUtils.TruncateAt.END
+        name.textSize = 14f
+        name.textAlignment = View.TEXT_ALIGNMENT_VIEW_START
+        name.setTextColor(Color.parseColor("#1B2735"))
+        name.layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+            .apply { marginStart = dp(12) }
+        val del = ImageView(this)
+        del.setImageResource(R.drawable.ic_close)
+        ImageViewCompat.setImageTintList(del, ColorStateList.valueOf(Color.parseColor("#B9C1CF")))
+        del.setPadding(dp(8), dp(8), dp(2), dp(8))
+        del.layoutParams = LinearLayout.LayoutParams(dp(30), dp(30))
+        del.contentDescription = getString(R.string.recents_delete)
+        del.setOnClickListener {
+            store.removeRecent(p)
+            refreshRecents()
+            historyRebuild?.invoke()
+            toast(R.string.recents_deleted)
+        }
+        row.addView(icon)
+        row.addView(name)
+        row.addView(del)
+        row.setOnClickListener { select(p) }
+        return row
+    }
+
+    /** بازسازی تازهٔ گفت‌وگوی تاریخچه پس از حذف از داخل خود گفت‌وگو */
+    private var historyRebuild: (() -> Unit)? = null
+
+    /** گفت‌وگوی «همهٔ تاریخچه»: همهٔ جست‌وجوها با حذف تکی + پاک کردن همه */
+    private fun showHistoryDialog() {
+        val c = LinearLayout(this)
+        c.orientation = LinearLayout.VERTICAL
+        val pad = dp(18)
+        c.setPadding(pad, dp(6), pad, dp(6))
+        val sc = android.widget.ScrollView(this)
+        sc.addView(c)
+
+        fun rebuild() {
+            c.removeAllViews()
+            val all = store.recents()
+            if (all.isEmpty()) {
+                val empty = TextView(this)
+                empty.text = getString(R.string.recents_empty)
+                empty.textSize = 14f
+                empty.setTextColor(Color.parseColor("#7C879A"))
+                empty.setPadding(0, dp(18), 0, dp(18))
+                c.addView(empty)
+                return
+            }
+            for (p in all) {
+                val row = recentRow(p)
+                row.setPadding(0, dp(8), 0, dp(8))
+                c.addView(row)
+            }
+        }
+        rebuild()
+        historyRebuild = { rebuild() }
+
+        val dlg = AlertDialog.Builder(this)
+            .setTitle(R.string.history_title)
+            .setView(sc)
+            .setPositiveButton(R.string.close, null)
+            .setNeutralButton(R.string.recents_clear_all) { _, _ ->
+                AlertDialog.Builder(this)
+                    .setTitle(R.string.recents_clear_all)
+                    .setMessage(R.string.recents_clear_confirm)
+                    .setPositiveButton(R.string.clear) { _, _ ->
+                        store.clearRecents()
+                        refreshRecents()
+                        toast(R.string.recents_cleared)
+                    }
+                    .setNegativeButton(R.string.close, null)
+                    .show()
+            }
+            .create()
+        dlg.setOnDismissListener { historyRebuild = null }
+        dlg.show()
     }
 
     private fun startVoiceSearch() {
@@ -1238,6 +1371,8 @@ class MainActivity : AppCompatActivity() {
 
     private fun clearAll() {
         if (NavigationController.navigating) NavigationController.stop()
+        // احتیاط: اگر رانندگی آزاد فعال بود، × باید همیشه کاربر را به نوار جست‌وجو برگرداند
+        if (NavigationController.freeMode) endFreeDriving()
         resetToHome()
     }
 
@@ -1273,6 +1408,9 @@ class MainActivity : AppCompatActivity() {
         leftCol.visibility = if (nav) View.VISIBLE else View.GONE
         fabColumn.visibility = if (nav) View.GONE else View.VISIBLE
         fabRoute.visibility = if (home) View.VISIBLE else View.GONE
+        // دکمهٔ شناور جست‌وجو: هر جا نوار جست‌وجو پنهان است دیده می‌شود تا کاربر
+        // بتواند همیشه جست‌وجو را دوباره بیاورد (گزارش کارفرما: × نوار جست‌وجو)
+        findViewById<View>(R.id.fabSearch).visibility = if (home) View.GONE else View.VISIBLE
         bottomNav.visibility = if (m == Mode.HOME) View.VISIBLE else View.GONE
         if (m != Mode.HOME) resultsCard.visibility = View.GONE
         if (m != Mode.ROUTE) clearBubbles()
@@ -3366,6 +3504,12 @@ class MainActivity : AppCompatActivity() {
         }
 
         /** یک ردیف صدا: دکمه رادیو + نام + جنسیت/تعداد + دکمه پخش */
+        fun langLabel(lang: String): String = getString(when (lang) {
+            "ps" -> R.string.voice_lang_pashto_name
+            "en" -> R.string.voice_lang_english_name
+            else -> R.string.voice_lang_dari_name
+        })
+
         fun addPackRow(p: af.rahyab.app.VoiceGuide.PackInfo) {
             val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = android.view.Gravity.CENTER_VERTICAL }
             val rb = android.widget.RadioButton(this).apply {
@@ -3374,17 +3518,17 @@ class MainActivity : AppCompatActivity() {
             radios.add(p.id to rb)
             val col = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
             col.addView(TextView(this).apply {
-                text = p.name + "  —  " + getString(when (p.lang) {
-                    "ps" -> R.string.voice_lang_pashto_name
-                    "en" -> R.string.voice_lang_english_name
-                    else -> R.string.voice_lang_dari_name
-                })
+                // بسته‌های چندزبانه برای همهٔ زبان‌ها کار می‌کنند؛ تک‌زبانه فقط زبان خودشان
+                text = p.name + "  —  " +
+                    (if (p.multiLang)
+                        getString(R.string.voice_group_all) + " (" + p.langs.joinToString("، ") { langLabel(it) } + ")"
+                    else langLabel(p.lang))
                 textSize = 15f; setTypeface(typeface, android.graphics.Typeface.BOLD)
             })
             col.addView(TextView(this).apply {
                 text = getString(if (p.gender == "female") R.string.voice_female else R.string.voice_male) +
                     " • " + getString(R.string.voice_pack_status, p.clips).substringAfter(": ").substringBefore(" —") +
-                    (if (p.id == selectedPack[0] && selectedSource[0] == "pack" && p.lang == curLang)
+                    (if (p.id == selectedPack[0] && selectedSource[0] == "pack")
                         " • " + getString(R.string.voice_active_tag) else "")
                 textSize = 11f; setTextColor(0xFF777777.toInt())
             })
@@ -3395,8 +3539,9 @@ class MainActivity : AppCompatActivity() {
                 contentDescription = getString(R.string.voice_play)
             }
             play.setOnClickListener {
-                // جمله پشتیبان به زبان همان بسته — اگر فایل صوتی پخش نشد، موتور گوشی حرف می‌زند
-                val sentence = when (p.lang) {
+                // جمله پشتیبان به زبان پخش پیش‌نمایش — اگر فایل صوتی پخش نشد، موتور گوشی حرف می‌زند
+                val plang = if (p.multiLang) curLang else p.lang
+                val sentence = when (plang) {
                     "ps" -> "غږیز لارښود راحیاب چمتو دی."
                     "en" -> "Rahyab voice guidance is ready."
                     else -> "راهنمای صوتی راه‌یاب آماده است."
@@ -3412,15 +3557,25 @@ class MainActivity : AppCompatActivity() {
             rb.setOnClickListener { selectWhich(p.id) }
         }
 
-        // صداهای ضبط‌شده داخل برنامه — به سه زبان گروه‌بندی شده
-        // (زبان راهنما همیشه همان زبان برنامه است؛ صدای زبان دیگر پس از تغییر زبان پخش می‌شود)
+        // صداهای ضبط‌شده داخل برنامه — نخست گوینده‌های «همهٔ زبان‌ها»، سپس گروه‌بندی تک‌زبانه
+        // (گوینده‌های چندزبانه با هر زبان برنامه کار می‌کنند)
+        val multi = packs.filter { it.multiLang }
+        if (multi.isNotEmpty()) {
+            c.addView(TextView(this).apply {
+                text = getString(R.string.voice_group_all)
+                textSize = 13f; setTypeface(typeface, android.graphics.Typeface.BOLD)
+                setTextColor(0xFF2E6DB4.toInt())
+                setPadding(0, dp(10), 0, dp(2))
+            })
+            for (p in multi) addPackRow(p)
+        }
         val groups = listOf(
             Triple("fa", R.string.voice_group_dari, R.string.voice_lang_dari_name),
             Triple("ps", R.string.voice_group_pashto, R.string.voice_lang_pashto_name),
             Triple("en", R.string.voice_group_english, R.string.voice_lang_english_name)
         )
         for ((gl, labelRes, nameRes) in groups) {
-            val gp = packs.filter { it.lang == gl }
+            val gp = packs.filter { !it.multiLang && it.lang == gl }
             if (gp.isEmpty()) continue
             c.addView(TextView(this).apply {
                 text = getString(labelRes) +
@@ -3733,13 +3888,33 @@ class MainActivity : AppCompatActivity() {
                 val rel = Updater.checkLatest() ?: throw BadResponseException("no release")
                 val newer = Updater.isNewer(rel, this@MainActivity)
                 ui.post {
-                    if (!newer) toast(R.string.update_latest)
-                    else AlertDialog.Builder(this)
-                        .setTitle(getString(R.string.update_available, rel.versionName))
-                        .setMessage(getString(R.string.update_info, rel.sizeBytes / 1048576) + "\n\n" + rel.notes.take(500))
-                        .setPositiveButton(R.string.update_download) { _, _ -> downloadUpdate(rel) }
-                        .setNegativeButton(R.string.close, null)
-                        .show()
+                    if (!newer) {
+                        // «نسخهٔ شما به‌روز است» — با شمارهٔ دقیق نسخهٔ نصب‌شده (درخواست کارفرما)
+                        AlertDialog.Builder(this)
+                            .setTitle(R.string.update_uptodate_title)
+                            .setMessage(
+                                getString(
+                                    R.string.update_uptodate,
+                                    Updater.currentVersionName(this), Updater.currentVersionCode(this)
+                                )
+                            )
+                            .setPositiveButton(R.string.close, null)
+                            .show()
+                    } else {
+                        AlertDialog.Builder(this)
+                            .setTitle(getString(R.string.update_available, rel.versionName))
+                            .setMessage(
+                                getString(
+                                    R.string.update_info_full,
+                                    Updater.currentVersionName(this),
+                                    rel.versionName,
+                                    fmtBytes(rel.sizeBytes)
+                                ) + "\n\n" + rel.notes.take(500)
+                            )
+                            .setPositiveButton(R.string.update_download) { _, _ -> downloadUpdate(rel) }
+                            .setNegativeButton(R.string.close, null)
+                            .show()
+                    }
                 }
             } catch (e: Exception) {
                 ui.post { toast(R.string.update_unavailable) }
@@ -3747,16 +3922,53 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
+    /** حجم انسانی فایل — «۴۵٫۲ مگابایت» */
+    private fun fmtBytes(b: Long): String = when {
+        b >= 1_048_576L -> String.format(java.util.Locale.US, "%.1f", b / 1048576.0) + " MB"
+        b >= 1024L -> (b / 1024).toString() + " KB"
+        else -> b.toString() + " B"
+    }
+
+    /** دانلود به‌روزرسانی با نوار پیشرفت، حجم فایل، سرعت و ادامهٔ دانلود پس از قطعی */
     private fun downloadUpdate(rel: Updater.Release) {
+        val bar = android.widget.ProgressBar(this, null, android.R.attr.progressBarStyleHorizontal)
+        bar.max = 100
+        bar.progress = 0
         val tv = TextView(this)
-        tv.setPadding(dp(24), dp(16), dp(24), dp(16))
+        tv.setPadding(dp(24), dp(10), dp(24), dp(4))
+        tv.textSize = 13f
+        // اگر دانلود ناتمامی از قبل هست، از همان‌جا ادامه می‌یابد
+        val hadPart = Updater.partFile(this).length()
+        if (hadPart > 0) tv.text = getString(R.string.update_resuming, fmtBytes(hadPart))
         val dlg = AlertDialog.Builder(this)
             .setTitle(R.string.update_downloading)
-            .setView(tv)
+            .setView(android.widget.LinearLayout(this).apply {
+                orientation = android.widget.LinearLayout.VERTICAL
+                setPadding(dp(8), dp(16), dp(8), dp(8))
+                addView(bar, android.widget.LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+                    .apply { setMargins(dp(16), 0, dp(16), dp(6)) })
+                addView(tv)
+            })
             .setNegativeButton(R.string.close, null)
             .show()
+        var lastMs = 0L
+        var lastBytes = 0L
         Updater.download(this, rel,
-            onProgress = { p -> ui.post { tv.text = getString(R.string.update_progress, p) } },
+            onProgress = { p, got, total ->
+                ui.post {
+                    bar.progress = p
+                    val now = System.currentTimeMillis()
+                    var speed = ""
+                    if (lastMs > 0 && now - lastMs > 400) {
+                        val kbps = ((got - lastBytes) / 1024.0) / ((now - lastMs) / 1000.0)
+                        speed = " — " + (if (kbps >= 1024) String.format(java.util.Locale.US, "%.1f", kbps / 1024) + " MB/s"
+                        else String.format(java.util.Locale.US, "%.0f", kbps) + " KB/s")
+                    }
+                    if (now - lastMs > 400) { lastMs = now; lastBytes = got }
+                    tv.text = "${fmtBytes(got)} / ${fmtBytes(total)} — $p٪$speed"
+                }
+            },
             onDone = { f ->
                 ui.post {
                     dlg.dismiss()
@@ -3771,8 +3983,17 @@ class MainActivity : AppCompatActivity() {
             },
             onError = { msg ->
                 ui.post {
+                    val kept = Updater.partFile(this).length()
                     dlg.dismiss()
-                    toast(getString(R.string.update_failed, msg))
+                    AlertDialog.Builder(this)
+                        .setTitle(R.string.update_failed_title)
+                        .setMessage(
+                            getString(R.string.update_failed_resume, msg) +
+                                (if (kept > 0) "\n" + getString(R.string.update_part_kept, fmtBytes(kept)) else "")
+                        )
+                        .setPositiveButton(R.string.update_retry) { _, _ -> downloadUpdate(rel) }
+                        .setNegativeButton(R.string.close, null)
+                        .show()
                 }
             }
         )

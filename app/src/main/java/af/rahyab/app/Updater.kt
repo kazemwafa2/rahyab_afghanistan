@@ -81,49 +81,97 @@ object Updater {
         ctx.packageManager.getPackageInfo(ctx.packageName, 0).versionName ?: ""
     } catch (e: Exception) { "" }
 
-    /** دانلود APK با گزارش پیشرفت (۰ تا ۱۰۰) */
-    fun download(ctx: Context, rel: Release, onProgress: (Int) -> Unit, onDone: (File) -> Unit, onError: (String) -> Unit) {
+    /** مسیر فایل موقت دانلود — با قطع انترنت حفظ می‌شود تا دانلود ادامه پیدا کند */
+    fun partFile(ctx: Context): File {
+        val outDir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "update")
+        outDir.mkdirs()
+        return File(outDir, "rahyab-update.apk.part")
+    }
+
+    /**
+     * دانلود APK با گزارش پیشرفت و «ادامهٔ دانلود».
+     *  - پیشرفت: (درصد، بایت‌های دریافت‌شده، حجم کل)
+     *  - اگر دانلود قبلی ناتمام مانده باشد، با هدر Range از همان‌جا ادامه می‌یابد
+     *    (سرور GitHub Releases از Range پشتیبانی می‌کند)؛ اگر سرور ۲۰۰ برگرداند
+     *    از صفر شروع می‌شود.
+     *  - SHA-256 پس از تکمیل روی فایل کامل محاسبه می‌شود (با ادامهٔ دانلود هم درست است).
+     */
+    fun download(
+        ctx: Context, rel: Release,
+        onProgress: (Int, Long, Long) -> Unit,
+        onDone: (File) -> Unit,
+        onError: (String) -> Unit
+    ) {
         Thread {
+            var c: java.net.HttpURLConnection? = null
             try {
-                val outDir = File(ctx.getExternalFilesDir(null) ?: ctx.filesDir, "update")
-                outDir.mkdirs()
-                val out = File(outDir, "rahyab-update.apk")
-                val c = java.net.URL(rel.apkUrl).openConnection() as java.net.HttpURLConnection
-                c.connectTimeout = Config.HTTP_CONNECT_TIMEOUT_MS
-                c.readTimeout = 60000
-                c.setRequestProperty("User-Agent", Config.USER_AGENT)
-                val total = c.contentLengthLong.takeIf { it > 0 } ?: rel.sizeBytes
-                val md = MessageDigest.getInstance("SHA-256")
-                var got = 0L
+                val part = partFile(ctx)
+                var got = if (part.isFile) part.length() else 0L
+                c = (java.net.URL(rel.apkUrl).openConnection() as java.net.HttpURLConnection).apply {
+                    connectTimeout = Config.HTTP_CONNECT_TIMEOUT_MS
+                    readTimeout = 60000
+                    setRequestProperty("User-Agent", Config.USER_AGENT)
+                    if (got > 0) setRequestProperty("Range", "bytes=$got-")
+                }
+                c.connect()
+                val code = c.responseCode
+                // ۲۰۶ = ادامه از همان‌جا؛ ۲۰۰ = سرور Range را نداد — از صفر
+                if (code == 416) { // بازهٔ کامل یا ناسازگار — از صفر دوباره
+                    c.disconnect()
+                    part.delete(); got = 0
+                    download(ctx, rel, onProgress, onDone, onError)
+                    return@Thread
+                }
+                if (code != 206) got = 0
+                if (got == 0L) part.delete()
+                val rangeTotal = (c.contentLengthLong.takeIf { it > 0 } ?: -1L).let {
+                    if (code == 206) it + got else it
+                }
+                val total = if (rangeTotal > 0) rangeTotal
+                    else if (rel.sizeBytes > 0) rel.sizeBytes else -1L
                 val buf = ByteArray(64 * 1024)
-                c.inputStream.use { input ->
-                    java.io.FileOutputStream(out).use { f ->
+                java.io.FileOutputStream(part, got > 0).use { f ->
+                    c.inputStream.use { input ->
                         while (true) {
                             val n = input.read(buf)
                             if (n < 0) break
                             f.write(buf, 0, n)
-                            md.update(buf, 0, n)
                             got += n
-                            if (total > 0) onProgress(((got * 100) / total).toInt().coerceIn(0, 100))
+                            if (total > 0) onProgress(((got * 100) / total).toInt().coerceIn(0, 100), got, total)
                         }
                     }
                 }
                 c.disconnect()
-                // بررسی صحت فایل با SHA-256 (اگر ریلیز چک‌سام اعلام کرده باشد)
+                if (total > 0 && got < total && total > 1_000_000) {
+                    // ناتمام — فایل part حفظ می‌شود؛ دفعهٔ بعد از همان‌جا ادامه می‌یابد
+                    onError("incomplete")
+                    return@Thread
+                }
+                // بررسی صحت با SHA-256 (روی فایل کامل — سازگار با ادامهٔ دانلود)
                 if (rel.sha256 != null) {
+                    val md = MessageDigest.getInstance("SHA-256")
+                    part.inputStream().use { ins ->
+                        val b = ByteArray(64 * 1024)
+                        while (true) { val n = ins.read(b); if (n < 0) break; md.update(b, 0, n) }
+                    }
                     val digest = md.digest().joinToString("") { "%02x".format(it) }
                     if (!digest.equals(rel.sha256, ignoreCase = true)) {
-                        out.delete()
+                        part.delete()
                         onError("sha256_mismatch")
                         return@Thread
                     }
                 }
-                if (total > 0 && got != total && total > 1_000_000) {
-                    onError("incomplete")
+                val out = File(part.parentFile, "rahyab-update.apk")
+                if (out.isFile) out.delete()
+                if (!part.renameTo(out)) {
+                    onError("rename_failed")
                     return@Thread
                 }
+                onProgress(100, got, got)
                 onDone(out)
             } catch (e: Exception) {
+                try { c?.disconnect() } catch (_: Exception) { }
+                // ناتمام — part حفظ می‌شود تا دانلود بعدی ادامه یابد
                 onError(e.message ?: "download_error")
             }
         }.start()

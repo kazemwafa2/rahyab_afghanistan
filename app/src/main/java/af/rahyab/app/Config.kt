@@ -49,6 +49,8 @@ object Config {
     const val BASE_PACKAGE_ID = "afghanistan"
     /** شناسه بسته پایه کامل (راه‌های اصلی شهرها هم) — دانلودی اختیاری، سنگین‌تر */
     const val BASE_FULL_PACKAGE_ID = "afghanistan_full"
+    /** مسیر دارایی بستهٔ پایهٔ ملی داخل APK — نصب خودکار آفلاین در نخستین اجرا (نسخهٔ ۱٫۱٫۰) */
+    const val BASE_PACKAGE_ASSET = "initial/afghanistan.rahpkg.zip"
 
     // ---------- سرور اطلاعات جاده‌ای (ضمیمهٔ ۱ — Cloudflare Worker + D1) ----------
     // ورکر مستقر و زندهٔ پروژه (نام: rahyab-api) — بدون هیچ توکن یا کلید مخفی.
