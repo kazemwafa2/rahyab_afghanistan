@@ -4,6 +4,7 @@
   (الزامات انتساب در همه حالت‌ها رعایت شده: آنلاین، آفلاین و داخل بسته‌ها.)
 - کاشی و سبک نقشه آنلاین: OpenFreeMap (رایگان، بدون کلید) — © OpenMapTiles، داده از OpenStreetMap — https://openfreemap.org — سرویس «همان‌گونه که هست» ارائه می‌شود و ممکن است تغییر کند یا قطع شود. محدودیت‌های شرایط استفاده OpenFreeMap رعایت شده است.
 - کاشی‌های آفلاین: ساخته‌شده با [planetiler](https://github.com/onthegomap/planetiler) (Apache-2.0) از داده خام OpenStreetMap — قالب PMTiles (BSD/ISC-style، protomaps).
+- کاشی‌های «نقشهٔ اختصاصی کامل» بستهٔ afghanistan_full: بازساختهٔ طرح OpenMapTiles 3.14 از دادهٔ رسمی OpenStreetMap افغانستان (Geofabrik) — فایل عمومی منتشرشدهٔ https://map.af (tiles.map.af/basemap/af.pmtiles، بدون API) به‌عنوان مبنای کاشی استفاده شده است؛ دادهٔ کاشی متعلق به © OpenStreetMap contributors — ODbL است و انتساب در سبک و بسته‌ها رعایت شده است. سپاس از نقشهٔ افغانستان (map.af) که این فایل را عمومی منتشر کرده است.
 - فونت‌های گلیف (نمایش نام‌ها در نقشه آفلاین): Noto Sans Regular/Bold — SIL Open Font License 1.1 — همراه خود APK است و یک بار در حافظه برنامه استخراج می‌شود؛ منبع گلیف‌ها: fonts.protomaps.com و demotiles.maplibre.org (هر دو سرویس عمومی MapLibre). بسته‌های نقشه فونت ندارند تا دانلود سبک‌تر باشد.
 - نمایش نقشه: MapLibre Native (BSD-2-Clause)
 - Material Components, AndroidX (Apache-2.0)
