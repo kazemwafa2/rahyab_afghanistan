@@ -6,14 +6,14 @@
     android:layout_height="match_parent"
     android:background="@drawable/bg_welcome_gradient">
 
-    <!-- پس‌زمینهٔ عکس تاکسی کابل (درخواست کاربر) — پشت همهٔ مراحل -->
+    <!-- پس‌زمینهٔ رسمی خوش‌آمد — پوستر رسمی راه‌یاب (درخواست کاربر ۲۰۲۶-۱۱-۱۷) -->
     <ImageView
         android:id="@+id/welcomeBg"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:contentDescription="@null"
         android:scaleType="centerCrop"
-        android:src="@drawable/welcome_bg" />
+        android:src="@drawable/welcome_bg_poster" />
 
     <View
         android:id="@+id/welcomeScrim"

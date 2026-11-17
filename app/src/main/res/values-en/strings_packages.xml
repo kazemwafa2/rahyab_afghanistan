@@ -42,4 +42,6 @@
     <string name="pkg_manifest_not_published">The online package list is not published yet; the built-in list is shown. Province packages install from this list without internet.</string>
     <string name="err_asset_missing">This package file is not included in the installed app version. Please install the full app build.</string>
     <string name="err_network_dl">Connection failed. Check your internet and try again.</string>
+    <string name="pkg_name_af_full">Afghanistan — dedicated full map (all 34 provinces)</string>
+    <string name="pkg_name_af_base">Afghanistan (national base)</string>
 </resources>

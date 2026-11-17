@@ -172,6 +172,13 @@ class MapPackagesActivity : AppCompatActivity() {
         }
     }
 
+    /** نام نمایشی دوستانه برای شناسه‌های شناخته‌شده (وقتی فقط از اسکن دارایی‌ها آمده‌اند) */
+    private fun displayName(id: String, fallback: String): String = when (id) {
+        Config.BASE_FULL_PACKAGE_ID -> getString(R.string.pkg_name_af_full)
+        Config.BASE_PACKAGE_ID -> getString(R.string.pkg_name_af_base)
+        else -> fallback
+    }
+
     /** ادغام manifest رسمی با اسکن دارایی‌ها؛ برای هر شناسه نسخهٔ تازه‌تر برنده است */
     private fun mergeWithAssets(
         manifest: List<PackageDownloader.RemotePkg>?,
@@ -184,10 +191,10 @@ class MapPackagesActivity : AppCompatActivity() {
             when {
                 cur == null ->
                     // بسته‌ای که هنوز در manifest ثبت نشده (تازه بارگذاری شده)
-                    byId[s.id] = s.copy(name = s.id)
+                    byId[s.id] = s.copy(name = displayName(s.id, s.id))
                 s.dataDate > cur.dataDate ->
                     // manifest قدیمی است: نام نمایشی از manifest حفظ می‌شود
-                    byId[s.id] = s.copy(name = cur.name, region = cur.region)
+                    byId[s.id] = s.copy(name = displayName(s.id, cur.name), region = cur.region)
                 else -> { /* manifest تازه‌تر/برابر — دست نمی‌زنیم */ }
             }
         }
@@ -254,7 +261,7 @@ class MapPackagesActivity : AppCompatActivity() {
         card.addView(col)
 
         val tvName = TextView(this).apply {
-            text = p.name
+            text = displayName(p.id, p.name)
             textSize = 16f; setTypeface(typeface, android.graphics.Typeface.BOLD)
             textAlignment = View.TEXT_ALIGNMENT_VIEW_START
         }

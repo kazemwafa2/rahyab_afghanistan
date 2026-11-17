@@ -42,4 +42,6 @@
     <string name="pkg_manifest_not_published">لست بسته‌های آنلاین هنوز نشر نشده است؛ لست داخل برنامه نمایش داده شد. بسته‌های ولایتی از همین لست بدون انترنت نصب می‌شوند.</string>
     <string name="err_asset_missing">فایل این بسته در نسخهٔ نصب‌شدهٔ برنامه یافت نشد. لطفاً نسخهٔ کامل برنامه را نصب کنید.</string>
     <string name="err_network_dl">ارتباط برقرار نشد. انترنت را بررسی کنید و دوباره تلاش کنید.</string>
+    <string name="pkg_name_af_full">افغانستان — نقشهٔ اختصاصی کامل (همهٔ ۳۴ ولایت)</string>
+    <string name="pkg_name_af_base">افغانستان (پایهٔ کشوری)</string>
 </resources>

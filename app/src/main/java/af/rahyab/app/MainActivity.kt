@@ -2298,13 +2298,14 @@ class MainActivity : AppCompatActivity() {
      */
     private fun applyOnlineStyle() {
         val m = map ?: return
-        val key = "online:${if (wantDark()) "D" else "L"}"
+        val nationwide = nationwideTilesFile()
+        val key = "online:${if (wantDark()) "D" else "L"}:${nationwide?.name ?: "-"}"
         if (key == styleUrl && style != null) return
         styleUrl = key
         offlineStyleActive = false
         findViewById<TextView>(R.id.tvAttribution).visibility = View.GONE
         locationEnabled = false
-        val localJson = buildOnlineStyleJson()
+        val localJson = buildOnlineStyleJson(nationwide)
         if (localJson == null) {
             // عقب‌نشینی سبک قدیمی (فقط اگر ساخت JSON ناموفق شد — عملاً هرگز)
             val url = if (wantDark()) Config.STYLE_DARK else Config.STYLE_LIGHT
@@ -2342,14 +2343,45 @@ class MainActivity : AppCompatActivity() {
         } catch (_: Exception) { json }
     }
 
-    /** ساخت سبک آنلاین از همان دارایی سبک برنامه + کاشی برداری آنلاین */
-    private fun buildOnlineStyleJson(): String? {
+    /**
+     * فایل کاشی «نقشهٔ اختصاصی کامل کشور» — بستهٔ پایهٔ نصب‌شده‌ای که تا زوم ۱۳ یا بالاتر
+     * سراسر افغانستان را می‌پوشاند (afghanistan_full). این همان نقشهٔ اختصاصی برنامه است:
+     * یک فایل PMTiles روی خود گوشی که در هر دو حالت آنلاین و آفلاین منبع نقشه می‌شود
+     * تا ظاهر و کیفیت نقشه در دو حالت کاملاً یکسان باشد.
+     */
+    private fun nationwideTilesFile(): java.io.File? {
+        val base = OfflineData.basePackage() ?: return null
+        val f = OfflineData.tilesFile(base)
+        if (!f.isFile) return null
+        return if ((pmtilesZoomRange(f)?.second ?: 0) >= 13) f else null
+    }
+
+    /** تنظیم صریح minzoom/maxzoom منبع از سرآیند PMTiles (برای overzoom درست و نقشهٔ نه‌خالی) */
+    private fun setSourceZoomRange(json: String, srcId: String, tiles: java.io.File): String = try {
+        val o = org.json.JSONObject(json)
+        val srcs = o.getJSONObject("sources")
+        pmtilesZoomRange(tiles)?.let { (mn, mx) ->
+            srcs.optJSONObject(srcId)?.apply { put("minzoom", mn); put("maxzoom", mx) }
+        }
+        o.toString()
+    } catch (e: Exception) { json }
+
+    /** ساخت سبک آنلاین از همان دارایی سبک برنامه + منبع کاشی */
+    private fun buildOnlineStyleJson(nationwide: java.io.File?): String? {
         return try {
             val assetStyle = assets.open(if (wantDark()) "style/rahyab_dark.json" else "style/rahyab_light.json")
                 .bufferedReader().use { it.readText() }
             var json = MapTheme.applyJson(assetStyle, prefs, wantDark())
             json = applyBuilding3dPref(json)
-            json = json.replace("__SRC_URL__", Config.TILES_URL)
+            // نقشهٔ اختصاصی راه‌یاب در حالت آنلاین هم: اگر بستهٔ کامل کشوری نصب باشد،
+            // کاشی محلی خودِ برنامه منبع نقشه است (بدون هیچ درخواست کاشی از اینترنت)؛
+            // وگرنه کاشی برداری جهانی OpenFreeMap (بدون کلید) استفاده می‌شود.
+            if (nationwide != null) {
+                json = json.replace("__SRC_URL__", "pmtiles://file://" + nationwide.absolutePath)
+                json = setSourceZoomRange(json, "rahyab", nationwide)
+            } else {
+                json = json.replace("__SRC_URL__", Config.TILES_URL)
+            }
             json = json.replace("__FONTS__", "file://" + OfflineData.appFontsDir(this).absolutePath)
             json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
             json
@@ -2653,8 +2685,17 @@ class MainActivity : AppCompatActivity() {
             // رنگ‌های سفارشی کاربر (تم نقشه) — روی سبک آفلاین اعمال می‌شود
             json = MapTheme.applyJson(json, prefs, wantDark())
             json = applyBuilding3dPref(json)
-            val tiles = OfflineData.tilesFile(pkg)
+            // ⚠️ نقشهٔ اختصاصی کامل کشور: اگر بستهٔ پایه تا زوم ۱۳+ سراسر کشور را پوشش دهد
+            // (afghanistan_full)، همان فایل «منبع اصلی» می‌شود — کاشی ولایتی دیگر نقشی
+            // ندارد چون دادهٔ کامل‌تر سراسری در دست است. نتیجه: بدون تقسیم زوم ۹، بدون
+            // «حفرهٔ خالی» در مرز بسته‌ها، و ظاهر آنلاین و آفلاین کاملاً یکسان.
+            val baseTiles0 = base?.let { OfflineData.tilesFile(it) }
+            val baseIsNationwide = baseTiles0 != null && baseTiles0.isFile &&
+                (pmtilesZoomRange(baseTiles0)?.second ?: 0) >= 13
+            val tiles = if (baseIsNationwide && baseTiles0 != null) baseTiles0 else OfflineData.tilesFile(pkg)
             if (!tiles.isFile) return null
+            val useSplitBase = base != null && !baseIsNationwide &&
+                OfflineData.tilesFile(base).isFile
             // قالب استایل نسخهٔ ۲ منبع را با __SRC_URL__ می‌گیرد؛ بسته‌های قدیمی از __PMTILES__
             // استفاده می‌کردند (قالب «pmtiles://__PMTILES__») — هر دو پشتیبانی می‌شوند.
             // ⚠️ جای‌گذاری pmtiles://file:// فقط یک‌بار انجام می‌شود تا پیشوند تکراری نشود.
@@ -2663,7 +2704,7 @@ class MainActivity : AppCompatActivity() {
             json = json.replace("__FONTS__", "file://" + OfflineData.effectiveFontsDir(this, pkg).absolutePath)
             json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
 
-            if (base != null) {
+            if (useSplitBase && base != null) {
                 val baseTiles = OfflineData.tilesFile(base)
                 if (baseTiles.isFile) {
                     val o = org.json.JSONObject(json)

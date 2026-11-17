@@ -42,4 +42,6 @@
     <string name="pkg_manifest_not_published">د آنلاین بنډو لست تر اوسه خپور نه دی؛ د پروګرام دننه لست وښودل شو. ولایتي بنډې له همدې لست څخه پرته له انټرنټ نصب کېږي.</string>
     <string name="err_asset_missing">د دې بنډې فایل په نصب شوي پروګرام کې نه موندل شو. مهرباني وکړئ بشپړ نسخه نصب کړئ.</string>
     <string name="err_network_dl">نښلول بریالی نه شو. انټرنټ وګورئ او بیا هڅه وکړئ.</string>
+    <string name="pkg_name_af_full">افغانستان — بشپړ ځانګړې نقشه (ټول ۳۴ ولایتونه)</string>
+    <string name="pkg_name_af_base">افغانستان (ملي بنسټ)</string>
 </resources>

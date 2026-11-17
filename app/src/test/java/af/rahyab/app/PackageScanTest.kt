@@ -66,4 +66,36 @@ class PackageScanTest {
         val body = JSONObject().put("packages", JSONArray().put(pkg)).toString()
         assertEquals(0, PackageDownloader.fetchManifestFromJson(body).size)
     }
+
+    /**
+     * نقشهٔ اختصاصی کامل (afghanistan_full) — بستهٔ تازهٔ نسخهٔ 1.1.4:
+     * باید از manifest و اسکن دارایی‌ها هر دو پیدا شود و تاریخ تازه‌ترش،
+     * دکمهٔ «به‌روزرسانی» را برای کاربر فعال کند.
+     */
+    @Test
+    fun `full nationwide package is discovered from manifest and asset scan`() {
+        val full = JSONObject()
+            .put("id", "afghanistan_full").put("name", "افغانستان (نقشهٔ اختصاصی کامل)")
+            .put("region", "افغانستان (نقشهٔ اختصاصی کامل)")
+            .put("dataDate", "2026-11-17").put("builderVersion", "1.2.0")
+            .put("file", "afghanistan_full-2026-11-17.rahpkg.zip")
+            .put("url", "https://github.com/kazemwafa2/rahyab_afghanistan/releases/download/map-data/afghanistan_full-2026-11-17.rahpkg.zip")
+            .put("sizeBytes", 159_300_000L)
+            .put("sha256", "b".repeat(64))
+            .put("bounds", JSONObject().put("west", 60.48).put("south", 29.36).put("east", 74.90).put("north", 38.51))
+        val body = JSONObject().put("schema", 1).put("updated", "2026-11-17T00:00:00Z")
+            .put("packages", JSONArray().put(full)).toString()
+        val list = PackageDownloader.fetchManifestFromJson(body)
+        assertEquals(1, list.size)
+        assertEquals("afghanistan_full", list[0].id)
+        assertEquals("2026-11-17", list[0].dataDate)
+        assertTrue(list[0].sizeBytes > 100_000_000)
+
+        // اسکن دارایی‌ها هم باید همین بسته را ببیند
+        val scanned = PackageDownloader.parseReleaseAssets(
+            """<a href="/kazemwafa2/rahyab_afghanistan/releases/download/map-data/afghanistan_full-2026-11-17.rahpkg.zip">full</a>"""
+        )
+        assertEquals(1, scanned.size)
+        assertEquals("afghanistan_full", scanned[0].id)
+    }
 }
