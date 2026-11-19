@@ -40,3 +40,17 @@ manifest را روی سرور خودتان می‌گذارید، فیلد `url` 
 تا وقتی ریلیز `map-data` منتشر نشده باشد، دکمه‌های دانلود برنامه پیام خطای
 شبکه می‌دهند (و بسته پایه کشوری همچنان از خود APK نصب است). این محدودیت از
 سندباکس ساخت است که دسترسی انتشار به گیت‌هاب ندارد — با یک کلیک طبق راه ۱ حل می‌شود.
+
+## فایل PMTiles آنلاین (۱.۱.۶-test)
+
+نقشهٔ آنلاین برنامه فایل `afghanistan_full.pmtiles` را مستقیم از ریلیز `map-data` با HTTP Range می‌خواند.
+این فایل باید **جداگانه از ZIP** بارگذاری شود (همان فایل داخل `afghanistan_full-<تاریخ>.rahpkg.zip`).
+بررسی پیش از انتشار:
+
+```
+curl -sSL -r 0-126 -o /dev/null -w '%{http_code}\n' \
+  https://github.com/kazemwafa2/rahyab_afghanistan/releases/download/map-data/afghanistan_full.pmtiles
+# باید 206 بدهد؛ ۷ بایت اول باید PMTiles باشد
+```
+
+اگر ۲۰۶ نیامد، برنامه از بستهٔ نصب‌شده یا OpenFreeMap استفاده می‌کند (بدون خطا).

@@ -146,9 +146,97 @@ object OfflineRouter {
             return la * 100_000 + lo
         }
 
+        private val mainCache = HashMap<Int, BooleanArray>()
+
+        /**
+         * گره‌های «بزرگ‌ترین مؤلفهٔ قویاً همبند» شبکه برای پروفایل (Tarjan تکراری، بار اول محاسبه و ذخیره می‌شود).
+         * در بسته afghanistan_full حدود ۴٪ گره‌های موتررو (≈۱۸٬۷۰۰ از ۴۵۱٬۶۰۰) بیرون از این مؤلفه‌اند — گره‌های
+         * بن‌بست/تلهٔ یک‌طرفه (مثلاً وسط میدان‌ها). اگر مبدأ یا مقصد روی چنین گره‌ای بنشیند، «مسیر پیدا نشد» می‌آید.
+         */
+        @Synchronized
+        fun mainComponent(profile: Profile): BooleanArray {
+            val mask = when (profile) {
+                Profile.CAR, Profile.MOTO -> F_CAR
+                Profile.BIKE -> F_CAR or F_FOOT
+                Profile.FOOT -> F_FOOT
+            }
+            mainCache[mask]?.let { return it }
+            val t0 = System.currentTimeMillis()
+            val n = nodeCount
+            val index = IntArray(n) { -1 }
+            val low = IntArray(n)
+            val comp = IntArray(n) { -1 }
+            val onStack = BooleanArray(n)
+            val stack = IntArray(n)
+            val callNode = IntArray(n)
+            val callEdge = IntArray(n)
+            val compSize = IntArray(n)
+            var sp = 0
+            var counter = 0
+            var compCount = 0
+            for (root in 0 until n) {
+                if (index[root] != -1) continue
+                var cp = 0
+                index[root] = counter; low[root] = counter; counter++
+                stack[sp++] = root; onStack[root] = true
+                callNode[0] = root; callEdge[0] = csr[root]; cp = 1
+                while (cp > 0) {
+                    val v = callNode[cp - 1]
+                    var e = callEdge[cp - 1]
+                    val end = csr[v + 1]
+                    var descended = false
+                    while (e < end) {
+                        val ed = e
+                        e++
+                        if ((flags[ed] and mask) == 0) continue
+                        val w = to[ed]
+                        if (index[w] == -1) {
+                            callEdge[cp - 1] = e
+                            index[w] = counter; low[w] = counter; counter++
+                            stack[sp++] = w; onStack[w] = true
+                            callNode[cp] = w; callEdge[cp] = csr[w]; cp++
+                            descended = true
+                            break
+                        } else if (onStack[w] && index[w] < low[v]) {
+                            low[v] = index[w]
+                        }
+                    }
+                    if (descended) continue
+                    if (low[v] == index[v]) {
+                        var size = 0
+                        while (true) {
+                            val w = stack[--sp]
+                            onStack[w] = false
+                            comp[w] = compCount
+                            size++
+                            if (w == v) break
+                        }
+                        compSize[compCount] = size
+                        compCount++
+                    }
+                    cp--
+                    if (cp > 0) {
+                        val parent = callNode[cp - 1]
+                        if (low[v] < low[parent]) low[parent] = low[v]
+                    }
+                }
+            }
+            var best = 0
+            for (c in 1 until compCount) if (compSize[c] > compSize[best]) best = c
+            val result = BooleanArray(n) { comp[it] == best }
+            mainCache[mask] = result
+            Log.d(TAG, "مؤلفهٔ اصلی شبکه (mask=$mask): ${compSize[best]} از $n گره در ${System.currentTimeMillis() - t0}ms")
+            return result
+        }
+
+        /** مثل nearest ولی اول فقط گره‌های مؤلفهٔ اصلی؛ اگر در شعاع نبود، رفتار قبلی (هر گرهٔ قابل استفاده) */
+        fun nearestRobust(latDeg: Double, lonDeg: Double, maxMeters: Double, profile: Profile): Int? =
+            nearest(latDeg, lonDeg, maxMeters, profile, true) ?: nearest(latDeg, lonDeg, maxMeters, profile, false)
+
         /** نزدیک‌ترین گره قابل پذیرش در شعاع مجاز؛ گره باید دست‌کم یک یال قابل استفاده برای پروفایل داشته باشد */
-        fun nearest(latDeg: Double, lonDeg: Double, maxMeters: Double, profile: Profile): Int? {
+        fun nearest(latDeg: Double, lonDeg: Double, maxMeters: Double, profile: Profile, mainOnly: Boolean = false): Int? {
             buildGrid()
+            val main = if (mainOnly) mainComponent(profile) else null
             val latE7 = (latDeg * 1e7).toInt()
             val lonE7 = (lonDeg * 1e7).toInt()
             val baseLa = Math.floorDiv(latE7, 500_000)
@@ -164,6 +252,7 @@ object OfflineRouter {
                         for (n in arr) {
                             val d = distMeters(latDeg, lonDeg, lat[n] / 1e7, lon[n] / 1e7)
                             if (d < bestM) {
+                                if (main != null && !main[n]) continue
                                 var ok = false
                                 for (e in csr[n] until csr[n + 1]) if (edgeUsable(flags[e], profile)) { ok = true; break }
                                 if (!ok) continue
@@ -227,9 +316,9 @@ object OfflineRouter {
         fromLat: Double, fromLon: Double, toLat: Double, toLon: Double
     ): RouteResult? {
         val snap = snapFor(g, profile)
-        val s = g.nearest(fromLat, fromLon, snap, profile)
+        val s = g.nearestRobust(fromLat, fromLon, snap, profile)
         if (s == null) { Log.d(TAG, "نزدیک راه مبدأ، گره‌ای یافت نشد"); return null }
-        val t = g.nearest(toLat, toLon, snap, profile)
+        val t = g.nearestRobust(toLat, toLon, snap, profile)
         if (t == null) { Log.d(TAG, "نزدیک راه مقصد، گره‌ای یافت نشد"); return null }
 
         val t0 = System.currentTimeMillis()
@@ -262,8 +351,8 @@ object OfflineRouter {
         count: Int = 3
     ): List<RouteResult> {
         val snap = snapFor(g, profile)
-        val s = g.nearest(fromLat, fromLon, snap, profile) ?: return emptyList()
-        val t = g.nearest(toLat, toLon, snap, profile) ?: return emptyList()
+        val s = g.nearestRobust(fromLat, fromLon, snap, profile) ?: return emptyList()
+        val t = g.nearestRobust(toLat, toLon, snap, profile) ?: return emptyList()
 
         val paths = ArrayList<IntArray>()   // مسیرهای گره‌ای پذیرفته‌شده
         val penalized = HashSet<Long>()     // یال‌های جریمه‌خورده

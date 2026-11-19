@@ -20,6 +20,17 @@ object Config {
     // تنها منبع کاشی بین دو حالت فرق می‌کند: آنلاین = کاشی برداری OpenFreeMap (بدون کلید؛
     // بدون تضمین دائمی بودن سرویس — docs/SERVER.md)، آفلاین = فایل pmtiles بستهٔ نصب‌شده.
     const val TILES_URL = "https://tiles.openfreemap.org/planet"
+
+    /**
+     * کاشی‌های آنلاین نقشهٔ اختصاصی راه‌یاب: فایل PMTiles بستهٔ afghanistan_full که جداگانه
+     * (خارج از ZIP) در ریلیز map-data منتشر شود و با HTTP Range خوانده می‌شود — از داخل ZIP
+     * نمی‌شود کاشی گرفت. با انترنت روشن نقشه از همین منبع می‌آید و با قطع انترنت بستهٔ نصب‌شده
+     * جایگزین می‌شود. اگر فایل در دسترس نباشد یا Range پشتیبانی نشود، برنامه خودکار به
+     * عقب‌نشینی قبلی (بستهٔ نصب‌شده، وگرنه OpenFreeMap) برمی‌گردد.
+     */
+    val ONLINE_PMTILES_URL: String get() = "$REPO_URL/releases/download/$RELEASE_TAG/afghanistan_full.pmtiles"
+    /** فاصلهٔ حداقلی بین دو بررسی دسترس‌پذیری منبع آنلاین (میلی‌ثانیه) */
+    const val ONLINE_PROBE_INTERVAL_MS = 5 * 60 * 1000L
     /** سبک‌های قدیمی — فقط برای عقب‌نشینی و اشکال‌زدایی؛ مسیر اصلی سبک از دارایی برنامه ساخته می‌شود */
     const val STYLE_LIGHT = "https://tiles.openfreemap.org/styles/liberty"
     const val STYLE_DARK = "https://tiles.openfreemap.org/styles/dark"

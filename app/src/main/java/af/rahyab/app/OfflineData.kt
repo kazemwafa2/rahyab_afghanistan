@@ -153,20 +153,48 @@ object OfflineData {
         val dir = File(baseDir, "sprites")
         val png = File(dir, "sprite.png")
         val js = File(dir, "sprite.json")
-        if (!png.isFile || !js.isFile) {
+        // نسخهٔ sprite استخراج‌شده: پس از به‌روزرسانی برنامه، sprite قدیمی روی گوشی می‌ماند و
+        // آیکن‌های تازه (ic-shop، ic-cart) دیده نمی‌شدند؛ پس با تغییر versionCode دوباره استخراج می‌شود.
+        val marker = File(dir, ".app_version")
+        val stale = try { marker.readText().trim() != BuildConfig.VERSION_CODE.toString() } catch (_: Exception) { true }
+        if (stale || !png.isFile || !js.isFile) {
             try {
                 dir.mkdirs()
-                if (!png.isFile) ctx.assets.open("sprites/sprite.png").use { ins ->
+                ctx.assets.open("sprites/sprite.png").use { ins ->
                     java.io.FileOutputStream(png).use { ins.copyTo(it) }
                 }
-                if (!js.isFile) ctx.assets.open("sprites/sprite.json").use { ins ->
+                ctx.assets.open("sprites/sprite.json").use { ins ->
                     java.io.FileOutputStream(js).use { ins.copyTo(it) }
                 }
+                marker.writeText(BuildConfig.VERSION_CODE.toString())
             } catch (e: Exception) {
                 Log.e(TAG, "استخراج sprite ناموفق", e)
             }
         }
         return dir
+    }
+
+    /**
+     * فایل GeoJSON مکان‌ها برای زوم‌های پایین‌تر از ۱۴ (کاشی‌ها لایهٔ poi را فقط در زوم ۱۴ دارند).
+     * از assets/poi/poi_low.geojson استخراج می‌شود و با تغییر versionCode تازه می‌شود.
+     */
+    fun effectivePoiLowFile(ctx: Context): File {
+        val dir = File(baseDir, "poi")
+        val f = File(dir, "poi_low.geojson")
+        val marker = File(dir, ".app_version")
+        val stale = try { marker.readText().trim() != BuildConfig.VERSION_CODE.toString() } catch (_: Exception) { true }
+        if (stale || !f.isFile || f.length() == 0L) {
+            try {
+                dir.mkdirs()
+                val tmp = File(dir, "poi_low.geojson.tmp")
+                ctx.assets.open("poi/poi_low.geojson").use { ins -> java.io.FileOutputStream(tmp).use { ins.copyTo(it) } }
+                if (!tmp.renameTo(f)) { tmp.copyTo(f, overwrite = true); tmp.delete() }
+                marker.writeText(BuildConfig.VERSION_CODE.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "استخراج poi_low ناموفق", e)
+            }
+        }
+        return f
     }
 
     // ---------- گراف و اندیس (بارگذاری تنبل) ----------
