@@ -2450,6 +2450,7 @@ class MainActivity : AppCompatActivity() {
             }
             json = json.replace("__FONTS__", "file://" + OfflineData.appFontsDir(this).absolutePath)
             json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
+            json = json.replace("__POI_LOW__", "file://" + OfflineData.effectivePoiLowFile(this).absolutePath)
             json
         } catch (e: Exception) {
             android.util.Log.w("RahyabMap", "ساخت سبک آنلاین ناموفق: ${e.message}")
@@ -2769,6 +2770,7 @@ class MainActivity : AppCompatActivity() {
             json = json.replace("pmtiles://__PMTILES__", "pmtiles://file://" + tiles.absolutePath)
             json = json.replace("__FONTS__", "file://" + OfflineData.effectiveFontsDir(this, pkg).absolutePath)
             json = json.replace("__SPRITE__", "file://" + OfflineData.effectiveSpriteDir(this).absolutePath + "/sprite")
+            json = json.replace("__POI_LOW__", "file://" + OfflineData.effectivePoiLowFile(this).absolutePath)
 
             if (useSplitBase && base != null) {
                 val baseTiles = OfflineData.tilesFile(base)

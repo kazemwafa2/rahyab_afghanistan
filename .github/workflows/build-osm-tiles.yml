@@ -57,7 +57,7 @@ jobs:
         run: |
           java -Xmx6g -jar planetiler.jar openmaptiles \
             --area=afghanistan --osm_path=data/afghanistan-latest.osm.pbf \
-            --download --maxzoom="${{ inputs.maxzoom }}" \
+            --download --maxzoom="${{ inputs.maxzoom || '14' }}" \
             --output=out/afghanistan_osm.pmtiles --force
           ls -l out/afghanistan_osm.pmtiles
           sha256sum out/afghanistan_osm.pmtiles | tee out/afghanistan_osm.pmtiles.sha256

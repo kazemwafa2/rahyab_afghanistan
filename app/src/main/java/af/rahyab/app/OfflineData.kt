@@ -174,6 +174,29 @@ object OfflineData {
         return dir
     }
 
+    /**
+     * فایل GeoJSON مکان‌ها برای زوم‌های پایین‌تر از ۱۴ (کاشی‌ها لایهٔ poi را فقط در زوم ۱۴ دارند).
+     * از assets/poi/poi_low.geojson استخراج می‌شود و با تغییر versionCode تازه می‌شود.
+     */
+    fun effectivePoiLowFile(ctx: Context): File {
+        val dir = File(baseDir, "poi")
+        val f = File(dir, "poi_low.geojson")
+        val marker = File(dir, ".app_version")
+        val stale = try { marker.readText().trim() != BuildConfig.VERSION_CODE.toString() } catch (_: Exception) { true }
+        if (stale || !f.isFile || f.length() == 0L) {
+            try {
+                dir.mkdirs()
+                val tmp = File(dir, "poi_low.geojson.tmp")
+                ctx.assets.open("poi/poi_low.geojson").use { ins -> java.io.FileOutputStream(tmp).use { ins.copyTo(it) } }
+                if (!tmp.renameTo(f)) { tmp.copyTo(f, overwrite = true); tmp.delete() }
+                marker.writeText(BuildConfig.VERSION_CODE.toString())
+            } catch (e: Exception) {
+                Log.e(TAG, "استخراج poi_low ناموفق", e)
+            }
+        }
+        return f
+    }
+
     // ---------- گراف و اندیس (بارگذاری تنبل) ----------
     @Volatile
     var graph: OfflineRouter.Graph? = null
