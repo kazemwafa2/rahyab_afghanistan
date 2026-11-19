@@ -153,15 +153,20 @@ object OfflineData {
         val dir = File(baseDir, "sprites")
         val png = File(dir, "sprite.png")
         val js = File(dir, "sprite.json")
-        if (!png.isFile || !js.isFile) {
+        // نسخهٔ sprite استخراج‌شده: پس از به‌روزرسانی برنامه، sprite قدیمی روی گوشی می‌ماند و
+        // آیکن‌های تازه (ic-shop، ic-cart) دیده نمی‌شدند؛ پس با تغییر versionCode دوباره استخراج می‌شود.
+        val marker = File(dir, ".app_version")
+        val stale = try { marker.readText().trim() != BuildConfig.VERSION_CODE.toString() } catch (_: Exception) { true }
+        if (stale || !png.isFile || !js.isFile) {
             try {
                 dir.mkdirs()
-                if (!png.isFile) ctx.assets.open("sprites/sprite.png").use { ins ->
+                ctx.assets.open("sprites/sprite.png").use { ins ->
                     java.io.FileOutputStream(png).use { ins.copyTo(it) }
                 }
-                if (!js.isFile) ctx.assets.open("sprites/sprite.json").use { ins ->
+                ctx.assets.open("sprites/sprite.json").use { ins ->
                     java.io.FileOutputStream(js).use { ins.copyTo(it) }
                 }
+                marker.writeText(BuildConfig.VERSION_CODE.toString())
             } catch (e: Exception) {
                 Log.e(TAG, "استخراج sprite ناموفق", e)
             }

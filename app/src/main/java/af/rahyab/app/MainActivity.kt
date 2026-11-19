@@ -107,6 +107,11 @@ class MainActivity : AppCompatActivity() {
     /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
     @Volatile private var netReallyDown = false
     @Volatile private var lastProbeMs = 0L
+    /** منبع آنلاین PMTiles (ریلیز map-data): null = هنوز بررسی نشده، true = قابل استفاده، false = ناموجود */
+    @Volatile private var remoteTilesOk: Boolean? = null
+    @Volatile private var remoteTilesZoom: Pair<Int, Int>? = null
+    @Volatile private var remoteProbeMs = 0L
+    @Volatile private var remoteProbing = false
     @Volatile private var probing = false
 
     private lateinit var store: PlacesStore
@@ -2210,6 +2215,7 @@ class MainActivity : AppCompatActivity() {
         if (isNetworkAvailable()) {
             applyOnlineStyle()
             probeOnlineReachability()
+            probeRemoteTiles()
             return
         }
         // بدون انترنت — بستهٔ نقشهٔ بر اساس مکان فعلی/مرکز نقشه انتخاب می‌شود تا اگر
@@ -2299,7 +2305,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyOnlineStyle() {
         val m = map ?: return
         val nationwide = nationwideTilesFile()
-        val key = "online:${if (wantDark()) "D" else "L"}:${nationwide?.name ?: "-"}"
+        val key = "online:${if (wantDark()) "D" else "L"}:${nationwide?.name ?: "-"}:${if (remoteTilesOk == true) "R" else "-"}"
         if (key == styleUrl && style != null) return
         styleUrl = key
         offlineStyleActive = false
@@ -2366,6 +2372,59 @@ class MainActivity : AppCompatActivity() {
         o.toString()
     } catch (e: Exception) { json }
 
+    /** مثل setSourceZoomRange ولی با بازهٔ زوم داده‌شده (برای منبع آنلاین که فایل محلی ندارد) */
+    private fun setSourceZoomRangeValues(json: String, srcId: String, z: Pair<Int, Int>): String = try {
+        val o = org.json.JSONObject(json)
+        o.getJSONObject("sources").optJSONObject(srcId)?.apply { put("minzoom", z.first); put("maxzoom", z.second) }
+        o.toString()
+    } catch (e: Exception) { json }
+
+    /**
+     * بررسی منبع آنلاین PMTiles (ریلیز map-data): یک درخواست Range روی ۱۲۷ بایت سرآیند.
+     * فقط اگر پاسخ ۲۰۶ (Range پشتیبانی شود) و سرآیند «PMTiles» نسخهٔ ۳ باشد، منبع فعال می‌شود.
+     * نتیجه عوض شد → سبک دوباره ساخته می‌شود (آنلاین↔بستهٔ محلی/OpenFreeMap). هر ۵ دقیقه حداکثر یک‌بار.
+     */
+    private fun probeRemoteTiles() {
+        val now = System.currentTimeMillis()
+        if (remoteProbing || (remoteTilesOk != null && now - remoteProbeMs < Config.ONLINE_PROBE_INTERVAL_MS)) return
+        remoteProbing = true
+        remoteProbeMs = now
+        io.execute {
+            var ok = false
+            var zoom: Pair<Int, Int>? = null
+            try {
+                val c = java.net.URL(Config.ONLINE_PMTILES_URL).openConnection() as java.net.HttpURLConnection
+                c.connectTimeout = 5000; c.readTimeout = 5000
+                c.instanceFollowRedirects = true
+                c.setRequestProperty("Range", "bytes=0-126")
+                c.setRequestProperty("User-Agent", Config.USER_AGENT)
+                try {
+                    if (c.responseCode == 206) {
+                        val h = ByteArray(127)
+                        var n = 0
+                        c.inputStream.use { ins -> while (n < 127) { val r = ins.read(h, n, 127 - n); if (r < 0) break; n += r } }
+                        if (n >= 102 && String(h, 0, 7, Charsets.US_ASCII) == "PMTiles" && h[7].toInt() == 3) {
+                            zoom = Pair(h[100].toInt() and 0xFF, h[101].toInt() and 0xFF)
+                            ok = true
+                        }
+                    }
+                } finally { c.disconnect() }
+            } catch (e: Exception) {
+                android.util.Log.w("RahyabMap", "منبع آنلاین PMTiles در دسترس نیست: ${e.message}")
+            }
+            ui.post {
+                remoteProbing = false
+                val changed = (remoteTilesOk == true) != ok || (ok && remoteTilesZoom != zoom)
+                remoteTilesOk = ok
+                remoteTilesZoom = zoom
+                if (changed && !isDestroyed && !isFinishing && !offlineStyleActive) {
+                    styleUrl = ""
+                    loadStyle()
+                }
+            }
+        }
+    }
+
     /** ساخت سبک آنلاین از همان دارایی سبک برنامه + منبع کاشی */
     private fun buildOnlineStyleJson(nationwide: java.io.File?): String? {
         return try {
@@ -2376,7 +2435,14 @@ class MainActivity : AppCompatActivity() {
             // نقشهٔ اختصاصی راه‌یاب در حالت آنلاین هم: اگر بستهٔ کامل کشوری نصب باشد،
             // کاشی محلی خودِ برنامه منبع نقشه است (بدون هیچ درخواست کاشی از اینترنت)؛
             // وگرنه کاشی برداری جهانی OpenFreeMap (بدون کلید) استفاده می‌شود.
-            if (nationwide != null) {
+            // اولویت اول (انترنت روشن): فایل PMTiles ریلیز map-data به‌صورت آنلاین با HTTP Range
+            // — فقط وقتی probeRemoteTiles() دسترس‌پذیری و سرآیند معتبر آن را تأیید کرده باشد.
+            // اگر کاربر «اولویت بستهٔ محلی» را در prefs (prefer_local_tiles) روشن کرده باشد، بستهٔ نصب‌شده می‌ماند.
+            val remoteZoom = remoteTilesZoom
+            if (remoteTilesOk == true && remoteZoom != null && !prefs.getBoolean("prefer_local_tiles", false)) {
+                json = json.replace("__SRC_URL__", "pmtiles://" + Config.ONLINE_PMTILES_URL)
+                json = setSourceZoomRangeValues(json, "rahyab", remoteZoom)
+            } else if (nationwide != null) {
                 json = json.replace("__SRC_URL__", "pmtiles://file://" + nationwide.absolutePath)
                 json = setSourceZoomRange(json, "rahyab", nationwide)
             } else {

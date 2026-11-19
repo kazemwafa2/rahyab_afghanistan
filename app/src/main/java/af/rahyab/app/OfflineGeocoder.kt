@@ -68,7 +68,7 @@ object OfflineGeocoder {
                     val b = ByteArray(4); r.readFully(b)
                     val v = (b[0].toInt() and 0xFF) or ((b[1].toInt() and 0xFF) shl 8) or
                         ((b[2].toInt() and 0xFF) shl 16) or ((b[3].toInt() and 0xFF) shl 24)
-                    require(v == 1 || v == 2) { "نسخه اندیس پشتیبانی نمی‌شود: $v" }
+                    require(v in 1..3) { "نسخه اندیس پشتیبانی نمی‌شود: $v" }
                 }
             }
 
@@ -79,16 +79,21 @@ object OfflineGeocoder {
                 val magic = ByteArray(6); bb.get(magic)
                 require(String(magic, Charsets.ISO_8859_1) == MAGIC) { "قالب اندیس جست‌وجو معتبر نیست" }
                 val version = bb.int
-                require(version == 1 || version == 2) { "نسخه اندیس پشتیبانی نمی‌شود: $version" }
-                val recSize = if (version == 2) 21 else 20
+                require(version in 1..3) { "نسخه اندیس پشتیبانی نمی‌شود: $version" }
+                // v1: ۲۰ بایت، v2: ۲۱ (+دسته)، v3: ۲۶ (۲۱ بایت v2 + آفست u32 و طول u8 نام لاتین‌شده).
+                // v3 یک بلاب سوم «نام لاتین‌شده» بین normBlob و رکوردها دارد؛ اندازه‌اش در ۴ بایت اول بخش رزرو.
+                // این نسخه فقط رکورد را (با همان ۲۱ بایت اول) می‌خواند و بلاب لاتین را رد می‌کند —
+                // جست‌وجوی فازی لاتین (ق↔غ …) هنوز پیاده نشده.
+                val recSize = when (version) { 1 -> 20; 2 -> 21; else -> 26 }
                 val recordCount = bb.int
                 val nameBlobSize = bb.int
                 val normBlobSize = bb.int
-                bb.position(bb.position() + 12) // رزرو
+                val latinBlobSize = if (version >= 3) bb.int else 0
+                bb.position(bb.position() + (if (version >= 3) 8 else 12)) // رزرو
                 val nameBlob = bytes.copyOfRange(bb.position(), bb.position() + nameBlobSize)
                 bb.position(bb.position() + nameBlobSize)
                 val normBlob = bytes.copyOfRange(bb.position(), bb.position() + normBlobSize)
-                bb.position(bb.position() + normBlobSize)
+                bb.position(bb.position() + normBlobSize + latinBlobSize)
                 val rec = bytes.copyOfRange(bb.position(), bb.position() + recordCount * recSize)
                 Log.d(TAG, "اندیس بارگذاری شد: $recordCount رکورد (نسخه $version) در ${System.currentTimeMillis() - t0}ms")
                 return Index(nameBlob, normBlob, rec, recordCount, recSize, version)

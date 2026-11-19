@@ -1,0 +1,72 @@
+name: Build OSM Tiles (compare with reference af.pmtiles)
+
+# ساخت یک PMTiles کامل با خط تولید خود پروژه از Geofabrik (OSM) و مقایسهٔ آماری با کاشی مرجع بسته.
+# چرا؟ کاشی مرجع map.af فقط ≈۱۳٫۵ هزار ساختمان در کل کشور (۲۵۳ ساختمان در ۱۲۰ کاشی شهر کابل) دارد و
+# کلیدهای name:fa / name:ps ندارد (گزارش ۲۰۲۶-۱۱-۱۸). این Workflow مشخص می‌کند فایل ساخت خودمان چه تعداد
+# ساختمان و نام فارسی/پشتو دارد.
+#
+# ⚠️ هیچ چیزی را در Release منتشر نمی‌کند — فقط Artifact (فایل pmtiles + گزارش آماری + SHA-256).
+# ⚠️ آزمایش‌نشده: روی GitHub Actions اجرا نشده؛ اولین اجرا را دستی (workflow_dispatch) بررسی کنید.
+
+on:
+  workflow_dispatch:
+    inputs:
+      maxzoom:
+        description: 'بیشینهٔ زوم کاشی‌ها (۱۴ مثل مرجع؛ ۱۵ ساختمان بیشتر ولی فایل بزرگ‌تر)'
+        required: false
+        default: '14'
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PLANETILER_VERSION: v0.8.2
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download Afghanistan PBF (Geofabrik)
+        run: |
+          mkdir -p data out
+          curl -fL --retry 5 --retry-delay 10 -D data/response.headers \
+            -o data/afghanistan-latest.osm.pbf \
+            https://download.geofabrik.de/asia/afghanistan-latest.osm.pbf
+          test -s data/afghanistan-latest.osm.pbf
+          sha256sum data/afghanistan-latest.osm.pbf | tee out/pbf.sha256
+          grep -i '^last-modified' data/response.headers | tee out/pbf.lastmodified
+
+      - name: Download planetiler (fixed version)
+        run: |
+          curl -fsSL -o planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/${PLANETILER_VERSION}/planetiler.jar"
+          test -s planetiler.jar
+          sha256sum planetiler.jar
+
+      - name: Build tiles (OpenMapTiles profile — all buildings, all name:* keys)
+        run: |
+          java -Xmx6g -jar planetiler.jar openmaptiles \
+            --area=afghanistan --osm_path=data/afghanistan-latest.osm.pbf \
+            --download --maxzoom="${{ inputs.maxzoom }}" \
+            --output=out/afghanistan_osm.pmtiles --force
+          ls -l out/afghanistan_osm.pmtiles
+          sha256sum out/afghanistan_osm.pmtiles | tee out/afghanistan_osm.pmtiles.sha256
+
+      - name: Content statistics (buildings, names, Kabul sample)
+        run: python3 -I tools/pmtiles_stats.py out/afghanistan_osm.pmtiles --json out/stats.json | tee out/stats.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: osm-tiles-${{ github.run_id }}
+          path: out/
+          retention-days: 14
