@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- د لارموي نشانگر — پښتو -->
+    <string name="veh_title">د لارموي نشانگر</string>
+    <string name="veh_arrow">تیغه</string>
+    <string name="veh_landcruiser">لنډکروزر</string>
+    <string name="veh_toyota_suv">ټویوټا سوف</string>
+    <string name="veh_lexus">لیکسس</string>
+    <string name="veh_mercedes">مرسډیس</string>
+    <string name="veh_bmw">بي ام ډبلیو</string>
+    <string name="veh_camry">ټویوټا کمري</string>
+    <string name="veh_hyundai">هیونډای</string>
+    <string name="veh_kia">کیا</string>
+    <string name="veh_hiaze">هایس وانټ</string>
+    <string name="veh_mercedes_van">مرسډیس وان</string>
+    <string name="veh_bus">بس</string>
+    <string name="veh_tuktuk">ریکشا</string>
+    <string name="veh_moto">موټرسایکل</string>
+    <string name="veh_cargo_trike">بار وړونکی ریکشا</string>
+    <string name="veh_bike">بایسکل</string>
+    <string name="veh_selected">د لارموي نشانگر بدل شو</string>
+</resources>

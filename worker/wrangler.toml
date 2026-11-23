@@ -1,0 +1,28 @@
+name = "rahyab-api"
+main = "src/index.js"
+compatibility_date = "2024-11-01"
+
+# دیتابیس D1 — همین دیتابیس «rahyab-reports» که برای گزارش‌های زنده ساخته شده؛
+# جداول ضمیمهٔ ۱ با «wrangler d1 execute rahyab-reports --file=schema.sql» اضافه می‌شوند.
+#
+# ⚠ مهم — پیش از `wrangler deploy` از این مخزن:
+# مقدار database_id را با شناسهٔ واقعی دیتابیس جایگزین کنید. شناسه را از
+# داشبورد کلادفلر (Storage & Databases → D1 → rahyab-reports → Database ID)
+# کپی کنید یا در ترموکس:  wrangler d1 list
+# ورکر فعلی که از قبل مستقر شده سالم کار می‌کند؛ این مقدار فقط برای
+# استقرار دوباره از داخل همین مخزن لازم است.
+[[d1_databases]]
+binding = "DB"
+database_name = "rahyab-reports"
+database_id = "f38f20f2-b46c-4c83-923f-87c3aa7fef14"
+
+[vars]
+# سقف‌های امن برای کنترل مصرف Worker و D1 (بخش دوازدهم ضمیمهٔ ۱)
+MAX_LIMIT = "1000"
+NEARBY_LIMIT = "200"
+SEARCH_LIMIT = "60"
+
+# پاک‌سازی دوره‌ای روزانه (بخش ۲۵ سند جامع): حذف نمونه‌های ترافیک کهنه‌تر از
+# ۷ روز، وضعیت‌های منقضی و گزارش‌های منقضی — ساعت ۳:۱۷ UTC (≈۰۶:۴۷ صبح کابل)
+[triggers]
+crons = ["17 3 * * *"]

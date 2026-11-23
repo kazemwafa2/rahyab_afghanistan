@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- غږیز او متنی لارښود — پښتو -->
+    <string name="start_nav">لارموي پیلول</string>
+    <string name="save_place">خوندي کول</string>
+    <string name="share">شریکول</string>
+    <string name="stop_nav">د سفر پای</string>
+    <string name="places">زما ځایونه</string>
+    <string name="home">کور</string>
+    <string name="work">کار ځای</string>
+    <string name="set_home">د کور په توګه خوندي کړه</string>
+    <string name="set_work">د کار ځای په توګه خوندي کړه</string>
+    <string name="add_favorite">موردونو ته ورگډول</string>
+    <string name="saved_ok">خوندي شو</string>
+    <string name="no_saved">تر اوسه هېڅ ځای خوندي نه دی شوی</string>
+    <string name="voice_on">غږیز لارښود روشن شو</string>
+    <string name="voice_off">غږیز لارښود بند شو</string>
+    <string name="night_auto">د نقشې حالت: اتومات</string>
+    <string name="night_day">د نقشې حالت: ورځ</string>
+    <string name="night_night">د نقشې حالت: شپه</string>
+    <string name="no_tts">په ستاسو تلیفون کې فارسي غږ نشته. د تلیفون له تنظیماتو (متن ته وینا) فارسي غږ نصب کړئ. تر هغه چې لارښوونې یوازې پر سکرین ښکاري.</string>
+    <string name="offline_search_notice">انټرنټ نه دی وصل؛ یوازې په خوندي شویو ځایونو کې لټون وشو.</string>
+
+    <string name="nav_welcome">ښه راغلاست. د راهیاب غږیز لارښود چمتو دی.</string>
+    <string name="nav_depart">د تګ لپاره چمتو شئ.</string>
+    <string name="nav_continue">مستقیم دوام ورکړئ.</string>
+    <string name="nav_straight">خپلې لارې ته دوام ورکړئ.</string>
+    <string name="nav_keep_road">خپلې لارې ته دوام ورکړئ.</string>
+    <string name="nav_route_started">ستاسو لار پیل شوه.</string>
+    <string name="nav_new_route_set">نوې لار ټاکل شوه.</string>
+    <string name="nav_alt_found">بله لار پیدا شوه.</string>
+
+    <string name="nav_right">ښي خوا ته تاو شئ.</string>
+    <string name="nav_left">کیڼ ته تاو شئ.</string>
+    <string name="nav_slight_right">لږ ښي خوا ته اړ شئ.</string>
+    <string name="nav_slight_left">لږ کیڼ ته اړ شئ.</string>
+    <string name="nav_sharp_right">تیز ښي خوا ته تاو شئ.</string>
+    <string name="nav_sharp_left">تیز کيڼ خوا ته تاو شئ.</string>
+    <string name="nav_uturn">شا واړئ.</string>
+    <string name="nav_go_right_side">ښي خوا ته لاړ شئ.</string>
+    <string name="nav_go_left_side">کیڼ خوا ته لاړ شئ.</string>
+    <string name="nav_stay_right">په ښي لار کې پاتې شئ.</string>
+    <string name="nav_stay_left">په کیڼ لار کې پاتې شئ.</string>
+
+    <string name="nav_cross1_right">په لومړي چوک کې ښي خوا ته تاو شئ.</string>
+    <string name="nav_cross1_left">په لومړي چوک کې کيڼ خوا ته تاو شئ.</string>
+    <string name="nav_fork_right">په دوه لارې کې ښي لار وټاکئ.</string>
+    <string name="nav_fork_left">په دوه لارې کې کیڼ لار وټاکئ.</string>
+    <string name="nav_exit_1">له لومړي وتلو ووځئ.</string>
+    <string name="nav_exit_2">له دويم وتلو ووځئ.</string>
+    <string name="nav_exit_3">له درېيم وتلو ووځئ.</string>
+    <string name="nav_roundabout">ګردچوک ته ننوځئ.</string>
+    <string name="nav_exit_roundabout">له ګردچوک ووځئ.</string>
+
+    <string name="nav_enter_road">اصلي سړک ته ننوځئ.</string>
+    <string name="nav_exit_road">له اصلي سړک ووځئ.</string>
+    <string name="nav_enter_main">اصلي لار ته ننوځئ.</string>
+    <string name="nav_exit_main">له اصلي لار ووځئ.</string>
+    <string name="nav_enter_alt">بډېل لار ته ننوځئ.</string>
+    <string name="nav_lane_change">خپل لېن بدل کړئ.</string>
+    <string name="nav_keep_right">د ښي لېن څخه تېر شئ.</string>
+    <string name="nav_keep_left">له کیڼ لېن څخه تېر شئ.</string>
+
+    <string name="nav_in">له %1$s وروسته %2$s</string>
+    <string name="nav_now">اوس %1$s</string>
+    <string name="nav_arrive">تاسو مقصد ته ورسېدل.</string>
+    <string name="nav_offroute">تاسو له لارې بهر شوي یاست.</string>
+    <string name="nav_rerouted">نوې لار ټاکل شوه.</string>
+    <string name="nav_remaining">پاتې: %1$s • %2$s</string>
+
+    <string name="nav_locating">ستاسو موقعیت کتل کېږي.</string>
+    <string name="nav_gps_lost">د GPS اړیکه پرې شوه.</string>
+    <string name="nav_gps_restored">د GPS اړیکه بېرته ټينګه شوه.</string>
+    <string name="nav_route_changed">ستاسو لار بدله شوه.</string>
+    <string name="nav_faster_found">تر ژر لار پیدا شوه.</string>
+
+    <string name="nav_approaching">مو مقصد ته نږدې کېږئ.</string>
+    <string name="nav_dest_right">ستاسو مقصد په ښي خوا کې دی.</string>
+    <string name="nav_dest_left">ستاسو مقصد په کیڼ خوا کې دی.</string>
+    <string name="nav_dest_500">مقصد ته ۵۰۰ متره پاتې دي.</string>
+    <string name="nav_dest_200">مقصد ته ۲۰۰ متره پاتې دي.</string>
+
+    <string name="nav_arrive_farewell">تاسو مقصد ته ورسېدل. سفر مو ښه وي.</string>
+    <string name="nav_trip_end">ستاسو سفر پای ته ورسېد. له ملگرتیا مو مننه کوو.</string>
+    <string name="nav_thanks_bye">مننه چې له زموږ لارښود څخه مو کار واخیست. ورځ مو ښه وي.</string>
+    <string name="nav_be_safe">په سلامتیا اوسئ. هیله لرو سفر مو ښه وي.</string>
+
+    <string name="route_tag_fastest">تر ژر</string>
+    <string name="route_tag_shortest">تر لنډ</string>
+    <string name="route_tag_alt">بډېل %1$d</string>
+</resources>

@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== پښتو ژباړه — v0.9.3 ===== -->
+
+    <!-- ویونکی -->
+    <string name="voice_state">د ویونکي حالت</string>
+    <string name="voice_source">غږ غوره کړئ</string>
+    <string name="voice_system_option">د تلیفون خبرو موټور (د همدې ژبې غږ نصبولو ته اړتیا لري)</string>
+    <string name="voice_volume">د غږ لوړوالی</string>
+    <string name="voice_speed">د خبرو چټکتیا</string>
+    <string name="voice_list_note">هر غږ %1$d ثبت شوي جملې لري — بشپړ آفلاین؛ د انتخاب کولو دمخه د پلې کولو تڼۍ کې یې واورئ.</string>
+    <string name="voice_female">ښځینه غږ</string>
+    <string name="voice_male">نارینه غږ</string>
+    <string name="voice_play">ازموینیز پلې کول</string>
+    <string name="voice_bluetooth">د بلوټوت له لارې غږ پلې کول</string>
+    <string name="voice_during_call">د اړیکې په مهال غږ پلې کول</string>
+    <string name="voice_system_unavailable">پدې تلیفون کې د دې ژبې غږ نصب نه دی</string>
+    <string name="voice_saved_msg">د غږ امستنې خوندي شوې</string>
+    <string name="voice_lang_note">د غږیز لارښود ژبه د پلېکاڼي (اپ) ژبې تعقیبوي (د تلیفون له ژبې خپلواکه). اوسنۍ ژبه: %1$s</string>
+    <string name="voice_group_dari">دري غږونه</string>
+    <string name="voice_group_pashto">پښتو غږونه</string>
+    <string name="voice_group_english">انګلیسي غږونه</string>
+    <string name="voice_active_tag">فعال — همدا غږ لارښوونه کوي</string>
+    <string name="voice_lang_mismatch_toast">د %1$s غږ خوندي شو — کله چې د اپ ژبه %2$s کړئ، په همدې غږ به لارښوونه وشي.</string>
+    <string name="voice_lang_dari_name">دري</string>
+    <string name="voice_lang_pashto_name">پښتو</string>
+    <string name="voice_lang_english_name">انګلیسي</string>
+
+    <!-- خبرتیاوې -->
+    <string name="alerts_title">د خبرتیاوې امستنې</string>
+    <string name="alert_bump">د چټک‌گیرو خبرتیا</string>
+    <string name="alert_accident">د پېښې (ټکر) خبرتیا</string>
+    <string name="alert_traffic">د ترافیکې ګنګلتیا خبرتیا</string>
+    <string name="alert_closed">د سړک تړل کېدو خبرتیا</string>
+    <string name="alert_hazard">د سړک خطر خبرتیا</string>
+    <string name="alert_cam">د چټکتیا کمرې خبرتیا</string>
+    <string name="alert_speed">د موټر د زیاتې چټکتیا خبرتیا</string>
+    <string name="alert_speed_limit">د خبرتیا حد: %1$d کیلومتره په ساعت کې</string>
+    <string name="alerts_note">د خبرتیاوو سرچینه یوازې د راحیاب کاروونکو تصدیق شوي راپورونه دي (وروستی ۲۴ ساعته)؛ پټ امنیتي معلومات لرونکي راپورونه هېڅکله نه ښودل کېږي.</string>
+
+    <string name="alert_bump_text">احتیاط. مخکې سړک کې چټک‌ګیر دی</string>
+    <string name="alert_accident_text">احتیاط. مخکې سړک کې پېښه راپوره شوې ده</string>
+    <string name="alert_traffic_text">مخکې سړک کې ترافیکې ګنګلتیا راپوره شوې ده</string>
+    <string name="alert_closed_text">مخکې سړک کې د سړک بنډ راپوره شوی دی</string>
+    <string name="alert_hazard_text">احتیاط. مخکې سړک کې خطر دی</string>
+    <string name="alert_cam_text">احتیاط. مخکې سړک کې د چټکتیا کمره ده</string>
+    <string name="alert_speed_text">ستاسو چټکتیا زیاته ده. مهرباني وکړئ چټکتیا کمه کړئ</string>
+
+    <!-- ازاد موټروونې -->
+    <string name="free_title">آزاده موټروونې</string>
+    <string name="free_end">پای</string>
+    <string name="free_started">د آزادې موټروونې حالت فعال شو</string>
+    <string name="stop_nav_first">لومړی اوسنۍ لارښوونه ودروئ</string>
+    <string name="speed_unit">کیلومتره په ساعت کې</string>
+    <string name="tab_free">آزاد</string>
+    <!-- v1.0.2 — ناقص کیډي بشپړول؛ دمخه یوازې په تروجمخ دري کې وو -->
+    <string name="voice_pack_option">د پروګرام دننه دري غږ (آفلاین، تل کار کوي)</string>
+    <string name="voice_pack_missing">د پروګرام دننه غږ ونه موندل شو</string>
+    <string name="voice_pack_status">د دري غږ بنډل: %1$d ثبت شوې جمله — بشپړ آفلاین؛ په تلیفون کې د غږ د نصب کولو اړتیا نشته.</string>
+    <string name="alert_police">د پولیس د شتون خبرتیا</string>
+    <string name="alert_redlight">د سور چراغ د کمرې خبرتیا</string>
+    <string name="alert_slippery">د بهېدونکي سړک خبرتیا</string>
+    <string name="alert_narrow">د سړک د تنګېدو خبرتیا</string>
+    <string name="alert_school">د ښوونځي سیمې خبرتیا</string>
+    <string name="alert_crosswalk">د پېاده تلو څېرې خبرتیا</string>
+    <string name="alert_rail">د رېل لارې خبرتیا</string>
+    <string name="alert_animal">د څارویو د تېرېدو خبرتیا</string>
+    <string name="alert_trafficlight">د ترافیکو چراغ خبرتیا</string>
+    <string name="alert_limit">د چټکتیا د محدودیت بدلون خبرتیا</string>
+    <string name="alert_steep_down">د تېزې سراږېدو خبرتیا</string>
+    <string name="alert_steep_up">د تېز پورته کېدو خبرتیا</string>
+    <string name="alert_police_text">خبرتیا! کېدای شي مخکې پولیس وي.</string>
+    <string name="alert_redlight_text">خبرتیا! مخکې د سور چراغ کمره ده.</string>
+    <string name="alert_slippery_text">خبرتیا! سړک بهېدونکی دی.</string>
+    <string name="alert_narrow_text">خبرتیا! مخکې سړک تنګېږي.</string>
+    <string name="alert_school_text">خبرتیا! مخکې د ښوونځي سیمه ده.</string>
+    <string name="alert_crosswalk_text">خبرتیا! مخکې د پېاده تلو څېره ده.</string>
+    <string name="alert_rail_text">خبرتیا! مخکې د رېل لار تېرېږي.</string>
+    <string name="alert_animal_text">خبرتیا! کېدای شي څاروي تېر شي.</string>
+    <string name="alert_trafficlight_text">خبرتیا! مخکې د ترافیکو چراغ دی.</string>
+    <string name="alert_limit_text">خبرتیا! مخکې د چټکتیا محدودیت بدلیږي.</string>
+    <string name="alert_steep_down_text">خبرتیا! مخکې تېزه سراږه ده.</string>
+    <string name="alert_steep_up_text">خبرتیا! مخکې تېز پورته کېدونکی لار دی.</string>
+    <string name="alert_slow_down_text">چټکتیا کمه کړئ.</string>
+    <string name="routing_title">د لارموندنې امستنې</string>
+    <string name="routing_avoid_traffic">له ګڼه ګوڼې لارو ډډه کوئ (د کاروونکو د راپورونو پر بنسټ)</string>
+    <string name="routing_avoid_unpaved">له خټینو او تړلو سړکونو ډډه کوئ (کله چې د سړک معلومات وي)</string>
+    <string name="routing_avoid_toll">له مالیاتي سړکونو ډډه کوئ (کله چې د مالیات معلومات وي)</string>
+    <string name="routing_note">د ګڼه ګوڼې لارو څخه ډډه کول د ژوندي کاروونکو راپورونو سره سمدلاسه تطبیقېږي. نورې دوې اختیارونه کله چې په راتلونکو آفلاین بنډلونو کې د مالیات او د سړک د سطحې معلومات راشي، فعاله کېږي.</string>
+    <string name="map_labels_title">د نقشې نومونه</string>
+    <string name="map_labels_af">یوازې د افغانستان نومونه (درې)</string>
+    <string name="map_labels_all">ټول نومونه (ګاونډی هېوادونه هم)</string>
+    <string name="report_bump">چټک‌ګیر</string>
+    <string name="report_cam">د چټکتیا کمره</string>
+    <string name="report_police">د پولیس شتون</string>
+    <string name="report_redlight">د سور چراغ کمره</string>
+    <string name="report_slippery">بهېدونکی سړک</string>
+    <string name="report_narrow">د سړک تنګېدل</string>
+    <string name="report_school">د ښوونځي سیمه</string>
+    <string name="report_crosswalk">د پېاده تلو څېره</string>
+    <string name="report_rail">د رېل لار</string>
+    <string name="report_animal">د څارویو تېرېدل</string>
+    <string name="report_trafficlight">خراب د ترافیکو چراغ</string>
+    <string name="report_limit">د چټکتیا محدودیت بدلون</string>
+    <string name="report_steep_down">تېزه سراږه</string>
+    <string name="report_steep_up">تېز پورته کېدونکی</string>
+    <string name="sys_loc_acquired">ستاسو موقعیت ترلاسه شوه.</string>
+    <string name="sys_loc_unknown">ستاسو موقعیت نه معلومیږي. مهرباني وکړئ انتظار وکړئ.</string>
+    <string name="sys_map_loading">نقشه په بارېدو ده.</string>
+    <string name="sys_map_ready">نقشه د کارولو لپاره چمتو ده.</string>
+    <string name="sys_dl_started">د نقشې ډاونلوډ پیل شو.</string>
+    <string name="sys_dl_done">د نقشې ډاونلوډ بشپړ شو.</string>
+    <string name="sys_dl_failed">د نقشې ډاونلوډ ناکام شو.</string>
+    <string name="sys_no_internet">انټرنټ اړیکه نه ده ټینګه.</string>
+    <string name="sys_using_offline">له آفلاین نقشې څخه کار اخیستل کیږي.</string>
+    <string name="pkg_provinces_title">د هېواد پوښښ په ۳۴ ولایتونو کې</string>
+    <string name="pkg_provinces_note">ملي بنډل تل د برنامه سره وي او ټول ۳۴ ولایتونه پوښي. د ولایتونو بنډلونه هم اوس د برنامه دننه دي — بې انټرنټ د «ډاونلوډ» تڼۍ سره نصبېږي او له نصب وروسته د ړنګولو وړ دي. کله چې له نصب شوي ولایت بهر سفر کوئ، نقشه او لارموندنه په اتوماتيک ډول د ملي بنډل سره دوام پیدا کوي.</string>
+    <string name="pkg_provinces_error">د ولایتونو کتلاګ ونه موندل شو</string>
+    </resources>

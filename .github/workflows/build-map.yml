@@ -1,0 +1,283 @@
+name: Build Map Packages (All Provinces)
+
+# ساخت بسته پایه کشوری + بسته‌های آفلاین تمام ۳۴ ولایت افغانستان.
+#  - جدا از Workflow ساخت APK است (مطابق چک‌لیست مرحله ۴ و ۱۶)
+#  - ۵ شارد موازی (هر شارد یک گروه ۷-۸ ولایتی) تا در سقف زمان Runner جا شود
+#  - نسخه داده (تاریخ Geofabrik) و checksum همه فایل‌ها ثبت می‌شود
+#  - فایل خراب یا ناقص هرگز منتشر نمی‌شود (اعتبارسنجی پیش از انتشار)
+#  - خروجی: ۳۵ بسته (کشور + ۳۴ ولایت) + SHA256SUMS.txt + manifest.json در Release تگ map-data
+#
+# منبع داده: Geofabrik Afghanistan (© OpenStreetMap contributors — ODbL)
+# کاشی: planetiler نسخه ثابت (v0.8.2) برای ساخت تکرارپذیر
+#
+# مصرف سهمیه: هر اجرای کامل ≈ ۵ شارد × ۳۰-۶۰ دقیقه = ۱۵۰-۳۰۰ دقیقه Runner.
+# اجرای زمان‌بندی‌شده فصلی است، نه ماهانه، تا سهمیه رایگان حفظ شود.
+
+on:
+  workflow_dispatch:
+    inputs:
+      shard:
+        description: 'شارد (۰ تا ۴) — خالی = همه'
+        required: false
+        default: ''
+        type: string
+  schedule:
+    # فصلی — اول ژانویه/آوریل/جولای/اکتوبر (به‌روزرسانی همه ولایت‌ها)
+    - cron: '0 3 1 1,4,7,10 *'
+
+permissions:
+  contents: write
+
+env:
+  PLANETILER_VERSION: v0.8.2
+  PYTHONUNBUFFERED: '1'
+
+jobs:
+  prepare-data:
+    runs-on: ubuntu-latest
+    outputs:
+      data_date: ${{ steps.data.outputs.date }}
+    steps:
+      - name: Download Afghanistan PBF once
+        id: data
+        run: |
+          mkdir -p data
+          curl -fL --retry 5 --retry-delay 10 -D data/response.headers \
+            -o data/afghanistan-latest.osm.pbf \
+            https://download.geofabrik.de/asia/afghanistan-latest.osm.pbf
+          test -s data/afghanistan-latest.osm.pbf
+          LAST_MODIFIED="$(awk 'tolower($1)=="last-modified:" {$1=""; sub(/^[ 	]+/, ""); value=$0} END {print value}' data/response.headers)"
+          test -n "$LAST_MODIFIED"
+          DATE="$(date -u -d "$LAST_MODIFIED" +%F)"
+          echo "date=$DATE" >> "$GITHUB_OUTPUT"
+          cd data
+          sha256sum afghanistan-latest.osm.pbf > afghanistan-latest.osm.pbf.sha256
+          cat afghanistan-latest.osm.pbf.sha256
+          echo "تاریخ مشترک داده: $DATE"
+
+      - name: Upload shared Afghanistan PBF
+        uses: actions/upload-artifact@v4
+        with:
+          name: geofabrik-afghanistan-pbf
+          path: |
+            data/afghanistan-latest.osm.pbf
+            data/afghanistan-latest.osm.pbf.sha256
+          compression-level: 0
+          retention-days: 1
+
+  build-packages:
+    needs: prepare-data
+    runs-on: ubuntu-latest
+    env:
+      RAHYAB_DATA_DATE: ${{ needs.prepare-data.outputs.data_date }}
+    timeout-minutes: 330
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [0, 1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install osmium numpy pyshp
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download shared Afghanistan PBF
+        uses: actions/download-artifact@v4
+        with:
+          name: geofabrik-afghanistan-pbf
+          path: data
+
+      - name: Verify shared PBF checksum
+        run: |
+          cd data
+          sha256sum -c afghanistan-latest.osm.pbf.sha256
+
+      - name: Download planetiler (fixed version)
+        run: |
+          mkdir -p tools/bin
+          curl -sL -o tools/bin/planetiler.jar \
+            "https://github.com/onthegomap/planetiler/releases/download/${{ env.PLANETILER_VERSION }}/planetiler.jar"
+          sha256sum tools/bin/planetiler.jar
+
+      - name: Split + build shard ${{ matrix.shard }}
+        env:
+          RAHYAB_WORKSPACE: ${{ github.workspace }}
+          RAHYAB_PROJECT: ${{ github.workspace }}
+          RAHYAB_PBF: ${{ github.workspace }}/data/afghanistan-latest.osm.pbf
+          RAHYAB_DIST: ${{ github.workspace }}/dist
+          RAHYAB_WORK: ${{ github.workspace }}/work_prov
+          RAHYAB_PLANETILER: ${{ github.workspace }}/tools/bin/planetiler.jar
+        run: |
+          if [ -n "${{ github.event.inputs.shard }}" ]; then
+            if [ "${{ github.event.inputs.shard }}" != "${{ matrix.shard }}" ]; then
+              echo "این شارد انتخاب نشده؛ رد می‌شود"
+              exit 0
+            fi
+          fi
+          python3 tools/build_all_provinces.py --shard ${{ matrix.shard }}
+
+      - name: Validate shard output
+        if: hashFiles('dist/*.rahpkg.zip') != ''
+        run: |
+          for z in dist/*.rahpkg.zip; do
+            python3 tools/validate_package.py "$z" --expect graph,index,tiles,style
+          done
+
+      - uses: actions/upload-artifact@v4
+        if: hashFiles('dist/*.rahpkg.zip') != ''
+        with:
+          name: map-packages-shard-${{ matrix.shard }}
+          path: dist/*.rahpkg.zip
+
+  build-base-package:
+    needs: prepare-data
+    if: github.event_name != 'workflow_dispatch' || github.event.inputs.shard == ''
+    runs-on: ubuntu-latest
+    env:
+      RAHYAB_DATA_DATE: ${{ needs.prepare-data.outputs.data_date }}
+    timeout-minutes: 330
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install Python dependencies
+        run: pip install osmium numpy pyshp
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Download shared Afghanistan PBF
+        uses: actions/download-artifact@v4
+        with:
+          name: geofabrik-afghanistan-pbf
+          path: data
+
+      - name: Verify shared PBF checksum
+        run: |
+          cd data
+          sha256sum -c afghanistan-latest.osm.pbf.sha256
+
+      - name: Download planetiler
+        run: |
+          mkdir -p tools/bin
+          curl -fsSL -o tools/bin/planetiler.jar "https://github.com/onthegomap/planetiler/releases/download/${{ env.PLANETILER_VERSION }}/planetiler.jar"
+          test -s tools/bin/planetiler.jar
+          sha256sum tools/bin/planetiler.jar
+
+      - name: Build country base package
+        env:
+          RAHYAB_WORKSPACE: ${{ github.workspace }}
+          RAHYAB_PROJECT: ${{ github.workspace }}
+          RAHYAB_PBF: ${{ github.workspace }}/data/afghanistan-latest.osm.pbf
+          RAHYAB_DIST: ${{ github.workspace }}/dist
+          RAHYAB_WORK: ${{ github.workspace }}/work_base
+          RAHYAB_PLANETILER: ${{ github.workspace }}/tools/bin/planetiler.jar
+        run: python3 tools/build_base_package.py
+
+      - name: Validate country base package
+        run: |
+          for z in dist/*.rahpkg.zip; do
+            python3 tools/validate_package.py "$z" --expect graph,index,tiles,style
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: map-package-base
+          path: dist/*.rahpkg.zip
+          if-no-files-found: error
+
+  publish:
+    needs: [prepare-data, build-packages, build-base-package]
+    env:
+      RAHYAB_DATA_DATE: ${{ needs.prepare-data.outputs.data_date }}
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Download all shard artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: map-packages-shard-*
+          merge-multiple: true
+          path: dist
+
+      - name: Download country base artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: map-package-base
+          path: dist
+
+      - name: Build global manifest + checksums
+        run: |
+          ls -la dist/ | head -40
+          python3 tools/make_manifest.py \
+            --out dist/manifest.json \
+            --base-url "https://github.com/${{ github.repository }}/releases/download/map-data" \
+            dist/*.rahpkg.zip
+          python3 - <<'PY_VALIDATE'
+          import json
+          import sys
+
+          with open("dist/manifest.json", encoding="utf-8") as f:
+              doc = json.load(f)
+
+          packages = doc.get("packages", [])
+          ids = [p.get("id") for p in packages]
+          dates = {p.get("dataDate") for p in packages}
+
+          expected = {
+              "afghanistan", "badakhshan", "badghis", "baghlan", "balkh",
+              "bamyan", "daykundi", "farah", "faryab", "ghazni", "ghor",
+              "helmand", "herat", "jowzjan", "kabul", "kandahar", "kapisa",
+              "khost", "kunar", "kunduz", "laghman", "logar", "maidan_wardak",
+              "nangarhar", "nimruz", "nuristan", "paktia", "paktika",
+              "panjshir", "parwan", "samangan", "sar_e_pol", "takhar",
+              "urozgan", "zabul"
+          }
+
+          if len(packages) != 35:
+              sys.exit(f"تعداد بسته‌ها باید 35 باشد؛ فعلی: {len(packages)}")
+          if len(set(ids)) != 35 or set(ids) != expected:
+              sys.exit("شناسه‌های بسته‌ها ناقص، تکراری یا نامعتبر هستند.")
+          if len(dates) != 1 or not next(iter(dates)):
+              sys.exit(f"تاریخ بسته‌ها یکسان نیست: {dates}")
+          if next(iter(dates)) != __import__("os").environ["RAHYAB_DATA_DATE"]:
+              sys.exit("تاریخ Manifest با تاریخ منبع Geofabrik برابر نیست.")
+
+          print("اعتبارسنجی موفق: 35 بسته، 35 شناسه یکتا، تاریخ مشترک", next(iter(dates)))
+          PY_VALIDATE
+          cd dist && sha256sum *.rahpkg.zip manifest.json > SHA256SUMS.txt
+
+      - name: Publish to release (tag map-data)
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: map-data
+          files: |
+            dist/*.rahpkg.zip
+            dist/SHA256SUMS.txt
+            dist/manifest.json
+          make_latest: false
+          body: |
+            بسته پایه کشوری + بسته‌های نقشه آفلاین تمام ۳۴ ولایت افغانستان
+            - داده: © OpenStreetMap contributors (ODbL) — تاریخ: تاریخ فایل Geofabrik
+            - نصب: در برنامه «بسته‌های آفلاین» → دانلود → هر ولایت جداگانه
+            - checksums در SHA256SUMS.txt؛ فایل خراب هرگز نصب نمی‌شود

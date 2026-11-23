@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/radioRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F2F5FA"
+    android:orientation="vertical">
+
+    <!-- سرصفحه -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:background="@color/blue_primary"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingStart="16dp"
+        android:paddingEnd="16dp">
+
+        <ImageView
+            android:layout_width="26dp"
+            android:layout_height="26dp"
+            android:contentDescription="@null"
+            android:src="@drawable/ic_radio"
+            app:tint="#FFFFFF" />
+
+        <TextView
+            android:id="@+id/tvRadioTitle"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="12dp"
+            android:layout_weight="1"
+            android:text="@string/radio_title"
+            android:textColor="#FFFFFF"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <ImageView
+            android:id="@+id/btnRadioStop"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/radio_stop"
+            android:padding="10dp"
+            android:src="@drawable/ic_stop"
+            app:tint="#FFFFFF" />
+
+        <ImageView
+            android:id="@+id/btnRadioClose"
+            android:layout_width="44dp"
+            android:layout_height="44dp"
+            android:contentDescription="@string/close"
+            android:padding="10dp"
+            android:src="@drawable/ic_close"
+            app:tint="#FFFFFF" />
+    </LinearLayout>
+
+    <!-- ایستگاه در حال پخش -->
+    <TextView
+        android:id="@+id/tvPlaying"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="14dp"
+        android:background="@drawable/bg_weather_card"
+        android:padding="12dp"
+        android:textAlignment="viewStart"
+        android:textColor="@color/blue_dark"
+        android:textSize="14sp"
+        android:textStyle="bold"
+        android:visibility="gone" />
+
+    <!-- دسته‌بندی -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="14dp"
+        android:layout_marginTop="10dp"
+        android:layout_marginEnd="14dp"
+        android:orientation="horizontal">
+
+        <TextView
+            android:id="@+id/tabAll"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tab_sel"
+            android:gravity="center"
+            android:text="@string/radio_cat_all"
+            android:textColor="@color/blue_primary"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabDari"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tab"
+            android:gravity="center"
+            android:text="@string/radio_cat_dari"
+            android:textColor="#6B7788"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabPashto"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="6dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tab"
+            android:gravity="center"
+            android:text="@string/radio_cat_pashto"
+            android:textColor="#6B7788"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tabOther"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:background="@drawable/bg_tab"
+            android:gravity="center"
+            android:text="@string/radio_cat_other"
+            android:textColor="#6B7788"
+            android:textSize="13sp"
+            android:textStyle="bold" />
+    </LinearLayout>
+
+    <TextView
+        android:id="@+id/tvRadioStatus"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="16dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="16dp"
+        android:textColor="@color/ink_soft"
+        android:textSize="12sp"
+        android:visibility="gone" />
+
+    <ListView
+        android:id="@+id/lvStations"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_marginStart="10dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="10dp"
+        android:layout_marginBottom="10dp"
+        android:layout_weight="1"
+        android:divider="#E3E9F2"
+        android:dividerHeight="1dp" />
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="#FFFFFF"
+        android:padding="8dp"
+        android:text="@string/radio_source_note"
+        android:textAlignment="center"
+        android:textColor="@color/ink_soft"
+        android:textSize="10sp" />
+</LinearLayout>

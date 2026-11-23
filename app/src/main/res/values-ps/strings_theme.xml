@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- د نقشې رنګونه او تيم -->
+<resources>
+    <string name="map_colors_title">د نقشې رنګونه</string>
+    <string name="map_colors_saved">د نقشې رنګونه ذخیره شول.</string>
+    <string name="th_background">شاليد ځمکه</string>
+    <string name="th_street">سړکونه</string>
+    <string name="th_primary">اصلي سړکونه</string>
+    <string name="th_highway">لویه لار او لوړلار</string>
+    <string name="th_alley">کوچه او لین</string>
+    <string name="th_building">ودانیزې او کورونه</string>
+    <string name="th_building_border">د ودانۍ شاوخوا کرښه</string>
+    <string name="th_park">پارک او باغونه</string>
+    <string name="th_trees">وېنې</string>
+    <string name="th_water">اوبه او سیندونه</string>
+    <string name="th_label">د نومونو رنګ پر نقشه</string>
+    <string name="th_label_halo">د نومونو شالید (هاله)</string>
+    <string name="th_route">د لارې رنګ</string>
+    <string name="th_restaurant">رسټورانت او کافي</string>
+    <string name="th_shop">دوکانونه</string>
+    <string name="th_hospital">روغتونونه</string>
+    <string name="theme_presets">چمتو ډیزاینونه</string>
+    <string name="theme_classic">کلاسیک</string>
+    <string name="theme_green">زورور</string>
+    <string name="theme_desert">لندڅړی</string>
+    <string name="theme_ocean">سیمند</string>
+    <string name="theme_reset_all">ټول بېرته په اصلي حالت</string>
+    <string name="color_choose">رنګ غوره کړه</string>
+    <string name="color_hue">رنګ</string>
+    <string name="color_sat">د رنګ شدت</string>
+    <string name="color_val">روڼ‌والی</string>
+    <string name="color_use_default">اصلي رنګ</string>
+    <string name="color_pick">غوره</string>
+    <string name="color_apply_note">رنګونه سمدلاسه پر نقشه پلې کېږي.</string>
+</resources>

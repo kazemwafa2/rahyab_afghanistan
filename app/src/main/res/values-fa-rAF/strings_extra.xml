@@ -1,0 +1,131 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ===== نسخه ۰٫۹٫۷ — قابلیت‌های به سبک نشان + صدای داخل برنامه ===== -->
+
+    <!-- سخنگو -->
+    <string name="voice_state">حالت سخنگو</string>
+    <string name="voice_source">انتخاب صدا</string>
+    <string name="voice_pack_option">صدای دری داخل برنامه — امیر (آفلاین، همیشه کار می‌کند)</string>
+    <string name="voice_pack_missing">صدای داخل برنامه یافت نشد</string>
+    <string name="voice_system_option">موتور گفتار گوشی (نیاز به نصب صدای همان زبان دارد)</string>
+    <string name="voice_volume">بلندی صدا</string>
+    <string name="voice_speed">سرعت گفتار</string>
+    <string name="voice_pack_status">بسته صدای دری: %1$d عبارت ضبط‌شده — کاملاً آفلاین، بدون نیاز به نصب هیچ صدایی روی گوشی.</string>
+    <string name="voice_list_note">هر صدا شامل %1$d عبارت ضبط‌شده است — کاملاً آفلاین؛ پیش از انتخاب با دکمه پخش بشنوید.</string>
+    <string name="voice_female">صدای زنانه</string>
+    <string name="voice_male">صدای مردانه</string>
+    <string name="voice_play">پخش آزمایشی</string>
+    <string name="voice_bluetooth">پخش صدا از طریق بلوتوث</string>
+    <string name="voice_during_call">پخش صدا هنگام تماس</string>
+    <string name="voice_system_unavailable">روی این گوشی صدای این زبان نصب نیست</string>
+    <string name="voice_saved_msg">تنظیمات صدا ذخیره شد</string>
+    <string name="voice_lang_note">زبان راهنمای صوتی از زبان برنامه پیروی می‌کند (مستقل از زبان گوشی). زبان فعلی: %1$s</string>
+    <string name="voice_group_dari">صداهای دری</string>
+    <string name="voice_group_pashto">صداهای پشتو</string>
+    <string name="voice_group_english">صداهای انگلیسی</string>
+    <string name="voice_active_tag">فعال — با این صدا راهنمایی می‌شود</string>
+    <string name="voice_lang_mismatch_toast">صدای %1$s ذخیره شد — وقتی زبان برنامه را %2$s کنید با همین صدا راهنمایی می‌شوید.</string>
+    <string name="voice_lang_dari_name">دری</string>
+    <string name="voice_lang_pashto_name">پشتو</string>
+    <string name="voice_lang_english_name">انگلیسی</string>
+
+    <!-- هشدارها -->
+    <string name="alerts_title">تنظیمات هشدارها</string>
+    <string name="alert_bump">هشدار دست‌انداز</string>
+    <string name="alert_accident">هشدار حادثه ترافیکی</string>
+    <string name="alert_traffic">هشدار ترافیک سنگین</string>
+    <string name="alert_closed">هشدار سرک بسته</string>
+    <string name="alert_hazard">هشدار کار ترمیم سرک</string>
+    <string name="alert_cam">هشدار کمره کنترول سرعت</string>
+    <string name="alert_speed">هشدار سرعت زیاد</string>
+    <string name="alert_speed_limit">حد سرعت هشدار: %1$d کیلومتر در ساعت</string>
+    <string name="alerts_note">منبع هشدارها فقط گزارش‌های تأییدشده کاربران راه‌یاب در ۲۴ ساعت گذشته است؛ گزارش‌های حاوی اطلاعات حساس امنیتی هرگز نمایش داده نمی‌شوند.</string>
+
+    <!-- متن دقیق هشدارها — مطابق واژه‌نامه دری افغانستان -->
+    <string name="alert_bump_text">هشدار! دست‌انداز در پیش رو است.</string>
+    <string name="alert_accident_text">هشدار! حادثه ترافیکی در پیش رو است.</string>
+    <string name="alert_traffic_text">هشدار! ترافیک سنگین در پیش رو است.</string>
+    <string name="alert_closed_text">هشدار! سرک در پیش رو بسته است.</string>
+    <string name="alert_hazard_text">هشدار! کار ترمیم سرک در پیش رو است.</string>
+    <string name="alert_cam_text">هشدار! کمره کنترول سرعت در پیش رو است.</string>
+    <string name="alert_speed_text">سرعت شما بیش از حد مجاز است. سرعت خود را کم کنید.</string>
+
+    <!-- هشدارهای جدید (۰٫۹٫۷) -->
+    <string name="alert_police">هشدار احتمال حضور پولیس</string>
+    <string name="alert_redlight">هشدار کمره چراغ سرخ</string>
+    <string name="alert_slippery">هشدار سرک لغزنده</string>
+    <string name="alert_narrow">هشدار باریک شدن سرک</string>
+    <string name="alert_school">هشدار مکتب</string>
+    <string name="alert_crosswalk">هشدار گذرگاه عابران پیاده</string>
+    <string name="alert_rail">هشدار گذرگاه ریل</string>
+    <string name="alert_animal">هشدار عبور حیوانات</string>
+    <string name="alert_trafficlight">هشدار چراغ ترافیکی</string>
+    <string name="alert_limit">هشدار تغییر محدودیت سرعت</string>
+    <string name="alert_steep_down">هشدار سرازیری تند</string>
+    <string name="alert_steep_up">هشدار سربالایی تند</string>
+    <string name="alert_police_text">هشدار! احتمال حضور پولیس در پیش رو وجود دارد.</string>
+    <string name="alert_redlight_text">هشدار! کمره چراغ سرخ در پیش رو است.</string>
+    <string name="alert_slippery_text">هشدار! سرک لغزنده است.</string>
+    <string name="alert_narrow_text">هشدار! سرک در پیش رو باریک می‌شود.</string>
+    <string name="alert_school_text">هشدار! مکتب در پیش رو است.</string>
+    <string name="alert_crosswalk_text">هشدار! گذرگاه عابران پیاده در پیش رو است.</string>
+    <string name="alert_rail_text">هشدار! گذرگاه ریل در پیش رو است.</string>
+    <string name="alert_animal_text">هشدار! احتمال عبور حیوانات وجود دارد.</string>
+    <string name="alert_trafficlight_text">هشدار! چراغ ترافیکی در پیش رو است.</string>
+    <string name="alert_limit_text">هشدار! محدودیت سرعت در پیش رو تغییر می‌کند.</string>
+    <string name="alert_steep_down_text">هشدار! سرازیری تند در پیش رو است.</string>
+    <string name="alert_steep_up_text">هشدار! سربالایی تند در پیش رو است.</string>
+    <string name="alert_slow_down_text">سرعت خود را کم کنید.</string>
+
+    <!-- مسیریابی -->
+    <string name="routing_title">تنظیمات مسیریابی</string>
+    <string name="routing_avoid_traffic">پرهیز از راه‌های پرزحمت (بر اساس گزارش کاربران)</string>
+    <string name="routing_avoid_unpaved">پرهیز از جاده‌های خاکی و بسته (وقتی داده راه‌ها موجود باشد)</string>
+    <string name="routing_avoid_toll">پرهیز از راه‌های عوارضی (وقتی داده عوارض موجود باشد)</string>
+    <string name="routing_note">پرهیز از راه‌های پرزحمت همین حالا با گزارش‌های زنده کاربران اعمال می‌شود. دو گزینه دیگر با تکمیل داده عوارض و سطح جاده‌ها در بسته‌های آفلاین آینده فعال می‌شوند.</string>
+
+    <!-- رانندگی آزاد -->
+    <string name="free_title">رانندگی آزاد</string>
+    <string name="free_end">پایان</string>
+    <string name="free_started">حالت رانندگی آزاد فعال شد. با احتیاط رانندگی کنید.</string>
+    <string name="stop_nav_first">اول ناوبری فعلی را متوقف کنید</string>
+    <string name="speed_unit">کیلومتر در ساعت</string>
+    <string name="tab_free">آزاد</string>
+
+    <!-- نام‌های نقشه -->
+    <string name="map_labels_title">نام‌های روی نقشه</string>
+    <string name="map_labels_af">فقط نام‌های افغانستان (دری)</string>
+    <string name="map_labels_all">همه نام‌ها (کشورهای همسایه هم)</string>
+
+    <!-- گزارش‌های حوادث -->
+    <string name="report_bump">دست‌انداز</string>
+    <string name="report_cam">کمره کنترول سرعت</string>
+    <string name="report_police">احتمال حضور پولیس</string>
+    <string name="report_redlight">کمره چراغ سرخ</string>
+    <string name="report_slippery">سرک لغزنده</string>
+    <string name="report_narrow">باریک شدن سرک</string>
+    <string name="report_school">منطقه مکتب</string>
+    <string name="report_crosswalk">گذرگاه عابران پیاده</string>
+    <string name="report_rail">گذرگاه ریل</string>
+    <string name="report_animal">عبور حیوانات</string>
+    <string name="report_trafficlight">چراغ ترافیکی خراب</string>
+    <string name="report_limit">تغییر محدودیت سرعت</string>
+    <string name="report_steep_down">سرازیری تند</string>
+    <string name="report_steep_up">سربالایی تند</string>
+
+    <!-- پیام‌های صوتی سیستم -->
+    <string name="sys_loc_acquired">موقعیت شما دریافت شد.</string>
+    <string name="sys_loc_unknown">موقعیت شما مشخص نیست. لطفاً منتظر بمانید.</string>
+    <string name="sys_map_loading">نقشه در حال بارگذاری است.</string>
+    <string name="sys_map_ready">نقشه آماده استفاده است.</string>
+    <string name="sys_dl_started">دانلود نقشه آغاز شد.</string>
+    <string name="sys_dl_done">دانلود نقشه تکمیل شد.</string>
+    <string name="sys_dl_failed">دانلود نقشه ناموفق بود.</string>
+    <string name="sys_no_internet">اتصال اینترنت برقرار نیست.</string>
+    <string name="sys_using_offline">از نقشه آفلاین استفاده می‌شود.</string>
+
+    <!-- کاتالوگ ولایات در بسته‌های آفلاین -->
+    <string name="pkg_provinces_title">پوشش کشور به تفکیک ۳۴ ولایت</string>
+    <string name="pkg_provinces_note">بسته پایه کشوری همیشه همراه برنامه است و همه ۳۴ ولایت را می‌پوشاند. بسته‌های ولایتی هم اکنون داخل خود برنامه هستند — بدون انترنت با دکمه «دانلود» نصب می‌شوند و پس از نصب قابل حذف‌اند. در سفر بیرون از ولایتِ نصب‌شده، نقشه و مسیریابی به‌طور خودکار از بسته پایه کشوری ادامه می‌یابد.</string>
+    <string name="pkg_provinces_error">کاتالوگ ولایات یافت نشد</string>
+</resources>

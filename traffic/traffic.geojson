@@ -1,0 +1,7 @@
+{
+ "type": "FeatureCollection",
+ "name": "rahyab-community-traffic",
+ "generator": "Rahyab Afghanistan — فید جامعهٔ ترافیک",
+ "note": "این فایل منبع رسمی لایهٔ ترافیک جامعه در برنامهٔ راه‌یاب است. هر ویژگی (Feature) یک نقطه یا خط ترافیکی است. قوانین: ۱) فقط اطلاعات واقعی و تأییدشده؛ هرگز دادهٔ آزمایشی یا جعلی اضافه نکنید. ۲) properties باید شامل title و color (green|orange|red) یا congestion_level (0 تا 3) باشد. ۳) هندسهٔ Point یا LineString با مختصات [طول، عرض].",
+ "features": []
+}

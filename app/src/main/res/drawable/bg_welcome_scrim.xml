@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- پردهٔ نیمه‌شفاف روی عکس پس‌زمینهٔ خوش‌آمد تا متن سفید خوانا بماند -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient android:angle="270"
+        android:startColor="#B3000000"
+        android:centerColor="#33000000"
+        android:endColor="#99000000"/>
+</shape>

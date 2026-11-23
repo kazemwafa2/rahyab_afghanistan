@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- نوار پایین تیره مطابق طرح -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <solid android:color="#0E1B33"/>
+    <corners android:topLeftRadius="22dp" android:topRightRadius="22dp"/>
+</shape>

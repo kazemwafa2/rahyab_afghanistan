@@ -1,0 +1,25 @@
+*.iml
+.gradle/
+build/
+local.properties
+.idea/
+captures/
+*.jks
+*.keystore
+.DS_Store
+# ابزار ساخت داده
+tools/work/
+work/
+dist/
+*.pbf
+*.pmtiles
+*.rafgraph
+*.rafidx
+*.rahpkg.zip
+
+# بسته‌های نقشه همراه برنامه باید در مخزن باشند تا داخل APK بروند (وگرنه دانلود ولایت‌ها کار نمی‌کند)
+!app/src/main/assets/initial/*.rahpkg.zip
+!app/src/main/assets/packages/*.rahpkg.zip
+!app/src/main/assets/fonts/**/*.pbf
+__pycache__/
+*.pyc

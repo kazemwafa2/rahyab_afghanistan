@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- نشانگر مسیریابی — فارسی (ایران) -->
+    <string name="veh_title">نشانگر مسیریابی</string>
+    <string name="veh_arrow">فلش</string>
+    <string name="veh_landcruiser">لندکروز</string>
+    <string name="veh_toyota_suv">تویوتا شاسی‌بلند</string>
+    <string name="veh_lexus">لکسوس</string>
+    <string name="veh_mercedes">مرسدس</string>
+    <string name="veh_bmw">بی‌ام‌و</string>
+    <string name="veh_camry">تویوتا کمری</string>
+    <string name="veh_hyundai">هیوندای</string>
+    <string name="veh_kia">کیا</string>
+    <string name="veh_hiaze">وانت هایس</string>
+    <string name="veh_mercedes_van">وان مرسدس</string>
+    <string name="veh_bus">اتوبوس</string>
+    <string name="veh_tuktuk">توک‌توک</string>
+    <string name="veh_moto">موتورسیکلت</string>
+    <string name="veh_cargo_trike">تری‌سیکل باری</string>
+    <string name="veh_bike">دوچرخه</string>
+    <string name="veh_selected">نشانگر مسیریابی تغییر کرد</string>
+</resources>

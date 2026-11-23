@@ -1,0 +1,15 @@
+{
+ "id": "rahmat",
+ "name": "رحمت",
+ "gender": "male",
+ "lang": "fa",
+ "langs": [
+  "fa",
+  "ps",
+  "en"
+ ],
+ "engine": "edge-neural",
+ "clips": 92,
+ "phrases": 92,
+ "note": "صدای عصبی واقعی — برای همهٔ زبان‌های برنامه (دری/پشتو/انگلیسی)"
+}
