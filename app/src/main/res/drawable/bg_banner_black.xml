@@ -1,5 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- بنر ناوبری آبی مطابق طرح (نام فایل برای سازگاری با layout حفظ شده است) -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
-    <solid android:color="#101214"/>
+    <gradient
+        android:angle="270"
+        android:startColor="#1E5BD8"
+        android:endColor="#0B3FB5"/>
     <corners android:radius="20dp"/>
 </shape>

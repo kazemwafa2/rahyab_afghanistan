@@ -106,6 +106,8 @@ class MainActivity : AppCompatActivity() {
     private var offlineStyleActive = false
     /** اینترنت ظاهراً وصل است (مثلاً وای‌فای/VPN) ولی سرور نقشه واقعاً جواب نمی‌دهد */
     @Volatile private var netReallyDown = false
+    /** منبع آنلاین af.pmtiles (Range از GitHub) شکست خورده؛ تا بازگشت اینترنت از OpenFreeMap استفاده می‌شود */
+    @Volatile private var afRemoteFailed = false
     @Volatile private var lastProbeMs = 0L
     @Volatile private var probing = false
 
@@ -2299,7 +2301,7 @@ class MainActivity : AppCompatActivity() {
     private fun applyOnlineStyle() {
         val m = map ?: return
         val nationwide = nationwideTilesFile()
-        val key = "online:${if (wantDark()) "D" else "L"}:${nationwide?.name ?: "-"}"
+        val key = "online:${if (wantDark()) "D" else "L"}:${nationwide?.name ?: if (afRemoteFailed) "ofm" else "af"}"
         if (key == styleUrl && style != null) return
         styleUrl = key
         offlineStyleActive = false
@@ -2379,6 +2381,9 @@ class MainActivity : AppCompatActivity() {
             if (nationwide != null) {
                 json = json.replace("__SRC_URL__", "pmtiles://file://" + nationwide.absolutePath)
                 json = setSourceZoomRange(json, "rahyab", nationwide)
+            } else if (!afRemoteFailed) {
+                // محتوای نقشه از af.pmtiles (زوم ۰–۱۴ سراسر افغانستان)؛ بدون فایل محلی از راه دور با Range
+                json = json.replace("__SRC_URL__", "pmtiles://" + Config.AF_PMTILES_URL)
             } else {
                 json = json.replace("__SRC_URL__", Config.TILES_URL)
             }
@@ -2398,6 +2403,13 @@ class MainActivity : AppCompatActivity() {
      */
     private fun handleOnlineStyleFailure() {
         if (offlineStyleActive) return
+        // نخست: اگر af.pmtiles راه‌دور جواب نداد، به OpenFreeMap برگرد (نقشه خالی نماند)
+        if (!afRemoteFailed && nationwideTilesFile() == null) {
+            afRemoteFailed = true
+            styleUrl = ""
+            applyOnlineStyle()
+            return
+        }
         val pkg = pickOfflinePackage() ?: return
         applyOfflineStyle(pkg)
     }
@@ -2457,6 +2469,7 @@ class MainActivity : AppCompatActivity() {
                     ui.post {
                         if (!isDestroyed && !isFinishing) {
                             netReallyDown = false
+                            afRemoteFailed = false
                             loadStyle()
                             if (trafficOn) refreshTrafficData()
                         }

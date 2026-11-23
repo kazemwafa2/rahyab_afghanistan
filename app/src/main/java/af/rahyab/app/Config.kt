@@ -49,6 +49,14 @@ object Config {
     val MANIFEST_URL: String get() = "$REPO_URL/releases/download/$RELEASE_TAG/manifest.json"
 
     /**
+     * فایل داده اختصاصی افغانستان (PMTiles، زوم ۰ تا ۱۴، ~۱۶۰MB) در ریلیز map-data.
+     * حالت آنلاین، وقتی بسته کامل کشوری روی گوشی نصب نیست، کاشی‌ها را با درخواست Range
+     * مستقیم از همین فایل می‌خواند؛ اگر شکست خورد به OpenFreeMap برمی‌گردد.
+     * برای کاربر زیاد، همین فایل را روی Worker/R2 بگذارید و فقط این نشانی را عوض کنید.
+     */
+    val AF_PMTILES_URL: String get() = "$REPO_URL/releases/download/$RELEASE_TAG/af.pmtiles"
+
+    /**
      * صفحهٔ دارایی‌های ریلیز — اسکن پشتیبان فهرست بسته‌ها.
      * اگر manifest.json روی سرور قدیمی بماند ولی فایل‌های بسته تازه بارگذاری شوند
      * (دقیقاً اتفاقی که برای کاربر افتاد)، برنامه از همین صفحه نسخهٔ جدید را می‌بیند.
